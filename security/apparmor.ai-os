@@ -1,0 +1,38 @@
+#include <tunables/global>
+
+profile ai-os flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/nameservice>
+
+  owner @{HOME}/.ai_os/** rwk,
+  owner @{HOME}/.local/share/ai_os/** rwk,
+  owner @{HOME}/src/ai-os-interface-layer/** r,
+  owner @{HOME}/Downloads/** rw,
+
+  /usr/bin/python* ix,
+  /usr/bin/nvidia-smi ix,
+  /usr/bin/wpctl ix,
+  /usr/bin/brightnessctl ix,
+  /usr/bin/ollama ix,
+  /usr/bin/piper ix,
+  /usr/bin/clamscan ix,
+  /usr/bin/grep ix,
+  /usr/bin/rg ix,
+  /usr/bin/find ix,
+  /usr/bin/ls ix,
+  /usr/bin/cat ix,
+  /usr/bin/head ix,
+  /usr/bin/tail ix,
+  /usr/bin/stat ix,
+  /usr/bin/file ix,
+  /usr/bin/ps ix,
+  /usr/bin/pgrep ix,
+  /usr/bin/uname ix,
+
+  deny /etc/** w,
+  deny /boot/** w,
+  deny /usr/** w,
+  deny /var/lib/pacman/** w,
+}
+
