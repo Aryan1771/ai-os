@@ -21,20 +21,20 @@ Replace `YOUR_USERNAME` with your GitHub username.
 ```bash
 mkdir -p ~/src
 cd ~/src
-git clone https://github.com/YOUR_USERNAME/ai-os-interface-layer.git
-cd ai-os-interface-layer
+git clone https://github.com/YOUR_USERNAME/ai-os.git
+cd ai-os
 ```
 
 If the repo is private:
 
 ```bash
-git clone git@github.com:YOUR_USERNAME/ai-os-interface-layer.git
+git clone git@github.com:YOUR_USERNAME/ai-os.git
 ```
 
 ## 2. Install Arch Packages
 
 ```bash
-cd ~/src/ai-os-interface-layer
+cd ~/src/ai-os
 sudo bash scripts/install_arch_packages.sh
 ```
 
@@ -61,7 +61,7 @@ systemctl --user enable --now pipewire pipewire-pulse wireplumber
 ## 3. Create Python Runtime
 
 ```bash
-cd ~/src/ai-os-interface-layer
+cd ~/src/ai-os
 bash scripts/install_runtime.sh
 ```
 
@@ -100,7 +100,7 @@ For the RTX 4060 Laptop 8 GB target, keep normal local inference around 4.7 to 5
 ## 5. Run Smoke Tests
 
 ```bash
-cd ~/src/ai-os-interface-layer
+cd ~/src/ai-os
 bash scripts/run_smoke_tests.sh
 ```
 
@@ -143,7 +143,7 @@ Start the daemon:
 
 ```bash
 source ~/.ai_os/venv/bin/activate
-cd ~/src/ai-os-interface-layer
+cd ~/src/ai-os
 python -m ai_os.ai_os_core
 ```
 
@@ -197,7 +197,7 @@ sudo loginctl enable-linger "$USER"
 Do this after package installation and model downloads, because strict outbound firewall rules can interrupt setup.
 
 ```bash
-cd ~/src/ai-os-interface-layer
+cd ~/src/ai-os
 sudo bash scripts/security_baseline.sh
 ```
 
@@ -250,7 +250,7 @@ If anything breaks during builds, remove the override and restart `tmp.mount`.
 On Windows:
 
 ```powershell
-cd C:\path\to\ai-os-interface-layer
+cd C:\path\to\ai-os
 git status
 git add .
 git commit -m "Update AI-OS layer"
@@ -260,7 +260,7 @@ git push
 On Arch:
 
 ```bash
-cd ~/src/ai-os-interface-layer
+cd ~/src/ai-os
 git pull
 source ~/.ai_os/venv/bin/activate
 python -m pip install -e ".[memory,voice,vision,udev,dev]"
