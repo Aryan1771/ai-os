@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import time
 from dataclasses import dataclass
 from typing import Any, Iterator
@@ -17,10 +18,10 @@ class HardwareEvent:
 
 
 def collect_snapshot() -> dict[str, Any]:
-    display = run_command(["sh", "-lc", "command -v xrandr >/dev/null 2>&1 && xrandr --query || true"], approve=True)
+    display = run_command(["xrandr", "--query"]) if shutil.which("xrandr") else None
     return {
         "hardware": get_hardware_stats(),
-        "display_raw": display.stdout,
+        "display_raw": display.stdout if display and display.ok else "",
     }
 
 
@@ -58,4 +59,3 @@ def monitor_polling(interval_sec: int = 5) -> Iterator[HardwareEvent]:
 if __name__ == "__main__":
     for item in monitor_polling():
         print(json.dumps(item.__dict__, indent=2))
-

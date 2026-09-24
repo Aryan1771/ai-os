@@ -7,7 +7,7 @@ profile ai-os flags=(attach_disconnected,mediate_deleted) {
 
   owner @{HOME}/.ai_os/** rwk,
   owner @{HOME}/.local/share/ai_os/** rwk,
-  owner @{HOME}/src/ai-os-interface-layer/** r,
+  owner @{HOME}/src/ai-os/** r,
   owner @{HOME}/Downloads/** rw,
 
   /usr/bin/python* ix,
@@ -35,4 +35,3 @@ profile ai-os flags=(attach_disconnected,mediate_deleted) {
   deny /usr/** w,
   deny /var/lib/pacman/** w,
 }
-

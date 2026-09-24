@@ -47,22 +47,26 @@ def json_default(value: Any) -> Any:
     return str(value)
 
 
-def system_prompt() -> str:
-    return """You are the local AI-OS daemon.
+def system_prompt(registered_tools: set[str] | None = None) -> str:
+    tool_names = ", ".join(sorted(registered_tools or build_tool_registry()))
+    return f"""You are the local AI-OS daemon.
 Return ordinary helpful text unless a tool is needed.
 When using a tool, return exactly one JSON object:
-{"tool": "tool_name", "arguments": {"key": "value"}}
+{{"tool": "tool_name", "arguments": {{"key": "value"}}}}
+You may call only these registered tools: {tool_names}.
+Never invent a tool name or use an unregistered tool.
+Use get_hardware_stats for hardware requests.
 Never request destructive commands unless the user clearly asked.
 Hyprland/Wayland UI automation is disabled until the user enables Phase 5."""
 
 
-def ask_ollama(user_text: str) -> str:
+def ask_ollama(user_text: str, registered_tools: set[str] | None = None) -> str:
     config = load_config()
     payload = {
         "model": config.ollama_model,
         "stream": False,
         "messages": [
-            {"role": "system", "content": system_prompt()},
+            {"role": "system", "content": system_prompt(registered_tools)},
             {"role": "user", "content": user_text},
         ],
         "options": {"temperature": 0.2},
@@ -80,7 +84,11 @@ def parse_tool_call(text: str) -> dict[str, Any] | None:
         parsed = json.loads(stripped)
     except json.JSONDecodeError:
         return None
-    if isinstance(parsed, dict) and "tool" in parsed and "arguments" in parsed:
+    if (
+        isinstance(parsed, dict)
+        and isinstance(parsed.get("tool"), str)
+        and isinstance(parsed.get("arguments"), dict)
+    ):
         return parsed
     return None
 
@@ -109,7 +117,7 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
 
 def handle_user_text(user_text: str, registry: dict[str, ToolFn] | None = None) -> dict[str, Any]:
     registry = registry or build_tool_registry()
-    model_text = ask_ollama(user_text)
+    model_text = ask_ollama(user_text, set(registry))
     tool_call = parse_tool_call(model_text)
     if not tool_call:
         memory_tools.remember_event("assistant_text", {"user": user_text, "assistant": model_text})
@@ -145,4 +153,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
