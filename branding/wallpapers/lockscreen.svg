@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#101513"/>
+  <path d="M0 0h560v1080H0z" fill="#141c18"/>
+  <g fill="#21372d">
+    <path d="M220 320h80v-80h80v-80h80v80h80v80h80v80h-80v80h-80v80h-80v-80h-80v-80h-80z"/>
+    <path d="M560 400h80v80h-80zM640 480h80v80h-80zM720 560h80v80h-80z"/>
+  </g>
+  <g fill="#4de3a7"><rect x="340" y="320" width="40" height="40"/><rect x="420" y="320" width="40" height="40"/><rect x="370" y="420" width="60" height="12"/></g>
+  <g fill="#f1bd73"><rect x="760" y="640" width="36" height="36"/><rect x="840" y="720" width="24" height="24"/><rect x="920" y="800" width="16" height="16"/></g>
+  <text x="840" y="480" fill="#e7f4eb" font-family="sans-serif" font-size="54" letter-spacing="10">REGENOS</text>
+  <path d="M840 520h520" stroke="#4de3a7" stroke-width="3"/>
+</svg>

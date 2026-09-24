@@ -1,6 +1,8 @@
 {
   "ollama_url": "http://127.0.0.1:11434/api/chat",
   "ollama_model": "qwen2.5:7b-instruct-q4_K_M",
+  "ai_provider": "ollama",
+  "api_key_env": "AI_OS_API_KEY",
   "allow_external_apis": false,
   "allowed_api_hosts": [
     "api.x.ai",
@@ -24,10 +26,10 @@
   "avatar_accent": "#4de3a7",
   "theme": "forest",
   "branding": {
-    "brand_name": "AI-OS",
-    "assistant_name": "Assistant",
-    "logo_path": "branding/logos/ai-os-logo.png",
-    "wallpaper_path": "branding/wallpapers/default.png",
-    "lockscreen_path": "branding/wallpapers/lockscreen.png"
+    "brand_name": "REGENOS",
+    "assistant_name": "Companion",
+    "logo_path": "/usr/share/regenos/branding/regenos-mark.svg",
+    "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",
+    "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png"
   }
 }

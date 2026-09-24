@@ -1,11 +1,12 @@
 [Unit]
-Description=AI-OS Interface Layer Daemon
+Description=REGENOS local AI daemon
 After=network-online.target ollama.service pipewire.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 Environment=AI_OS_HOME=%h/.ai_os
+EnvironmentFile=-%h/.config/ai-os/secrets
 WorkingDirectory=%h/src/ai-os
 ExecStart=%h/.ai_os/venv/bin/python -m ai_os.ai_os_core
 Restart=on-failure
@@ -14,6 +15,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=read-only
+AppArmorProfile=ai-os
 ReadWritePaths=%h/.ai_os %h/.local/share/ai_os %h/Downloads
 
 [Install]

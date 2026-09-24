@@ -1,61 +1,42 @@
 # Project Structure
 
 ```text
-ai-os-interface-layer/
+ai-os/
 ├── ai_os/
 │   ├── ai_os_core.py
+│   ├── avatar_overlay.py
 │   ├── config.py
 │   ├── hardware_monitor.py
 │   ├── logging_utils.py
-│   ├── avatar_overlay.py
 │   ├── settings_server.py
 │   ├── speech_queue.py
-│   ├── security/
-│   │   └── consent_broker.py
-│   └── services/
-│       ├── external_api.py
-│       ├── jobs.py
-│       ├── scanner.py
-│       ├── stt.py
-│       └── wakeword.py
-│   └── web/
-│       ├── app.js
-│       ├── index.html
-│       └── styles.css
+│   ├── security/                 # CLI consent broker
+│   ├── services/                 # API broker, listener, STT, wake-word, jobs, scanner
+│   ├── tools/                    # System, memory, and UI tools
+│   └── web/                      # Local settings application
 ├── archiso/
+│   ├── packages.x86_64.add
+│   └── calamares/                 # Installer integration plan, not a shippable installer
 ├── branding/
+│   ├── regenos-mark.svg           # Scalable REGENOS mark
+│   ├── regenos-mark.png
+│   ├── regenos-companion-atlas.png # Six retro pixel companion poses
+│   ├── plymouth/                  # Linux boot splash theme
+│   └── wallpapers/                # Desktop and lock-screen art (SVG masters)
 ├── config/
-│   └── tools/
-│       ├── memory_tools.py
-│       ├── system_tools.py
-│       └── ui_tools.py
-├── docs/
-│   ├── ARCH_RUNBOOK.md
-│   ├── BRANDING_AND_ARCHISO.md
-│   ├── INSTALL_ON_ARCH.md
-│   ├── PHASE_5_DESKTOP.md
-│   ├── VOICE_AND_COMPANION.md
-│   ├── PROJECT_STRUCTURE.md
-│   └── ROADMAP.md
-├── install/
-│   └── ai-os-install.sh
-├── scripts/
-│   ├── install_arch_packages.sh
-│   ├── install_runtime.sh
-│   ├── run_smoke_tests.sh
-│   └── security_baseline.sh
-├── security/
-│   └── apparmor.ai-os
-├── systemd/
-│   └── ai-os.service
+│   ├── ai-os/config.example.json
+│   └── hypr/                      # Hyprland wallpaper, lock, and Super bindings
+├── docs/                          # Arch setup, security, desktop, voice, and ISO guides
+├── install/                       # Staged Arch installer script
+├── scripts/                       # Package, runtime, security, and smoke-check scripts
+├── security/                      # AppArmor profile
+├── systemd/                       # User services for daemon, settings, and avatar
 ├── tests/
-│   └── test_command_risk.py
 ├── pyproject.toml
-├── requirements.txt
 └── README.md
 ```
 
-Runtime files are created under `~/.ai_os/` on the Arch system:
+Runtime files are created on the Arch system, not committed to Git:
 
 ```text
 ~/.ai_os/
@@ -65,5 +46,6 @@ Runtime files are created under `~/.ai_os/` on the Arch system:
 ├── slang_vocab.json
 ├── logs/
 ├── run/
-└── models/
+├── models/                        # Local voice models; keep out of Git
+└── data/
 ```

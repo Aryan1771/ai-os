@@ -1,6 +1,10 @@
-# AI-OS Interface Layer
+# REGENOS
 
-Offline-first AI control layer for an Arch Linux portable external NVMe install.
+Offline-first AI interface layer and Arch-based desktop product for a portable external NVMe install.
+
+![REGENOS pixel-cycle mark](branding/regenos-mark.svg)
+
+The companion concept is a retro pixel character with expressive poses; its live overlay uses spring-driven pixel particles and currently morphs among a core, heart, music, code, idea, and cloud. The settings panel and desktop bindings are included. A branded Archiso live image is documented; a graphical disk installer is not yet packaged or safe to ship.
 
 This repository stores the source code, systemd templates, security templates, and Arch setup instructions. It does not store the Python virtual environment, Ollama models, ChromaDB state, downloaded voice models, or private API keys.
 
@@ -45,7 +49,7 @@ ai_os/settings_server.py and ai_os/web/
   loopback-only settings application for AI, voice, companion, appearance, desktop, and sandbox controls
 
 ai_os/avatar_overlay.py
-  optional animated desktop companion placeholder for a future branded mascot
+  pixel-particle companion with spring morphs and topic/emotion forms
 ```
 
 ## Start Here
@@ -59,4 +63,4 @@ docs/BRANDING_AND_ARCHISO.md
 docs/VOICE_AND_COMPANION.md
 ```
 
-`docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. The repository follows an installer/config/branding/docs layout inspired by distribution projects while keeping AI-OS original and Arch-based.
+`docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. REGENOS is the product identity; the source repository and Python package retain their `ai-os` names for compatibility. REGENOS is an independent Arch-based project and does not replace or claim ownership of Arch Linux, the kernel, or third-party projects.

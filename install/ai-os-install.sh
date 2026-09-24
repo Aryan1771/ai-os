@@ -38,12 +38,15 @@ install_security() {
 }
 
 install_desktop() {
-  sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar tk \
-    xdg-desktop-portal-hyprland ydotool
+  sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar tk wofi kitty thunar \
+    papirus-icon-theme bibata-cursor-theme noto-fonts noto-fonts-emoji ttf-jetbrains-mono \
+    xdg-desktop-portal-hyprland ydotool plymouth imagemagick
   mkdir -p "${HOME}/.config/hypr"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprlock.conf" "${HOME}/.config/hypr/hyprlock.conf"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprpaper.conf" "${HOME}/.config/hypr/hyprpaper.conf"
+  install -m 0644 "${REPO_ROOT}/config/hypr/regenos-bindings.conf" "${HOME}/.config/hypr/regenos-bindings.conf"
   echo "Desktop templates installed. Follow docs/PHASE_5_DESKTOP.md and docs/VOICE_AND_COMPANION.md before enabling services."
+  echo "Add 'source = ~/.config/hypr/regenos-bindings.conf' to your Hyprland config after checking key conflicts."
 }
 
 case "${1:-}" in

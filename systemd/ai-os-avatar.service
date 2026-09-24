@@ -1,6 +1,7 @@
 [Unit]
-Description=AI-OS desktop companion overlay
+Description=REGENOS pixel companion overlay
 After=graphical-session.target ai-os-settings.service
+PartOf=graphical-session.target
 Wants=ai-os-settings.service
 
 [Service]
@@ -17,4 +18,4 @@ ProtectHome=read-only
 ReadWritePaths=%h/.ai_os %h/.local/share/ai_os
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

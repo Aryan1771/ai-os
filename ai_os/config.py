@@ -19,6 +19,8 @@ class AiOsConfig:
     chroma_dir: Path
     ollama_url: str
     ollama_model: str
+    ai_provider: str
+    api_key_env: str
     allow_external_apis: bool
     allowed_api_hosts: tuple[str, ...]
     hyprland_enabled: bool
@@ -41,6 +43,8 @@ class AiOsConfig:
 DEFAULT_CONFIG = {
     "ollama_url": "http://127.0.0.1:11434/api/chat",
     "ollama_model": "qwen2.5:7b-instruct-q4_K_M",
+    "ai_provider": "ollama",
+    "api_key_env": "AI_OS_API_KEY",
     "allow_external_apis": False,
     "allowed_api_hosts": [
         "api.x.ai",
@@ -62,6 +66,17 @@ DEFAULT_CONFIG = {
     "avatar_scale": 100,
     "avatar_animation_enabled": True,
     "avatar_accent": "#4de3a7",
+    "theme": "forest",
+    "branding": {
+        "brand_name": "REGENOS",
+        "assistant_name": "Companion",
+        "logo_path": "/usr/share/regenos/branding/regenos-mark.svg",
+        "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",
+        "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png",
+        "icon_theme": "Papirus-Dark",
+        "cursor_theme": "Bibata-Modern-Ice",
+        "font": "Noto Sans 10",
+    },
 }
 
 
@@ -105,6 +120,8 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         chroma_dir=Path("~/.local/share/ai_os/chroma").expanduser(),
         ollama_url=str(raw["ollama_url"]),
         ollama_model=str(raw["ollama_model"]),
+        ai_provider=str(raw["ai_provider"]),
+        api_key_env=str(raw["api_key_env"]),
         allow_external_apis=bool(raw["allow_external_apis"]),
         allowed_api_hosts=tuple(str(host) for host in raw["allowed_api_hosts"]),
         hyprland_enabled=bool(raw["hyprland_enabled"]),

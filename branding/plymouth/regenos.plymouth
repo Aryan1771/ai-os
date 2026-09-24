@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=REGENOS
+Description=REGENOS pixel-cycle boot identity
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/regenos
+ScriptFile=/usr/share/plymouth/themes/regenos/regenos.script

@@ -7,6 +7,8 @@ profile ai-os flags=(attach_disconnected,mediate_deleted) {
 
   owner @{HOME}/.ai_os/** rwk,
   owner @{HOME}/.local/share/ai_os/** rwk,
+  owner @{HOME}/.config/gtk-3.0/** rwk,
+  owner @{HOME}/.config/hypr/** rwk,
   owner @{HOME}/src/ai-os/** r,
   owner @{HOME}/Downloads/** rw,
 
@@ -16,6 +18,11 @@ profile ai-os flags=(attach_disconnected,mediate_deleted) {
   /usr/bin/brightnessctl ix,
   /usr/bin/ollama ix,
   /usr/bin/piper ix,
+  /usr/bin/pw-record ix,
+  /usr/bin/pw-play ix,
+  /usr/bin/whisper-cli ix,
+  /usr/bin/hyprctl ix,
+  /usr/bin/ydotool ix,
   /usr/bin/clamscan ix,
   /usr/bin/grep ix,
   /usr/bin/rg ix,
@@ -29,6 +36,11 @@ profile ai-os flags=(attach_disconnected,mediate_deleted) {
   /usr/bin/ps ix,
   /usr/bin/pgrep ix,
   /usr/bin/uname ix,
+
+  owner @{HOME}/.ai_os/venv/bin/piper ix,
+
+  network inet stream,
+  network inet dgram,
 
   deny /etc/** w,
   deny /boot/** w,

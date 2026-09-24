@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#101513"/>
+  <path d="M0 760h1920v320H0z" fill="#17221d"/>
+  <g fill="#20372d">
+    <path d="M1120 120h160v80h-80v80h-80v80h-80v80H880v-80h80v-80h80v-80h80z"/>
+    <path d="M1280 200h80v80h-80zM1360 280h80v80h-80zM1440 360h80v80h-80zM1520 440h80v80h-80z"/>
+    <path d="M240 800h160v40H240zM400 760h80v40h-80zM480 720h80v40h-80zM560 680h80v40h-80zM640 640h80v40h-80zM720 600h80v40h-80z"/>
+  </g>
+  <g fill="#4de3a7">
+    <rect x="1160" y="240" width="40" height="40"/><rect x="1080" y="320" width="40" height="40"/>
+    <rect x="1000" y="400" width="40" height="40"/><rect x="920" y="480" width="40" height="40"/>
+    <rect x="800" y="560" width="40" height="40"/><rect x="680" y="640" width="40" height="40"/>
+  </g>
+  <g fill="#f1bd73"><rect x="1560" y="520" width="40" height="40"/><rect x="600" y="720" width="40" height="40"/></g>
+  <path d="M120 930h490" stroke="#385344" stroke-width="2"/>
+  <text x="120" y="1000" fill="#e7f4eb" font-family="sans-serif" font-size="44" letter-spacing="8">REGENOS</text>
+  <text x="120" y="1042" fill="#9cb6a5" font-family="sans-serif" font-size="18">SYSTEMS THAT REASSEMBLE</text>
+</svg>

@@ -36,6 +36,7 @@ rm /tmp/ai-os-mic-test.raw
 
 ```bash
 mkdir -p ~/.config/systemd/user
+mkdir -p ~/.config/gtk-3.0 ~/.config/hypr
 cp ~/src/ai-os/systemd/ai-os-settings.service ~/.config/systemd/user/
 cp ~/src/ai-os/systemd/ai-os-avatar.service ~/.config/systemd/user/
 systemctl --user daemon-reload
@@ -44,13 +45,16 @@ systemctl --user enable --now ai-os-settings.service
 
 Open `http://127.0.0.1:8765` locally. The panel configures model connection, online-provider opt-in, voice, listener, companion appearance, themes, branding paths, Hyprland IPC, and sandbox confirmation.
 
-After setting your companion preferences, start it from a graphical session:
+Appearance changes write only to your user GTK and Hyprland config directories. Review existing files first because the panel manages `gtk-3.0/settings.ini`, `hyprpaper.conf`, and `hyprlock.conf`; theme changes may require restarting GTK apps or reloading Hyprland.
+
+Import the active desktop environment into the user service manager, then start the companion:
 
 ```bash
+systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE
 systemctl --user enable --now ai-os-avatar.service
 ```
 
-Click the companion to open the panel. It is a lightweight temporary visual; replace it with your selected mascot artwork in the next branding stage.
+Click the companion to open the panel. Pixel particles morph between a core form and simple topic silhouettes (music, heart, code, idea, cloud) with spring motion. Extend the mapping in `ai_os/ai_os_core.py` as more topic shapes are added; this first mascot maps known topics rather than generating arbitrary pictures.
 
 ## 3. Enable Voice Deliberately
 
