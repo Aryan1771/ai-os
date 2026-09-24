@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from ai_os.config import load_config
 from ai_os.tools.system_tools import run_command
 
 
@@ -18,8 +19,10 @@ def ui_status() -> dict[str, Any]:
 
 
 def require_hyprland() -> tuple[bool, str]:
+    if not load_config().hyprland_enabled:
+        return False, "Hyprland automation is disabled in ~/.ai_os/config.json."
     if not os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
-        return False, "Hyprland IPC is disabled for Phase 1. Boot a Hyprland session in Phase 5."
+        return False, "Hyprland was not detected. Start a Hyprland session before using UI tools."
     return True, "Hyprland detected."
 
 
@@ -28,7 +31,14 @@ def list_windows() -> dict[str, Any]:
     if not ok:
         return {"ok": False, "error": reason}
     result = run_command(["hyprctl", "clients", "-j"])
-    return {"ok": result.ok, "stdout": result.stdout, "stderr": result.stderr}
+    if not result.ok:
+        return {"ok": False, "error": result.stderr}
+    try:
+        import json
+
+        return {"ok": True, "windows": json.loads(result.stdout)}
+    except json.JSONDecodeError:
+        return {"ok": False, "error": "hyprctl returned invalid JSON."}
 
 
 def type_text(text: str, *, approve: bool = False) -> dict[str, Any]:
@@ -39,4 +49,3 @@ def type_text(text: str, *, approve: bool = False) -> dict[str, Any]:
         return {"ok": False, "error": "Typing into the active UI requires explicit approval."}
     result = run_command(["ydotool", "type", "--", text], approve=True)
     return {"ok": result.ok, "stderr": result.stderr}
-

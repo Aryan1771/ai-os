@@ -22,6 +22,10 @@ class AiOsConfig:
     allow_external_apis: bool
     allowed_api_hosts: tuple[str, ...]
     hyprland_enabled: bool
+    wake_word_enabled: bool
+    whisper_cli: str
+    whisper_model: Path
+    piper_model: Path
 
 
 DEFAULT_CONFIG = {
@@ -34,6 +38,10 @@ DEFAULT_CONFIG = {
         "generativelanguage.googleapis.com",
     ],
     "hyprland_enabled": False,
+    "wake_word_enabled": False,
+    "whisper_cli": "whisper-cli",
+    "whisper_model": "models/ggml-base.en.bin",
+    "piper_model": "models/en_US-lessac-medium.onnx",
 }
 
 
@@ -80,5 +88,8 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         allow_external_apis=bool(raw["allow_external_apis"]),
         allowed_api_hosts=tuple(str(host) for host in raw["allowed_api_hosts"]),
         hyprland_enabled=bool(raw["hyprland_enabled"]),
+        wake_word_enabled=bool(raw["wake_word_enabled"]),
+        whisper_cli=str(raw["whisper_cli"]),
+        whisper_model=home / str(raw["whisper_model"]),
+        piper_model=home / str(raw["piper_model"]),
     )
-

@@ -16,36 +16,25 @@
 
 ## Phase 2: Voice and Memory
 
-- Add Whisper.cpp command integration.
-- Add Piper speech output.
-- Add openWakeWord.
-- Add JSON habits, slang vocabulary, and ChromaDB memory.
+- Source: Whisper.cpp adapter, Piper PipeWire playback path, lazy openWakeWord adapter, and optional ChromaDB helpers are present.
+- Arch validation: install local models, verify microphone capture, confirm Piper audio, then explicitly enable wake word.
 
 ## Phase 3: Security Sandbox
 
-- Enable UFW baseline.
-- Add AppArmor profile.
-- Add ClamAV scanning.
-- Add noexec temp/cache mounts only after confirming package workflows.
+- Source: UFW/AppArmor baseline, ClamAV adapter, and HTTPS allowlisted external API broker are present.
+- Arch validation: apply the baseline only from a local console, load the profile, and verify recovery access.
 
 ## Phase 4: Hardware Awareness and Async Jobs
 
-- Add udev hardware monitor.
-- Add GPU/RAM/display snapshot diffs.
-- Add background job registry.
-- Add sentence-aware speech queue event injection.
+- Source: polling and optional udev monitor, cooperative job registry, and sentence-aware speech queue are present.
+- Arch validation: monitor real attach/remove events and ensure long-running workers observe cancellation and pause events.
 
 ## Phase 5: Hyprland/Wayland UI
 
-- Install Hyprland after the daemon is stable.
-- Enable `hyprctl` IPC bridge.
-- Enable `ydotool`/`wdotool` with explicit user consent.
-- Build HUD, lock screen branding, wallpaper, and desktop shell polish.
+- Source: phase-gated `hyprctl` window listing, consent-gated typing, Hyprpaper/Hyprlock templates, and branding paths are present.
+- Arch validation: install and test Hyprland separately, then explicitly set `hyprland_enabled` to `true`.
 
 ## Phase 6: Packaging
 
-- Move installation into scripts.
-- Create Archiso profile.
-- Add branding assets.
-- Build and test ISO on multiple machines.
-
+- Source: staged installer, branding asset boundary, Archiso package additions, and build guide are present.
+- Arch validation: copy Archiso's `releng` profile, build an ISO, test it in a VM, then test it on spare removable media.

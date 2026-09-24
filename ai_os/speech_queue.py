@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import queue
 import re
+import shutil
 import subprocess
 import threading
 from dataclasses import dataclass
@@ -39,15 +40,32 @@ class SpeechQueue:
 
     def speak_text(self, text: str) -> None:
         if self.piper_model and self.piper_model.exists():
-            subprocess.run(
-                ["piper", "--model", str(self.piper_model), "--output-raw"],
-                input=text,
-                text=True,
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return
+            player = shutil.which("pw-play")
+            if player and shutil.which("piper"):
+                try:
+                    piper = subprocess.Popen(
+                        ["piper", "--model", str(self.piper_model), "--output-raw"],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    player_process = subprocess.Popen(
+                        [player, "--raw", "--rate", "22050", "--channels", "1", "--format", "s16", "-"],
+                        stdin=piper.stdout,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    if piper.stdin:
+                        piper.stdin.write(text.encode("utf-8"))
+                        piper.stdin.close()
+                    piper.wait(timeout=30)
+                    player_process.wait(timeout=30)
+                    return
+                except (OSError, subprocess.TimeoutExpired):
+                    if "piper" in locals():
+                        piper.kill()
+                    if "player_process" in locals():
+                        player_process.kill()
         print(f"[speech] {text}", flush=True)
 
     def run_forever(self) -> None:
@@ -61,4 +79,3 @@ class SpeechQueue:
                     break
                 self.speak_text(sentence)
             self._queue.task_done()
-

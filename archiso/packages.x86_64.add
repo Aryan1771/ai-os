@@ -1,0 +1,21 @@
+# Append these to a copied Archiso releng packages.x86_64 after reviewing versions.
+git
+python
+python-pip
+python-virtualenv
+ollama
+pipewire
+pipewire-pulse
+wireplumber
+nvidia-utils
+brightnessctl
+ufw
+clamav
+apparmor
+hyprland
+hyprlock
+hyprpaper
+hypridle
+waybar
+xdg-desktop-portal-hyprland
+ydotool

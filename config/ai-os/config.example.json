@@ -1,0 +1,15 @@
+{
+  "ollama_url": "http://127.0.0.1:11434/api/chat",
+  "ollama_model": "qwen2.5:7b-instruct-q4_K_M",
+  "allow_external_apis": false,
+  "allowed_api_hosts": [
+    "api.x.ai",
+    "api.openai.com",
+    "generativelanguage.googleapis.com"
+  ],
+  "hyprland_enabled": false,
+  "wake_word_enabled": false,
+  "whisper_cli": "whisper-cli",
+  "whisper_model": "models/ggml-base.en.bin",
+  "piper_model": "models/en_US-lessac-medium.onnx"
+}

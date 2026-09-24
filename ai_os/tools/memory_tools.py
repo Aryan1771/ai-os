@@ -103,3 +103,40 @@ def search_recent_events(query: str, limit: int = 20, paths: MemoryPaths = Memor
             break
     return rows
 
+
+def store_semantic_memory(
+    memory_id: str,
+    text: str,
+    metadata: dict[str, Any] | None = None,
+    *,
+    collection_name: str = "ai_os_memories",
+) -> dict[str, Any]:
+    """Store a local Chroma document when the optional memory dependency is installed."""
+    try:
+        import chromadb
+    except ImportError:
+        return {"ok": False, "error": "chromadb is not installed in the AI-OS virtual environment."}
+
+    chroma_dir = Path("~/.local/share/ai_os/chroma").expanduser()
+    client = chromadb.PersistentClient(path=str(chroma_dir))
+    collection = client.get_or_create_collection(collection_name)
+    collection.upsert(ids=[memory_id], documents=[text], metadatas=[metadata or {}])
+    return {"ok": True, "id": memory_id, "collection": collection_name}
+
+
+def search_semantic_memory(
+    query: str,
+    limit: int = 5,
+    *,
+    collection_name: str = "ai_os_memories",
+) -> dict[str, Any]:
+    try:
+        import chromadb
+    except ImportError:
+        return {"ok": False, "error": "chromadb is not installed in the AI-OS virtual environment."}
+
+    chroma_dir = Path("~/.local/share/ai_os/chroma").expanduser()
+    client = chromadb.PersistentClient(path=str(chroma_dir))
+    collection = client.get_or_create_collection(collection_name)
+    result = collection.query(query_texts=[query], n_results=max(1, min(20, int(limit))))
+    return {"ok": True, "result": result}

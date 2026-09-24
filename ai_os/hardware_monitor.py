@@ -56,6 +56,30 @@ def monitor_polling(interval_sec: int = 5) -> Iterator[HardwareEvent]:
         time.sleep(max(1, int(interval_sec)))
 
 
+def monitor_udev() -> Iterator[HardwareEvent]:
+    """Yield device add/remove/change events when optional pyudev is installed."""
+    try:
+        import pyudev
+    except ImportError as exc:
+        raise RuntimeError("pyudev is not installed in the AI-OS virtual environment.") from exc
+
+    context = pyudev.Context()
+    monitor = pyudev.Monitor.from_netlink(context)
+    monitor.filter_by(subsystem="block")
+    for device in iter(monitor.poll, None):
+        yield HardwareEvent(
+            kind="udev_device_change",
+            summary=f"{device.action}: {device.device_node or device.sys_name}",
+            before=None,
+            after={
+                "action": device.action,
+                "device_node": device.device_node,
+                "subsystem": device.subsystem,
+                "sys_name": device.sys_name,
+            },
+        )
+
+
 if __name__ == "__main__":
     for item in monitor_polling():
         print(json.dumps(item.__dict__, indent=2))

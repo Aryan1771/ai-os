@@ -34,6 +34,8 @@ def build_tool_registry() -> dict[str, ToolFn]:
         "apply_slang_replacements": memory_tools.apply_slang_replacements,
         "remember_event": memory_tools.remember_event,
         "search_recent_events": memory_tools.search_recent_events,
+        "store_semantic_memory": memory_tools.store_semantic_memory,
+        "search_semantic_memory": memory_tools.search_semantic_memory,
         "ui_status": ui_tools.ui_status,
         "list_windows": ui_tools.list_windows,
     }

@@ -10,14 +10,28 @@ ai-os-interface-layer/
 │   ├── speech_queue.py
 │   ├── security/
 │   │   └── consent_broker.py
+│   └── services/
+│       ├── external_api.py
+│       ├── jobs.py
+│       ├── scanner.py
+│       ├── stt.py
+│       └── wakeword.py
+├── archiso/
+├── branding/
+├── config/
 │   └── tools/
 │       ├── memory_tools.py
 │       ├── system_tools.py
 │       └── ui_tools.py
 ├── docs/
 │   ├── ARCH_RUNBOOK.md
+│   ├── BRANDING_AND_ARCHISO.md
+│   ├── INSTALL_ON_ARCH.md
+│   ├── PHASE_5_DESKTOP.md
 │   ├── PROJECT_STRUCTURE.md
 │   └── ROADMAP.md
+├── install/
+│   └── ai-os-install.sh
 ├── scripts/
 │   ├── install_arch_packages.sh
 │   ├── install_runtime.sh
@@ -46,4 +60,3 @@ Runtime files are created under `~/.ai_os/` on the Arch system:
 ├── run/
 └── models/
 ```
-

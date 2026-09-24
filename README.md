@@ -11,7 +11,7 @@ This repository stores the source code, systemd templates, security templates, a
 - Local LLM: Ollama with `qwen2.5:7b-instruct-q4_K_M`
 - Python: 3.12+ in `~/.ai_os/venv`
 - Runtime directory: `~/.ai_os`
-- Source checkout: any folder, commonly `~/src/ai-os-interface-layer`
+- Source checkout: any folder, commonly `~/src/ai-os`
 
 ## Architecture
 
@@ -36,15 +36,20 @@ ai_os/speech_queue.py
 
 ai_os/security/consent_broker.py
   human approval flow for risky commands
+
+ai_os/services/
+  local Whisper.cpp adapter, optional wake-word adapter, allowlisted external API broker,
+  ClamAV scanner, and cooperative background job registry
 ```
 
 ## Start Here
 
-Read and execute:
+Read and execute in this order:
 
 ```bash
-docs/ARCH_RUNBOOK.md
+docs/INSTALL_ON_ARCH.md
+docs/PHASE_5_DESKTOP.md
+docs/BRANDING_AND_ARCHISO.md
 ```
 
-The repo is intentionally usable before Hyprland. Phase 1 runs in TTY or minimal X11 and focuses on the daemon, tool safety, Ollama, memory, and voice pipeline.
-
+`docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. The repository follows an installer/config/branding/docs layout inspired by distribution projects while keeping AI-OS original and Arch-based.
