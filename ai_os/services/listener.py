@@ -27,6 +27,8 @@ class AlwaysListeningService:
         wake_word_threshold: float = 0.5,
         command_seconds: int = 8,
         sample_rate: int = 16_000,
+        on_activity: Callable[[str], None] | None = None,
+        playback_active: Callable[[], bool] | None = None,
     ) -> None:
         self.run_dir = run_dir
         self.transcriber = transcriber
@@ -34,6 +36,8 @@ class AlwaysListeningService:
         self.wake_word = WakeWordService(wake_word_threshold)
         self.command_seconds = max(2, min(30, int(command_seconds)))
         self.sample_rate = sample_rate
+        self.on_activity = on_activity or (lambda _phase: None)
+        self.playback_active = playback_active or (lambda: False)
         self._stop = threading.Event()
         self._process: subprocess.Popen[bytes] | None = None
 
@@ -83,10 +87,15 @@ class AlwaysListeningService:
                         raise RuntimeError("PipeWire recorder exited unexpectedly.")
                     continue
                 frame = np.frombuffer(audio, dtype=np.int16)
+                if self.playback_active():
+                    continue
                 if self.wake_word.detect_frame(frame):
+                    self.on_activity("listening")
                     transcript = self._capture_and_transcribe(audio, chunk_bytes)
                     if transcript:
                         self.on_transcript(transcript)
+                    else:
+                        self.on_activity("idle")
         finally:
             self.stop()
 
@@ -109,6 +118,7 @@ class AlwaysListeningService:
                 wav_file.setsampwidth(2)
                 wav_file.setframerate(self.sample_rate)
                 wav_file.writeframes(b"".join(chunks))
+            self.on_activity("transcribing")
             result = self.transcriber.transcribe_file(audio_path)
             return result.text if result.ok else ""
         finally:

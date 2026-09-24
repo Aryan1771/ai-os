@@ -5,7 +5,7 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
   cat <<'EOF'
-Usage: bash install/ai-os-install.sh <base|runtime|voice|security|desktop|all>
+Usage: bash install/ai-os-install.sh <base|runtime|voice|security|native|desktop|all>
 
 Run one stage at a time on Arch. "all" runs the stages in order and asks before
 security and desktop changes. It never enables Hyprland automation by itself.
@@ -38,13 +38,15 @@ install_security() {
 }
 
 install_desktop() {
-  sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar tk wofi kitty thunar \
+  bash "${REPO_ROOT}/scripts/install_native_desktop.sh"
+  sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar xorg-xwayland wofi kitty thunar \
     papirus-icon-theme bibata-cursor-theme noto-fonts noto-fonts-emoji ttf-jetbrains-mono \
     xdg-desktop-portal-hyprland ydotool plymouth imagemagick
   mkdir -p "${HOME}/.config/hypr"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprlock.conf" "${HOME}/.config/hypr/hyprlock.conf"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprpaper.conf" "${HOME}/.config/hypr/hyprpaper.conf"
   install -m 0644 "${REPO_ROOT}/config/hypr/regenos-bindings.conf" "${HOME}/.config/hypr/regenos-bindings.conf"
+  install -m 0644 "${REPO_ROOT}/config/hypr/regenos-companion.conf" "${HOME}/.config/hypr/regenos-companion.conf"
   echo "Desktop templates installed. Follow docs/PHASE_5_DESKTOP.md and docs/VOICE_AND_COMPANION.md before enabling services."
   echo "Add 'source = ~/.config/hypr/regenos-bindings.conf' to your Hyprland config after checking key conflicts."
 }
@@ -53,6 +55,7 @@ case "${1:-}" in
   base) install_base ;;
   runtime) install_runtime ;;
   voice) install_voice ;;
+  native) bash "${REPO_ROOT}/scripts/install_native_desktop.sh" ;;
   security) confirm "Apply the firewall and AppArmor baseline?" && install_security ;;
   desktop) confirm "Install the Hyprland desktop packages?" && install_desktop ;;
   all)

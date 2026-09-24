@@ -7,25 +7,31 @@ import subprocess
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 
 @dataclass(frozen=True)
 class SpeechItem:
     text: str
     priority: int = 10
+    avatar: dict | None = None
 
 
 class SpeechQueue:
-    def __init__(self, piper_model: Path | None = None) -> None:
+    def __init__(self, piper_model: Path | None = None, *, on_activity: Callable[[str, str, dict | None], None] | None = None) -> None:
         self.piper_model = piper_model
         self._queue: queue.PriorityQueue[tuple[int, int, SpeechItem]] = queue.PriorityQueue()
         self._counter = 0
         self._stop = threading.Event()
+        self._speaking = threading.Event()
+        self.on_activity = on_activity or (lambda _phase, _text, _avatar: None)
 
-    def enqueue(self, text: str, priority: int = 10) -> None:
+    def is_speaking(self) -> bool:
+        return self._speaking.is_set()
+
+    def enqueue(self, text: str, priority: int = 10, *, avatar: dict | None = None) -> None:
         self._counter += 1
-        self._queue.put((priority, self._counter, SpeechItem(text=text, priority=priority)))
+        self._queue.put((priority, self._counter, SpeechItem(text=text, priority=priority, avatar=avatar)))
 
     def enqueue_bridge(self, text: str) -> None:
         self.enqueue(f"Oh, by the way. {text}", priority=5)
@@ -74,8 +80,14 @@ class SpeechQueue:
                 _, _, item = self._queue.get(timeout=0.25)
             except queue.Empty:
                 continue
-            for sentence in self.sentence_chunks(item.text):
-                if self._stop.is_set():
-                    break
-                self.speak_text(sentence)
-            self._queue.task_done()
+            self._speaking.set()
+            try:
+                for sentence in self.sentence_chunks(item.text):
+                    if self._stop.is_set():
+                        break
+                    self.on_activity("speaking", sentence, item.avatar)
+                    self.speak_text(sentence)
+            finally:
+                self._speaking.clear()
+                self.on_activity("idle", "", None)
+                self._queue.task_done()

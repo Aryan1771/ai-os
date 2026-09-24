@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=REGENOS Companion
+Comment=Pixel companion
+Exec=regenos-companion
+Icon=regenos
+Terminal=false
+Categories=Utility;
+StartupWMClass=regenos-companion
+X-GNOME-Autostart-enabled=true

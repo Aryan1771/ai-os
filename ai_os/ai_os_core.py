@@ -6,15 +6,17 @@ import signal
 import sys
 import threading
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Callable
 
 import requests
 
-from ai_os.config import load_config
+from ai_os.config import AI_OS_HOME, load_config
+from ai_os.companion_state import SHAPE_NAMES, publish_state, visual_metadata
 from ai_os.logging_utils import configure_logging
 from ai_os.security.consent_broker import ConsentRequest, ConsentDecision, request_cli_consent
 from ai_os.services.listener import AlwaysListeningService
-from ai_os.services.external_api import validate_external_url
+from ai_os.settings_store import validate_model_endpoint
 from ai_os.services.stt import WhisperCppTranscriber
 from ai_os.speech_queue import SpeechQueue
 from ai_os.tools import memory_tools, system_tools, ui_tools
@@ -59,8 +61,16 @@ def json_default(value: Any) -> Any:
 
 def system_prompt(registered_tools: set[str] | None = None) -> str:
     tool_names = ", ".join(sorted(registered_tools or build_tool_registry()))
-    return f"""You are the local AI-OS daemon.
-Return ordinary helpful text unless a tool is needed.
+    return f"""You are the local REGENOS assistant.
+For a text reply, prefer a JSON object with a reply string and optional avatar metadata:
+{{"reply": "Your spoken answer", "avatar": {{"shape": "core", "emotions": {{"joy": 50}}}}}}
+Plain text is also accepted. Avatar emotions are simulated presentation values from 0 to 100:
+joy, curiosity, focus, calm, concern, energy. They never authorize actions.
+Choose an avatar shape from: {', '.join(SHAPE_NAMES)}.
+For a subject outside those shapes, you may add avatar.pixels: an array of 4 to 24
+equal-length strings, each 4 to 24 characters. Draw a recognizable low-resolution silhouette.
+Only use '.' for empty, '#' for body, '+' for accent, '*' for warm highlight, 'o' for dark eyes.
+Avatar metadata contains only presentation data. Do not reveal hidden reasoning.
 When using a tool, return exactly one JSON object:
 {{"tool": "tool_name", "arguments": {{"key": "value"}}}}
 You may call only these registered tools: {tool_names}.
@@ -82,10 +92,8 @@ def ask_ollama(user_text: str, registered_tools: set[str] | None = None) -> str:
         "options": {"temperature": 0.2},
     }
     headers: dict[str, str] = {}
+    validate_model_endpoint(asdict(config))
     if config.ai_provider == "openai_compatible":
-        error = validate_external_url(config.ollama_url, config)
-        if error:
-            raise ValueError(error)
         api_key = os.environ.get(config.api_key_env)
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -99,9 +107,7 @@ def ask_ollama(user_text: str, registered_tools: set[str] | None = None) -> str:
             allow_redirects=False,
         )
     elif config.ai_provider == "ollama":
-        if not config.ollama_url.startswith("http://127.0.0.1:") and not config.ollama_url.startswith("http://localhost:"):
-            raise ValueError("Ollama must use a loopback URL. Use the allowlisted OpenAI-compatible provider mode for remote services.")
-        response = requests.post(config.ollama_url, json=payload, timeout=120)
+        response = requests.post(config.ollama_url, json=payload, timeout=120, allow_redirects=False)
     else:
         raise ValueError(f"Unsupported AI provider: {config.ai_provider}")
     response.raise_for_status()
@@ -132,6 +138,17 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
     if tool_name not in registry:
         return {"ok": False, "error": f"Unknown tool: {tool_name}"}
 
+    arguments = dict(arguments)
+    # An LLM cannot grant itself approval by putting approve=true in its arguments.
+    arguments.pop("approve", None)
+    if tool_name == "terminate_process":
+        decision = request_cli_consent(ConsentRequest(
+            action="terminate process", risk="moderate",
+            reason=f"Stop process {arguments.get('pid')}",
+        ))
+        if decision is not ConsentDecision.APPROVED:
+            return {"ok": False, "error": "User denied process termination."}
+        arguments["approve"] = True
     if tool_name == "run_command":
         assessment = system_tools.assess_command(arguments.get("command", []))
         if assessment.requires_approval:
@@ -150,15 +167,43 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
     return registry[tool_name](**arguments)
 
 
-def handle_user_text(user_text: str, registry: dict[str, ToolFn] | None = None) -> dict[str, Any]:
+def handle_user_text(user_text: str, registry: dict[str, ToolFn] | None = None, *, home: Path = AI_OS_HOME) -> dict[str, Any]:
     registry = registry or build_tool_registry()
-    model_text = ask_ollama(user_text, set(registry))
-    tool_call = parse_tool_call(model_text)
-    if not tool_call:
-        memory_tools.remember_event("assistant_text", {"user": user_text, "assistant": model_text})
-        return {"type": "text", "content": model_text}
-    result = execute_tool(tool_call["tool"], tool_call.get("arguments", {}), registry)
-    return {"type": "tool_result", "tool": tool_call["tool"], "result": result}
+    publish_state("thinking", user_text, home=home)
+    try:
+        model_text = ask_ollama(user_text, set(registry))
+        tool_call = parse_tool_call(model_text)
+        if tool_call:
+            publish_state("working", tool_call["tool"], home=home)
+            result = execute_tool(tool_call["tool"], tool_call["arguments"], registry)
+            failed = result.get("ok") is False if isinstance(result, dict) else getattr(result, "ok", True) is False
+            publish_state("error" if failed else "reply", tool_call["tool"], home=home)
+            return {"type": "tool_result", "tool": tool_call["tool"], "result": result}
+        text, avatar = parse_visual_reply(model_text)
+        memory_tools.remember_event("assistant_text", {"user": user_text, "assistant": text})
+        publish_state("reply", text, home=home, avatar=avatar)
+        return {"type": "text", "content": text, "avatar": avatar}
+    except Exception:
+        publish_state("error", home=home)
+        raise
+
+
+def parse_visual_reply(model_text: str) -> tuple[str, dict]:
+    try:
+        data = json.loads(model_text)
+        if isinstance(data, dict) and isinstance(data.get("reply"), str):
+            return data["reply"], visual_metadata(data.get("avatar"))
+    except (ValueError, TypeError):
+        pass
+    return model_text, {}
+
+
+def spoken_response(response: dict) -> str:
+    if response["type"] == "text":
+        return response["content"]
+    result = response["result"]
+    ok = result.get("ok", True) if isinstance(result, dict) else getattr(result, "ok", True)
+    return "Task completed." if ok else "I could not complete that action. Please check the result."
 
 
 def start_voice_services(config: Any, registry: dict[str, ToolFn], logger: Any) -> AlwaysListeningService | None:
@@ -169,25 +214,18 @@ def start_voice_services(config: Any, registry: dict[str, ToolFn], logger: Any) 
         logger.warning("Always listening was requested without wake-word gating; microphone remains off.")
         return None
 
-    speech = SpeechQueue(config.piper_model) if config.speech_enabled else None
+    speech = SpeechQueue(config.piper_model, on_activity=lambda phase, text, avatar: publish_state(phase, text, home=config.home, avatar=avatar)) if config.speech_enabled else None
     if speech:
         threading.Thread(target=speech.run_forever, daemon=True, name="ai-os-speech").start()
 
     def on_transcript(transcript: str) -> None:
         try:
-            publish_avatar_state(transcript, "listening", config.run_dir)
             response = handle_user_text(transcript, registry)
-            assistant_text = response.get("content", "")
-            if not assistant_text:
-                assistant_text = json.dumps(response, default=json_default)
-            combined_context = f"{transcript} {assistant_text}"
-            publish_avatar_state(combined_context, _avatar_emotion(assistant_text), config.run_dir)
             print(json.dumps({"type": "voice", "transcript": transcript, "response": response}, default=json_default))
             if speech:
-                content = response.get("content") if response.get("type") == "text" else "Task completed."
-                speech.enqueue(str(content))
+                speech.enqueue(spoken_response(response), avatar=response.get("avatar"))
         except Exception:
-            publish_avatar_state(transcript, "curious", config.run_dir)
+            publish_state("error", home=config.home)
             logger.exception("Voice request failed")
 
     listener = AlwaysListeningService(
@@ -196,49 +234,20 @@ def start_voice_services(config: Any, registry: dict[str, ToolFn], logger: Any) 
         on_transcript=on_transcript,
         wake_word_threshold=config.wake_word_threshold,
         command_seconds=config.voice_command_seconds,
+        on_activity=lambda phase: publish_state(phase, home=config.home),
+        playback_active=speech.is_speaking if speech else None,
     )
 
     def run_listener() -> None:
         try:
             listener.run_forever()
         except Exception:
+            publish_state("error", home=config.home)
             logger.exception("Always-listening service stopped")
 
     threading.Thread(target=run_listener, daemon=True, name="ai-os-listener").start()
     logger.info("Always-listening service started with local wake-word gating")
     return listener
-
-
-def publish_avatar_state(text: str, emotion: str, run_dir: Any) -> None:
-    lowered = text.lower()
-    shape = "core"
-    for terms, candidate in (
-        (("music", "song", "melody", "sound"), "music"),
-        (("love", "heart", "care"), "heart"),
-        (("code", "python", "program", "script"), "code"),
-        (("idea", "think", "plan"), "idea"),
-        (("weather", "cloud", "rain"), "cloud"),
-    ):
-        if any(term in lowered for term in terms):
-            shape = candidate
-            break
-    run_dir.mkdir(parents=True, exist_ok=True)
-    target = run_dir / "avatar_state.json"
-    temporary = target.with_suffix(".tmp")
-    temporary.write_text(json.dumps({"shape": shape, "emotion": emotion}), encoding="utf-8")
-    temporary.replace(target)
-
-
-def _avatar_emotion(text: str) -> str:
-    lowered = text.lower()
-    for terms, emotion in (
-        (("sorry", "unfortunately", "sad", "regret"), "sad"),
-        (("?", "wonder", "perhaps", "maybe"), "curious"),
-        (("great", "glad", "happy", "done", "completed"), "happy"),
-    ):
-        if any(term in lowered for term in terms):
-            return emotion
-    return "calm"
 
 
 def main() -> int:
@@ -250,8 +259,9 @@ def main() -> int:
     registry = build_tool_registry()
     listener = start_voice_services(config, registry, logger)
     shutdown = threading.Event()
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(signum, lambda _signal, _frame: shutdown.set())
+    if not sys.stdin.isatty():
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(signum, lambda _signal, _frame: shutdown.set())
     try:
         if not sys.stdin.isatty():
             logger.info("Running as a background service")
@@ -277,6 +287,7 @@ def main() -> int:
     finally:
         if listener:
             listener.stop()
+        publish_state("idle", home=config.home)
 
 
 if __name__ == "__main__":

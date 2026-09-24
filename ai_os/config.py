@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -66,6 +68,15 @@ DEFAULT_CONFIG = {
     "avatar_scale": 100,
     "avatar_animation_enabled": True,
     "avatar_accent": "#4de3a7",
+    "avatar_motion": 65,
+    "avatar_reactivity": 75,
+    "avatar_show_emotion_bars": True,
+    "avatar_topic_morphing": True,
+    "avatar_idle_shape": "core",
+    "avatar_emotions": {
+        "joy": 35, "curiosity": 50, "focus": 40,
+        "calm": 75, "concern": 10, "energy": 45,
+    },
     "theme": "forest",
     "branding": {
         "brand_name": "REGENOS",
@@ -106,8 +117,26 @@ def load_raw_config(home: Path = AI_OS_HOME) -> dict[str, Any]:
     ensure_runtime_tree(home)
     config_path = home / "config.json"
     data = json.loads(config_path.read_text(encoding="utf-8"))
-    merged = DEFAULT_CONFIG | data
+    if not isinstance(data, dict):
+        raise ValueError("Configuration must be a JSON object.")
+    merged = deepcopy(DEFAULT_CONFIG) | data
+    for key in ("branding", "avatar_emotions"):
+        merged[key] = deepcopy(DEFAULT_CONFIG[key]) | data.get(key, {})
     return merged
+
+
+def atomic_json(path: Path, value: dict[str, Any]) -> None:
+    """Publish a complete snapshot, including when speech and the daemon write together."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, filename = tempfile.mkstemp(prefix=path.stem + "-", suffix=".tmp", dir=path.parent)
+    temporary = Path(filename)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(value, handle, indent=2, allow_nan=False)
+            handle.write("\n")
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:

@@ -1,145 +1,103 @@
 from __future__ import annotations
 
-import json
-import math
-import tkinter as tk
+import os
+import sys
+from pathlib import Path
 
-from ai_os.config import load_config
+from PySide6.QtCore import QProcess, Qt, QTimer
+from PySide6.QtWidgets import QApplication, QLabel, QMenu, QVBoxLayout, QWidget
 
-
-SHAPES = {
-    "core": ["....###....", "..#######..", ".#########.", "###########", "###########", "###########", ".#########.", "..#######..", "....###...."],
-    "heart": ["..##...##..", ".####.####.", "###########", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#....."],
-    "music": [".......##..", ".......##..", ".......##..", "..#######..", "..##....##..", "..##....##..", "..##........", "..##........", ".###........"],
-    "code": ["...........", "...##...##..", "..##.....##..", ".##.......##.", "##.........##", "##.........##", ".##.......##.", "..##.....##..", "...##...##.."],
-    "idea": ["....###....", "..#######..", ".##.....##.", "##.......##", "##.......##", ".##.....##.", "..#######..", "....###....", "....###...."],
-    "cloud": ["...........", "....###....", "..#######..", ".#########.", "###########", "###########", ".#########.", "...........", "..........."],
-}
-
-EMOTIONS = {
-    "happy": "..##.....##..\n..##.....##..\n.............\n...#######...",
-    "sad": "..##.....##..\n..##.....##..\n.............\n.....###.....",
-    "curious": "..##.....##..\n..##.....##..\n.....#.......\n....#####....",
-    "listening": "..##.....##..\n..##.....##..\n.............\n....#####....",
-    "calm": "..##.....##..\n..##.....##..\n.............\n.....###.....",
-}
+from ai_os.companion_state import read_state
+from ai_os.config import AI_OS_HOME, load_raw_config
+from ai_os.native_widgets import CompanionCanvas, EmotionBars, LocalInstance, theme_stylesheet
+from ai_os.settings_store import save_settings
 
 
-def _target_points(shape: str, emotion: str, columns: int = 15, rows: int = 15) -> list[tuple[float, float]]:
-    pattern = SHAPES.get(shape, SHAPES["core"])
-    mask = [[char == "#" for char in line] for line in pattern]
-    height, width = len(mask), max(len(line) for line in mask)
-    points = [
-        (x - (width - 1) / 2, y - (height - 1) / 2)
-        for y, line in enumerate(mask)
-        for x, filled in enumerate(line)
-        if filled
-    ]
+class AvatarOverlay(QWidget):
+    def __init__(self, home: Path = AI_OS_HOME) -> None:
+        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
+                         Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.home = home
+        self.setWindowTitle("REGENOS Companion")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.canvas = CompanionCanvas()
+        self.status = QLabel("Idle")
+        self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bars = EmotionBars(compact=True)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 0, 8, 8)
+        layout.setSpacing(3)
+        layout.addWidget(self.canvas, 1)
+        layout.addWidget(self.status)
+        layout.addWidget(self.bars)
+        self.canvas.levels_changed.connect(self.bars.set_levels)
+        self.canvas.clicked.connect(self.open_settings)
+        self.last_config = None
+        self.timer = QTimer(self)
+        self.timer.setInterval(350)
+        self.timer.timeout.connect(self.refresh)
+        self.timer.start()
+        self.refresh()
+        app = QApplication.instance()
+        app.screenAdded.connect(lambda _screen: self.place())
+        app.screenRemoved.connect(lambda _screen: self.place())
+        for screen in app.screens():
+            screen.availableGeometryChanged.connect(lambda _rect: self.place())
 
-    if shape in {"core", "idea"}:
-        face = EMOTIONS.get(emotion, EMOTIONS["calm"]).splitlines()
-        for y, line in enumerate(face):
-            for x, filled in enumerate(line):
-                if filled:
-                    points.append((x - 6, y - 2))
-
-    if len(points) > columns * rows:
-        stride = len(points) / (columns * rows)
-        points = [points[int(i * stride)] for i in range(columns * rows)]
-    return points
-
-
-class AvatarOverlay:
-    """Pixel particle companion with spring-driven expression and subject morphs."""
-
-    def __init__(self) -> None:
-        self.config = load_config()
-        self.root = tk.Tk()
-        self.root.overrideredirect(True)
-        self.root.attributes("-topmost", True)
-        self.root.attributes("-alpha", 0.94)
-        self.root.configure(bg="#101513")
-        self.size = round(180 * self.config.avatar_scale / 100)
-        self.canvas = tk.Canvas(self.root, width=self.size, height=self.size, bg="#101513", highlightthickness=0)
-        self.canvas.pack()
-        self.state_path = self.config.run_dir / "avatar_state.json"
-        self.state = {"shape": "core", "emotion": "calm"}
-        self.tick = 0
-        self.points = _target_points("core", "calm")
-        self.position = [[float(x), float(y), 0.0, 0.0] for x, y in self.points]
-        self.items = [self.canvas.create_rectangle(0, 0, 0, 0, outline="", fill=self.config.avatar_accent) for _ in self.points]
-        self.canvas.bind("<Button-1>", lambda _event: self._open_settings())
-        self._place()
-        self._animate()
-
-    def _open_settings(self) -> None:
-        import webbrowser
-
-        webbrowser.open("http://127.0.0.1:8765")
-
-    def _place(self) -> None:
-        margin = 24
-        self.root.update_idletasks()
-        width, height = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        x = margin if "left" in self.config.avatar_corner else width - self.size - margin
-        y = margin if "top" in self.config.avatar_corner else height - self.size - margin
-        self.root.geometry(f"{self.size}x{self.size}+{x}+{y}")
-
-    def _read_state(self) -> None:
+    def refresh(self) -> None:
         try:
-            latest = json.loads(self.state_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            config = load_raw_config(self.home)
+        except (OSError, ValueError, TypeError):
             return
-        shape = latest.get("shape", "core")
-        emotion = latest.get("emotion", "calm")
-        if shape == self.state.get("shape") and emotion == self.state.get("emotion"):
+        if config != self.last_config:
+            self.last_config = config
+            scale = config["avatar_scale"] / 100
+            self.canvas.setFixedHeight(round(230 * scale))
+            self.setFixedSize(max(210, round(260 * scale)), round(230 * scale) + 30 + (138 if config["avatar_show_emotion_bars"] else 0))
+            self.setStyleSheet(theme_stylesheet(config["theme"]) + "AvatarOverlay {background: transparent;}")
+            self.bars.setVisible(config["avatar_show_emotion_bars"])
+            self.setVisible(config["avatar_enabled"])
+            self.place()
+        state = read_state(self.home)
+        self.canvas.set_state(state, config)
+        self.status.setText(state["phase"].capitalize())
+
+    def place(self) -> None:
+        screen = QApplication.primaryScreen()
+        if not screen or not self.last_config:
             return
-        self.state = {"shape": shape, "emotion": emotion}
-        points = _target_points(shape, emotion)
-        self.points = points
-        while len(self.position) < len(points):
-            self.position.append([0.0, 0.0, 0.0, 0.0])
-            self.items.append(self.canvas.create_rectangle(0, 0, 0, 0, outline="", fill=self.config.avatar_accent))
-        for index, item in enumerate(self.items):
-            self.canvas.itemconfigure(item, state="normal" if index < len(points) else "hidden")
+        rect = screen.availableGeometry()
+        corner = self.last_config["avatar_corner"]
+        x = rect.left() + 18 if "left" in corner else rect.right() - self.width() - 18
+        y = rect.top() + 18 if "top" in corner else rect.bottom() - self.height() - 18
+        self.move(x, y)
 
-    def _animate(self) -> None:
-        self._read_state()
-        unit = self.size / 20
-        center = self.size / 2
-        for index, item in enumerate(self.items):
-            if index >= len(self.points):
-                continue
-            px, py, vx, vy = self.position[index]
-            tx, ty = self.points[index]
-            if self.config.avatar_animation_enabled:
-                vx = (vx + (tx - px) * 0.16) * 0.78
-                vy = (vy + (ty - py) * 0.16) * 0.78
-                px += vx
-                py += vy
-            else:
-                px, py = tx, ty
-                vx = vy = 0
-            self.position[index] = [px, py, vx, vy]
-            pulse = 0.10 * math.sin(index * 0.9 + self.tick / 8)
-            radius = max(2.5, unit * (0.34 + pulse))
-            x = center + px * unit
-            y = center + py * unit
-            color = self.config.avatar_accent if index % 7 else "#f1bd73"
-            self.canvas.coords(item, x - radius, y - radius, x + radius, y + radius)
-            self.canvas.itemconfigure(item, fill=color)
-        self.tick += 1
-        self.root.after(30, self._animate)
+    def open_settings(self) -> None:
+        QProcess.startDetached(sys.executable, ["-m", "ai_os.native_settings"])
 
-    def run(self) -> None:
-        self.root.mainloop()
+    def contextMenuEvent(self, event) -> None:
+        menu = QMenu(self)
+        menu.addAction("Settings", self.open_settings)
+        menu.addAction("Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home))
+        menu.exec(event.globalPos())
 
 
 def main() -> int:
-    config = load_config()
-    if config.avatar_enabled:
-        AvatarOverlay().run()
-    return 0
+    # XWayland allows explicit corner positioning; Qt Wayland clients cannot place themselves.
+    if sys.platform == "linux" and os.environ.get("WAYLAND_DISPLAY") and os.environ.get("DISPLAY"):
+        os.environ["QT_QPA_PLATFORM"] = "xcb"
+    app = QApplication(["regenos-companion"])
+    app.setStyle("Fusion")
+    app.setApplicationName("regenos-companion")
+    app.setDesktopFileName("regenos-companion")
+    app.setQuitOnLastWindowClosed(False)
+    instance = LocalInstance(AI_OS_HOME, "regenos-companion")
+    if not instance.acquire(lambda: None):
+        return 0
+    overlay = AvatarOverlay()
+    app.aboutToQuit.connect(overlay.timer.stop)
+    return app.exec()
 
 
 if __name__ == "__main__":

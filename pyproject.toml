@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+desktop = ["PySide6-Essentials>=6.8,<7"]
 memory = ["chromadb>=0.5.0"]
 voice = ["openwakeword>=0.6.0", "piper-tts>=1.2.0"]
 vision = ["opencv-python>=4.9.0"]
@@ -23,8 +24,9 @@ dev = ["pytest>=8.0.0", "ruff>=0.5.0"]
 [tool.setuptools]
 packages = ["ai_os", "ai_os.tools", "ai_os.security", "ai_os.services"]
 
-[tool.setuptools.package-data]
-ai_os = ["web/*.css", "web/*.html", "web/*.js"]
+[project.gui-scripts]
+regenos-settings = "ai_os.native_settings:main"
+regenos-companion = "ai_os.avatar_overlay:main"
 
 [tool.ruff]
 line-length = 100

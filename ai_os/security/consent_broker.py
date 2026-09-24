@@ -19,6 +19,8 @@ class ConsentRequest:
 
 
 def request_cli_consent(request: ConsentRequest) -> ConsentDecision:
+    if not sys.stdin.isatty():
+        return ConsentDecision.DENIED
     print("\n[AI-OS CONSENT REQUIRED]", file=sys.stderr)
     print(f"Action: {request.action}", file=sys.stderr)
     print(f"Risk: {request.risk}", file=sys.stderr)
@@ -27,10 +29,12 @@ def request_cli_consent(request: ConsentRequest) -> ConsentDecision:
         print(f"Command: {' '.join(request.command)}", file=sys.stderr)
 
     while True:
-        answer = input("[Approve/Deny] ").strip().lower()
+        try:
+            answer = input("[Approve/Deny] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            return ConsentDecision.DENIED
         if answer in {"approve", "a", "yes", "y"}:
             return ConsentDecision.APPROVED
         if answer in {"deny", "d", "no", "n"}:
             return ConsentDecision.DENIED
         print("Please type Approve or Deny.", file=sys.stderr)
-

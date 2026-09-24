@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=REGENOS Settings
+Comment=AI, companion, voice and desktop settings
+Exec=regenos-settings
+Icon=regenos
+Terminal=false
+Categories=Settings;Utility;
+StartupWMClass=regenos-settings
