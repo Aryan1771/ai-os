@@ -11,5 +11,23 @@
   "wake_word_enabled": false,
   "whisper_cli": "whisper-cli",
   "whisper_model": "models/ggml-base.en.bin",
-  "piper_model": "models/en_US-lessac-medium.onnx"
+  "piper_model": "models/en_US-lessac-medium.onnx",
+  "speech_enabled": false,
+  "always_listening_enabled": false,
+  "wake_word_threshold": 0.5,
+  "voice_command_seconds": 8,
+  "sandbox_lock_settings": true,
+  "avatar_enabled": true,
+  "avatar_corner": "bottom-right",
+  "avatar_scale": 100,
+  "avatar_animation_enabled": true,
+  "avatar_accent": "#4de3a7",
+  "theme": "forest",
+  "branding": {
+    "brand_name": "AI-OS",
+    "assistant_name": "Assistant",
+    "logo_path": "branding/logos/ai-os-logo.png",
+    "wallpaper_path": "branding/wallpapers/default.png",
+    "lockscreen_path": "branding/wallpapers/lockscreen.png"
+  }
 }

@@ -26,6 +26,16 @@ class AiOsConfig:
     whisper_cli: str
     whisper_model: Path
     piper_model: Path
+    speech_enabled: bool
+    always_listening_enabled: bool
+    wake_word_threshold: float
+    voice_command_seconds: int
+    sandbox_lock_settings: bool
+    avatar_enabled: bool
+    avatar_corner: str
+    avatar_scale: int
+    avatar_animation_enabled: bool
+    avatar_accent: str
 
 
 DEFAULT_CONFIG = {
@@ -42,6 +52,16 @@ DEFAULT_CONFIG = {
     "whisper_cli": "whisper-cli",
     "whisper_model": "models/ggml-base.en.bin",
     "piper_model": "models/en_US-lessac-medium.onnx",
+    "speech_enabled": False,
+    "always_listening_enabled": False,
+    "wake_word_threshold": 0.5,
+    "voice_command_seconds": 8,
+    "sandbox_lock_settings": True,
+    "avatar_enabled": True,
+    "avatar_corner": "bottom-right",
+    "avatar_scale": 100,
+    "avatar_animation_enabled": True,
+    "avatar_accent": "#4de3a7",
 }
 
 
@@ -92,4 +112,14 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         whisper_cli=str(raw["whisper_cli"]),
         whisper_model=home / str(raw["whisper_model"]),
         piper_model=home / str(raw["piper_model"]),
+        speech_enabled=bool(raw["speech_enabled"]),
+        always_listening_enabled=bool(raw["always_listening_enabled"]),
+        wake_word_threshold=max(0.0, min(1.0, float(raw["wake_word_threshold"]))),
+        voice_command_seconds=max(2, min(30, int(raw["voice_command_seconds"]))),
+        sandbox_lock_settings=bool(raw["sandbox_lock_settings"]),
+        avatar_enabled=bool(raw["avatar_enabled"]),
+        avatar_corner=str(raw["avatar_corner"]),
+        avatar_scale=max(60, min(160, int(raw["avatar_scale"]))),
+        avatar_animation_enabled=bool(raw["avatar_animation_enabled"]),
+        avatar_accent=str(raw["avatar_accent"]),
     )

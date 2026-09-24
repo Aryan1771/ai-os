@@ -7,5 +7,8 @@
 *.txt text eol=lf
 *.json text eol=lf
 *.conf text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
 security/* text eol=lf
 archiso/* text eol=lf

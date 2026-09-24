@@ -40,6 +40,12 @@ ai_os/security/consent_broker.py
 ai_os/services/
   local Whisper.cpp adapter, optional wake-word adapter, allowlisted external API broker,
   ClamAV scanner, and cooperative background job registry
+
+ai_os/settings_server.py and ai_os/web/
+  loopback-only settings application for AI, voice, companion, appearance, desktop, and sandbox controls
+
+ai_os/avatar_overlay.py
+  optional animated desktop companion placeholder for a future branded mascot
 ```
 
 ## Start Here
@@ -50,6 +56,7 @@ Read and execute in this order:
 docs/INSTALL_ON_ARCH.md
 docs/PHASE_5_DESKTOP.md
 docs/BRANDING_AND_ARCHISO.md
+docs/VOICE_AND_COMPANION.md
 ```
 
 `docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. The repository follows an installer/config/branding/docs layout inspired by distribution projects while keeping AI-OS original and Arch-based.

@@ -23,7 +23,9 @@ dev = ["pytest>=8.0.0", "ruff>=0.5.0"]
 [tool.setuptools]
 packages = ["ai_os", "ai_os.tools", "ai_os.security", "ai_os.services"]
 
+[tool.setuptools.package-data]
+ai_os = ["web/*.css", "web/*.html", "web/*.js"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from dataclasses import asdict
 from typing import Any, Callable
 
@@ -9,6 +10,9 @@ import requests
 from ai_os.config import load_config
 from ai_os.logging_utils import configure_logging
 from ai_os.security.consent_broker import ConsentRequest, ConsentDecision, request_cli_consent
+from ai_os.services.listener import AlwaysListeningService
+from ai_os.services.stt import WhisperCppTranscriber
+from ai_os.speech_queue import SpeechQueue
 from ai_os.tools import memory_tools, system_tools, ui_tools
 
 
@@ -128,6 +132,47 @@ def handle_user_text(user_text: str, registry: dict[str, ToolFn] | None = None) 
     return {"type": "tool_result", "tool": tool_call["tool"], "result": result}
 
 
+def start_voice_services(config: Any, registry: dict[str, ToolFn], logger: Any) -> AlwaysListeningService | None:
+    """Start the microphone only after both explicit voice switches are enabled."""
+    if not config.always_listening_enabled:
+        return None
+    if not config.wake_word_enabled:
+        logger.warning("Always listening was requested without wake-word gating; microphone remains off.")
+        return None
+
+    speech = SpeechQueue(config.piper_model) if config.speech_enabled else None
+    if speech:
+        threading.Thread(target=speech.run_forever, daemon=True, name="ai-os-speech").start()
+
+    def on_transcript(transcript: str) -> None:
+        try:
+            response = handle_user_text(transcript, registry)
+            print(json.dumps({"type": "voice", "transcript": transcript, "response": response}, default=json_default))
+            if speech:
+                content = response.get("content") if response.get("type") == "text" else "Task completed."
+                speech.enqueue(str(content))
+        except Exception:
+            logger.exception("Voice request failed")
+
+    listener = AlwaysListeningService(
+        run_dir=config.run_dir,
+        transcriber=WhisperCppTranscriber(config.whisper_cli, config.whisper_model),
+        on_transcript=on_transcript,
+        wake_word_threshold=config.wake_word_threshold,
+        command_seconds=config.voice_command_seconds,
+    )
+
+    def run_listener() -> None:
+        try:
+            listener.run_forever()
+        except Exception:
+            logger.exception("Always-listening service stopped")
+
+    threading.Thread(target=run_listener, daemon=True, name="ai-os-listener").start()
+    logger.info("Always-listening service started with local wake-word gating")
+    return listener
+
+
 def main() -> int:
     config = load_config()
     logger = configure_logging(config.log_dir)
@@ -135,22 +180,27 @@ def main() -> int:
     print("AI-OS daemon ready. Type 'exit' to quit.")
 
     registry = build_tool_registry()
-    while True:
-        try:
-            user_text = input("ai-os> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            return 0
-        if user_text.lower() in {"exit", "quit"}:
-            return 0
-        if not user_text:
-            continue
-        try:
-            response = handle_user_text(user_text, registry)
-            print(json.dumps(response, indent=2, default=json_default))
-        except Exception as exc:
-            logger.exception("Request failed")
-            print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
+    listener = start_voice_services(config, registry, logger)
+    try:
+        while True:
+            try:
+                user_text = input("ai-os> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return 0
+            if user_text.lower() in {"exit", "quit"}:
+                return 0
+            if not user_text:
+                continue
+            try:
+                response = handle_user_text(user_text, registry)
+                print(json.dumps(response, indent=2, default=json_default))
+            except Exception as exc:
+                logger.exception("Request failed")
+                print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
+    finally:
+        if listener:
+            listener.stop()
 
 
 if __name__ == "__main__":

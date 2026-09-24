@@ -38,12 +38,12 @@ install_security() {
 }
 
 install_desktop() {
-  sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar \
+  sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar tk \
     xdg-desktop-portal-hyprland ydotool
   mkdir -p "${HOME}/.config/hypr"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprlock.conf" "${HOME}/.config/hypr/hyprlock.conf"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprpaper.conf" "${HOME}/.config/hypr/hyprpaper.conf"
-  echo "Desktop templates installed. Follow docs/PHASE_5_DESKTOP.md before enabling automation."
+  echo "Desktop templates installed. Follow docs/PHASE_5_DESKTOP.md and docs/VOICE_AND_COMPANION.md before enabling services."
 }
 
 case "${1:-}" in

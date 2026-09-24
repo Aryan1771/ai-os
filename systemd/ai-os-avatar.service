@@ -1,0 +1,20 @@
+[Unit]
+Description=AI-OS desktop companion overlay
+After=graphical-session.target ai-os-settings.service
+Wants=ai-os-settings.service
+
+[Service]
+Type=simple
+Environment=AI_OS_HOME=%h/.ai_os
+WorkingDirectory=%h/src/ai-os
+ExecStart=%h/.ai_os/venv/bin/python -m ai_os.avatar_overlay
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=%h/.ai_os %h/.local/share/ai_os
+
+[Install]
+WantedBy=default.target

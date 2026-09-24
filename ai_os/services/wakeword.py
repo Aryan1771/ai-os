@@ -26,3 +26,6 @@ class WakeWordService:
             if any(float(score) >= self.threshold for score in scores.values()):
                 return True
         return False
+
+    def detect_frame(self, pcm_frame: object) -> bool:
+        return self.detect([pcm_frame])

@@ -7,6 +7,8 @@ ai-os-interface-layer/
 │   ├── config.py
 │   ├── hardware_monitor.py
 │   ├── logging_utils.py
+│   ├── avatar_overlay.py
+│   ├── settings_server.py
 │   ├── speech_queue.py
 │   ├── security/
 │   │   └── consent_broker.py
@@ -16,6 +18,10 @@ ai-os-interface-layer/
 │       ├── scanner.py
 │       ├── stt.py
 │       └── wakeword.py
+│   └── web/
+│       ├── app.js
+│       ├── index.html
+│       └── styles.css
 ├── archiso/
 ├── branding/
 ├── config/
@@ -28,6 +34,7 @@ ai-os-interface-layer/
 │   ├── BRANDING_AND_ARCHISO.md
 │   ├── INSTALL_ON_ARCH.md
 │   ├── PHASE_5_DESKTOP.md
+│   ├── VOICE_AND_COMPANION.md
 │   ├── PROJECT_STRUCTURE.md
 │   └── ROADMAP.md
 ├── install/
