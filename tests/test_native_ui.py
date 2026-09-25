@@ -32,13 +32,13 @@ def test_native_settings_persist_emotion_bars_and_toggle(app, tmp_path):
     window.fields["avatar_enabled"].setChecked(False)
     window.fields["avatar_emotions.joy"].setValue(84)
     window.fields["avatar_motion"].setValue(22)
-    window.fields["branding.brand_name"].setText("REGENOS Lab")
+    window.fields["branding.brand_name"].setText("REgenOS Lab")
     assert window.save()
     saved = load_raw_config(tmp_path)
     assert saved["avatar_emotions"]["joy"] == 84
     assert saved["avatar_motion"] == 22
     assert not saved["avatar_enabled"]
-    assert window.windowTitle() == "REGENOS Lab Settings"
+    assert window.windowTitle() == "REgenOS Lab Settings"
     window.close()
 
 

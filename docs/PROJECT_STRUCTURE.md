@@ -22,7 +22,7 @@ ai-os/
 │   ├── packages.x86_64.add
 │   └── calamares/                 # Installer integration plan, not a shippable installer
 ├── branding/
-│   ├── regenos-mark.svg           # Scalable REGENOS mark
+│   ├── regenos-mark.svg           # Scalable REgenOS mark
 │   ├── regenos-mark.png
 │   ├── regenos-companion-atlas.png # Nine concept poses; not the live renderer
 │   ├── plymouth/                  # Linux boot splash theme

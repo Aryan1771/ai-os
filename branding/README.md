@@ -1,4 +1,4 @@
-# REGENOS Branding Assets
+# REgenOS Branding Assets
 
 Keep only original assets here. The installer expects these optional files:
 

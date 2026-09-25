@@ -7,6 +7,6 @@
   </g>
   <g fill="#4de3a7"><rect x="340" y="320" width="40" height="40"/><rect x="420" y="320" width="40" height="40"/><rect x="370" y="420" width="60" height="12"/></g>
   <g fill="#f1bd73"><rect x="760" y="640" width="36" height="36"/><rect x="840" y="720" width="24" height="24"/><rect x="920" y="800" width="16" height="16"/></g>
-  <text x="840" y="480" fill="#e7f4eb" font-family="sans-serif" font-size="54" letter-spacing="10">REGENOS</text>
+  <text x="840" y="480" fill="#e7f4eb" font-family="sans-serif" font-size="54" letter-spacing="10">REgenOS</text>
   <path d="M840 520h520" stroke="#4de3a7" stroke-width="3"/>
 </svg>

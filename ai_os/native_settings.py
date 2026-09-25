@@ -46,7 +46,7 @@ class SettingsWindow(QMainWindow):
         self.saved = load_raw_config(home)
         self.fields = {}
         self.service_process = None
-        self.setWindowTitle("REGENOS Settings")
+        self.setWindowTitle("REgenOS Settings")
         self.resize(1030, 760)
         self.setMinimumSize(780, 570)
         outer = QWidget()
@@ -54,7 +54,7 @@ class SettingsWindow(QMainWindow):
         root = QVBoxLayout(outer)
         root.setContentsMargins(22, 18, 22, 18)
         header = QHBoxLayout()
-        brand = QLabel("REGENOS")
+        brand = QLabel("REgenOS")
         self.brand = brand
         brand.setMaximumWidth(360)
         brand.setObjectName("product")
@@ -325,7 +325,7 @@ class SettingsWindow(QMainWindow):
         form = self.form(layout)
         self.check(form, "hyprland_enabled", "Allow Hyprland window tools")
         for keys, action in (
-            ("Super + A", "REGENOS Settings"),
+            ("Super + A", "REgenOS Settings"),
             ("Super + Space", "Application launcher"),
             ("Super + Enter", "Terminal"),
             ("Super + R", "Start AI service"),
@@ -377,7 +377,7 @@ class SettingsWindow(QMainWindow):
         self.apply_branding()
 
     def apply_branding(self):
-        name = self.saved["branding"]["brand_name"] or "REGENOS"
+        name = self.saved["branding"]["brand_name"] or "REgenOS"
         self.brand.setText(
             QFontMetrics(self.brand.font()).elidedText(name, Qt.TextElideMode.ElideRight, 350)
         )

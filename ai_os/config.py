@@ -84,7 +84,7 @@ DEFAULT_CONFIG = {
     },
     "theme": "forest",
     "branding": {
-        "brand_name": "REGENOS",
+        "brand_name": "REgenOS",
         "assistant_name": "Companion",
         "logo_path": "/usr/share/regenos/branding/regenos-mark.svg",
         "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",

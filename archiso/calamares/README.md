@@ -1,6 +1,6 @@
 # Calamares Graphical Installer Work
 
-Calamares is the candidate installer for an Ubuntu-style graphical setup wizard. This directory records the integration boundary; REGENOS does not claim to ship a tested installer configuration yet. Archiso builds live media. Calamares requires a packaged build plus distribution configuration and installation modules.
+Calamares is the candidate installer for an Ubuntu-style graphical setup wizard. This directory records the integration boundary; REgenOS does not claim to ship a tested installer configuration yet. Archiso builds live media. Calamares requires a packaged build plus distribution configuration and installation modules.
 
 ## Build And Integrate In This Order
 

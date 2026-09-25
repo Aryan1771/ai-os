@@ -23,7 +23,7 @@ class AvatarOverlay(QWidget):
             | Qt.WindowType.WindowDoesNotAcceptFocus,
         )
         self.home = home
-        self.setWindowTitle("REGENOS Companion")
+        self.setWindowTitle("REgenOS Companion")
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.canvas = CompanionCanvas()

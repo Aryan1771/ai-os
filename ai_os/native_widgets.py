@@ -143,7 +143,7 @@ class CompanionCanvas(QWidget):
         self.setMinimumSize(96, 96)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("CompanionCanvas {background: transparent;}")
-        self.setAccessibleName("REGENOS pixel companion")
+        self.setAccessibleName("REgenOS pixel companion")
         self.engine = PixelEngine()
         self.config = DEFAULT_CONFIG.copy()
         self.state = {"phase": "idle", "shape": "core", "emotions": {}, "pixels": None}

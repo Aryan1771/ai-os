@@ -1,4 +1,4 @@
-# REGENOS Feature Checklist
+# REgenOS Feature Checklist
 
 Updated 2026-09-25. Checked items mean implemented in this repository, not certified on the Arch laptop. The Python/Qt tests run on Windows with offscreen Qt rendering. PipeWire, NVIDIA, systemd, AppArmor, Hyprland and ISO installation need target-system validation. This is an application/distribution prototype, not a completed independently installable operating system.
 
@@ -7,7 +7,7 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [x] Native Python/Qt Settings application with application-menu launcher. No browser, HTML, JavaScript frontend, HTTP settings endpoint, Electron or WebEngine.
 - [x] Six settings pages: companion, AI connection, voice/listening, appearance, desktop and permissions.
 - [x] Native checkboxes, selectors, numeric controls, sliders, color dialog, file pickers, confirmation dialogs and status feedback.
-- [x] Five REGENOS window themes: forest, graphite, ocean, light and sunrise.
+- [x] Five REgenOS window themes: forest, graphite, ocean, light and sunrise.
 - [x] Saved product/companion names update native window identity; an existing local logo path supplies the Settings window icon. This does not rewrite `/etc/os-release` or boot branding.
 - [x] Save/revert preferences; validate values before an atomic config write; keep existing nested defaults when upgrading older configs.
 - [x] Native transparent corner companion, shown/hidden from Settings; independent lifetime after closing Settings; click to reopen Settings; context-menu hide.
@@ -92,7 +92,7 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [x] Cooperative background job registry with pause/cancel state; it is a library rather than a full daemon scheduler.
 - [x] Phase-gated Hyprland window listing and a separate typing adapter; typing is not exposed as a registered daemon tool.
 - [x] Super-key bindings for native Settings/companion, launcher, terminal, file manager, AI service control, volume, brightness and locking.
-- [x] Original REGENOS logo, wallpapers, lock-screen art, companion concept atlas and Plymouth theme sources.
+- [x] Original REgenOS logo, wallpapers, lock-screen art, companion concept atlas and Plymouth theme sources.
 - [x] Explicit user appearance application: GTK icon/cursor/font preferences plus Hyprpaper/Hyprlock config, with backups of pre-existing files.
 - [x] Written boot-splash, desktop, logo installation and branding commands.
 - [ ] Hardware events automatically routed into conversations/speech and jobs automatically scheduled by the AI.

@@ -1,6 +1,6 @@
-# Native REGENOS Desktop
+# Native REgenOS Desktop
 
-REGENOS Settings and Companion are Python programs using Qt Widgets through PySide6. They use local files and a user-local single-instance socket. They do not start an HTTP server, require a browser, use WebEngine/Electron, or download UI assets at runtime. Qt uses its Linux display backend; the daemon can still run on a bare TTY, while the two graphical programs need an X11 or Wayland desktop session.
+REgenOS Settings and Companion are Python programs using Qt Widgets through PySide6. They use local files and a user-local single-instance socket. They do not start an HTTP server, require a browser, use WebEngine/Electron, or download UI assets at runtime. Qt uses its Linux display backend; the daemon can still run on a bare TTY, while the two graphical programs need an X11 or Wayland desktop session.
 
 ## Install Or Upgrade On Arch
 
@@ -15,7 +15,7 @@ bash install/ai-os-install.sh native
 ~/.ai_os/venv/bin/regenos-settings
 ```
 
-The native stage adds Qt to the existing venv and installs desktop launchers. It does not install Hyprland. Launch **REGENOS Settings** from the desktop application menu, or use the command above. The installer disables the old `ai-os-settings.service` HTTP service. That unit has been removed from the repository. The old `python -m ai_os.settings_server` entry point now opens the native window for compatibility.
+The native stage adds Qt to the existing venv and installs desktop launchers. It does not install Hyprland. Launch **REgenOS Settings** from the desktop application menu, or use the command above. The installer disables the old `ai-os-settings.service` HTTP service. That unit has been removed from the repository. The old `python -m ai_os.settings_server` entry point now opens the native window for compatibility.
 
 ## Companion Controls
 
@@ -65,7 +65,7 @@ The service template assumes `~/src/ai-os` and `~/.ai_os`. For a custom installa
 - **Appearance:** choose a native window theme and branding paths. Saving records preferences. **Apply desktop appearance** explicitly writes user GTK icon/cursor/font settings and Hyprpaper/Hyprlock files, preserving a first `.regenos-backup` beside each existing file. Existing GTK keys are retained. Reload affected applications to see changes.
 - **Permissions:** protected preference changes open a native confirmation dialog. Disabling that confirmation is itself protected. This is a local UI guard; it does not isolate the daemon from every process running under the same Linux user. Privileged action approvals remain terminal-based and are denied by background workers without an interactive terminal.
 
-The window themes style the REGENOS programs. System-wide Qt/GTK themes, bootloader settings, firmware, partitions and the complete desktop settings stack are not controlled by this panel. Boot branding remains documented in [branding and ISO setup](BRANDING_AND_ARCHISO.md).
+The window themes style the REgenOS programs. System-wide Qt/GTK themes, bootloader settings, firmware, partitions and the complete desktop settings stack are not controlled by this panel. Boot branding remains documented in [branding and ISO setup](BRANDING_AND_ARCHISO.md).
 
 ## Verify On Arch
 

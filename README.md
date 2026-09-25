@@ -1,12 +1,12 @@
-# REGENOS
+# REgenOS
 
 Offline-first AI interface layer and Arch-based desktop product for a portable external NVMe install.
 
-![REGENOS pixel-cycle mark](branding/regenos-mark.svg)
+![REgenOS pixel-cycle mark](branding/regenos-mark.svg)
 
-REGENOS Settings and the corner companion are native Python/Qt applications. The companion rearranges colored pixels in real time, with six simulated emotion bars, twelve built-in forms and validated model-generated pixel patterns. No browser or HTTP settings server is needed. A branded Archiso live image is documented; the graphical disk installer remains unfinished.
+REgenOS Settings and the corner companion are native Python/Qt applications. The companion rearranges colored pixels in real time, with six simulated emotion bars, twelve built-in forms and validated model-generated pixel patterns. No browser or HTTP settings server is needed. A branded Archiso live image is documented; the graphical disk installer remains unfinished.
 
-![Native REGENOS Settings](docs/images/native-settings.png)
+![Native REgenOS Settings](docs/images/native-settings.png)
 
 This repository stores the source code, systemd templates, security templates, and Arch setup instructions. It does not store the Python virtual environment, Ollama models, ChromaDB state, downloaded voice models, or private API keys.
 
@@ -68,4 +68,4 @@ docs/BRANDING_AND_ARCHISO.md
 
 See [the detailed feature checklist](docs/FEATURE_STATUS.md) for implemented features, integration gaps and target-hardware verification still required.
 
-`docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. REGENOS is the product identity; the source repository and Python package retain their `ai-os` names for compatibility. REGENOS is an independent Arch-based project and does not replace or claim ownership of Arch Linux, the kernel, or third-party projects.
+`docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. REgenOS is the product identity; the source repository and Python package retain their `ai-os` names for compatibility. REgenOS is an independent Arch-based project and does not replace or claim ownership of Arch Linux, the kernel, or third-party projects.

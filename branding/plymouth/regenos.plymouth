@@ -1,6 +1,6 @@
 [Plymouth Theme]
-Name=REGENOS
-Description=REGENOS pixel-cycle boot identity
+Name=REgenOS
+Description=REgenOS pixel-cycle boot identity
 ModuleName=script
 
 [script]

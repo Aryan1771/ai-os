@@ -61,7 +61,7 @@ def json_default(value: Any) -> Any:
 
 def system_prompt(registered_tools: set[str] | None = None) -> str:
     tool_names = ", ".join(sorted(registered_tools or build_tool_registry()))
-    return f"""You are the local REGENOS assistant.
+    return f"""You are the local REgenOS assistant.
 For a text reply, prefer a JSON object with a reply string and optional avatar metadata:
 {{"reply": "Your spoken answer", "avatar": {{"shape": "core", "emotions": {{"joy": 50}}}}}}
 Plain text is also accepted. Avatar emotions are simulated presentation values from 0 to 100:
@@ -282,8 +282,8 @@ def start_voice_services(
 def main() -> int:
     config = load_config()
     logger = configure_logging(config.log_dir)
-    logger.info("REGENOS daemon started")
-    print("REGENOS ready. Type 'exit' to quit.")
+    logger.info("REgenOS daemon started")
+    print("REgenOS ready. Type 'exit' to quit.")
 
     registry = build_tool_registry()
     listener = start_voice_services(config, registry, logger)

@@ -1,6 +1,6 @@
-# REGENOS Branding And Archiso
+# REgenOS Branding And Archiso
 
-REGENOS is an Arch-based desktop product. Keep attribution clear: it does not replace or claim ownership of Arch Linux, Linux, or third-party components. The tracked identity includes an original pixel-cycle mark, desktop and lock-screen art, a Plymouth theme, and a retro companion concept atlas. The native Qt overlay renders spring-animated particles, twelve topic forms and validated model-generated pixel grids; the atlas is source artwork, not the live rendering engine.
+REgenOS is an Arch-based desktop product. Keep attribution clear: it does not replace or claim ownership of Arch Linux, Linux, or third-party components. The tracked identity includes an original pixel-cycle mark, desktop and lock-screen art, a Plymouth theme, and a retro companion concept atlas. The native Qt overlay renders spring-animated particles, twelve topic forms and validated model-generated pixel grids; the atlas is source artwork, not the live rendering engine.
 
 ## Apply Branding To An Existing Arch Install
 
