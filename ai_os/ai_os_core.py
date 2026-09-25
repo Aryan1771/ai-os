@@ -5,22 +5,22 @@ import os
 import signal
 import sys
 import threading
+from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import requests
 
-from ai_os.config import AI_OS_HOME, load_config
 from ai_os.companion_state import SHAPE_NAMES, publish_state, visual_metadata
+from ai_os.config import AI_OS_HOME, load_config
 from ai_os.logging_utils import configure_logging
-from ai_os.security.consent_broker import ConsentRequest, ConsentDecision, request_cli_consent
+from ai_os.security.consent_broker import ConsentDecision, ConsentRequest, request_cli_consent
 from ai_os.services.listener import AlwaysListeningService
-from ai_os.settings_store import validate_model_endpoint
 from ai_os.services.stt import WhisperCppTranscriber
+from ai_os.settings_store import validate_model_endpoint
 from ai_os.speech_queue import SpeechQueue
 from ai_os.tools import memory_tools, system_tools, ui_tools
-
 
 ToolFn = Callable[..., Any]
 
@@ -66,7 +66,7 @@ For a text reply, prefer a JSON object with a reply string and optional avatar m
 {{"reply": "Your spoken answer", "avatar": {{"shape": "core", "emotions": {{"joy": 50}}}}}}
 Plain text is also accepted. Avatar emotions are simulated presentation values from 0 to 100:
 joy, curiosity, focus, calm, concern, energy. They never authorize actions.
-Choose an avatar shape from: {', '.join(SHAPE_NAMES)}.
+Choose an avatar shape from: {", ".join(SHAPE_NAMES)}.
 For a subject outside those shapes, you may add avatar.pixels: an array of 4 to 24
 equal-length strings, each 4 to 24 characters. Draw a recognizable low-resolution silhouette.
 Only use '.' for empty, '#' for body, '+' for accent, '*' for warm highlight, 'o' for dark eyes.
@@ -107,7 +107,9 @@ def ask_ollama(user_text: str, registered_tools: set[str] | None = None) -> str:
             allow_redirects=False,
         )
     elif config.ai_provider == "ollama":
-        response = requests.post(config.ollama_url, json=payload, timeout=120, allow_redirects=False)
+        response = requests.post(
+            config.ollama_url, json=payload, timeout=120, allow_redirects=False
+        )
     else:
         raise ValueError(f"Unsupported AI provider: {config.ai_provider}")
     response.raise_for_status()
@@ -142,10 +144,13 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
     # An LLM cannot grant itself approval by putting approve=true in its arguments.
     arguments.pop("approve", None)
     if tool_name == "terminate_process":
-        decision = request_cli_consent(ConsentRequest(
-            action="terminate process", risk="moderate",
-            reason=f"Stop process {arguments.get('pid')}",
-        ))
+        decision = request_cli_consent(
+            ConsentRequest(
+                action="terminate process",
+                risk="moderate",
+                reason=f"Stop process {arguments.get('pid')}",
+            )
+        )
         if decision is not ConsentDecision.APPROVED:
             return {"ok": False, "error": "User denied process termination."}
         arguments["approve"] = True
@@ -167,7 +172,9 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
     return registry[tool_name](**arguments)
 
 
-def handle_user_text(user_text: str, registry: dict[str, ToolFn] | None = None, *, home: Path = AI_OS_HOME) -> dict[str, Any]:
+def handle_user_text(
+    user_text: str, registry: dict[str, ToolFn] | None = None, *, home: Path = AI_OS_HOME
+) -> dict[str, Any]:
     registry = registry or build_tool_registry()
     publish_state("thinking", user_text, home=home)
     try:
@@ -176,7 +183,11 @@ def handle_user_text(user_text: str, registry: dict[str, ToolFn] | None = None, 
         if tool_call:
             publish_state("working", tool_call["tool"], home=home)
             result = execute_tool(tool_call["tool"], tool_call["arguments"], registry)
-            failed = result.get("ok") is False if isinstance(result, dict) else getattr(result, "ok", True) is False
+            failed = (
+                result.get("ok") is False
+                if isinstance(result, dict)
+                else getattr(result, "ok", True) is False
+            )
             publish_state("error" if failed else "reply", tool_call["tool"], home=home)
             return {"type": "tool_result", "tool": tool_call["tool"], "result": result}
         text, avatar = parse_visual_reply(model_text)
@@ -206,22 +217,40 @@ def spoken_response(response: dict) -> str:
     return "Task completed." if ok else "I could not complete that action. Please check the result."
 
 
-def start_voice_services(config: Any, registry: dict[str, ToolFn], logger: Any) -> AlwaysListeningService | None:
+def start_voice_services(
+    config: Any, registry: dict[str, ToolFn], logger: Any
+) -> AlwaysListeningService | None:
     """Start the microphone only after both explicit voice switches are enabled."""
     if not config.always_listening_enabled:
         return None
     if not config.wake_word_enabled:
-        logger.warning("Always listening was requested without wake-word gating; microphone remains off.")
+        logger.warning(
+            "Always listening was requested without wake-word gating; microphone remains off."
+        )
         return None
 
-    speech = SpeechQueue(config.piper_model, on_activity=lambda phase, text, avatar: publish_state(phase, text, home=config.home, avatar=avatar)) if config.speech_enabled else None
+    speech = (
+        SpeechQueue(
+            config.piper_model,
+            on_activity=lambda phase, text, avatar: publish_state(
+                phase, text, home=config.home, avatar=avatar
+            ),
+        )
+        if config.speech_enabled
+        else None
+    )
     if speech:
         threading.Thread(target=speech.run_forever, daemon=True, name="ai-os-speech").start()
 
     def on_transcript(transcript: str) -> None:
         try:
             response = handle_user_text(transcript, registry)
-            print(json.dumps({"type": "voice", "transcript": transcript, "response": response}, default=json_default))
+            print(
+                json.dumps(
+                    {"type": "voice", "transcript": transcript, "response": response},
+                    default=json_default,
+                )
+            )
             if speech:
                 speech.enqueue(spoken_response(response), avatar=response.get("avatar"))
         except Exception:

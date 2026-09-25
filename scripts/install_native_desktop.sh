@@ -13,7 +13,7 @@ if [[ ! -x "${RUNTIME_DIR}/venv/bin/python" ]]; then
   exit 1
 fi
 
-sudo pacman -S --needed libxkbcommon-x11 xcb-util-cursor libxcb fontconfig desktop-file-utils
+sudo pacman -S --needed libxkbcommon-x11 xcb-util-cursor libxcb fontconfig noto-fonts desktop-file-utils
 "${RUNTIME_DIR}/venv/bin/python" -m pip install -e "${REPO_ROOT}[desktop]"
 mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/scalable/apps"
 install -m 0644 "${REPO_ROOT}/branding/regenos-mark.svg" "${HOME}/.local/share/icons/hicolor/scalable/apps/regenos.svg"

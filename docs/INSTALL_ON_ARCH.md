@@ -40,6 +40,8 @@ python -m ai_os.ai_os_core
 
 ## 3. Voice And Memory
 
+For the native settings window and animated companion in an existing graphical session, follow [Native Desktop](NATIVE_DESKTOP.md). The `native` installation stage works independently of Hyprland. The headless daemon remains usable from a TTY.
+
 ```bash
 cd ~/src/ai-os
 bash install/ai-os-install.sh voice

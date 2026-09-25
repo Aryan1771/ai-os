@@ -32,33 +32,29 @@ pw-record --raw --format s16 --rate 16000 --channels 1 - | head -c 32000 > /tmp/
 rm /tmp/ai-os-mic-test.raw
 ```
 
-## 2. Start Settings And Companion
+## 2. Install Native Settings And Companion
 
 ```bash
-mkdir -p ~/.config/systemd/user
-mkdir -p ~/.config/gtk-3.0 ~/.config/hypr
-cp ~/src/ai-os/systemd/ai-os-settings.service ~/.config/systemd/user/
-cp ~/src/ai-os/systemd/ai-os-avatar.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now ai-os-settings.service
+cd ~/src/ai-os
+bash install/ai-os-install.sh native
+~/.ai_os/venv/bin/regenos-settings
 ```
 
-Open `http://127.0.0.1:8765` locally. The panel configures model connection, online-provider opt-in, voice, listener, companion appearance, themes, branding paths, Hyprland IPC, and sandbox confirmation.
+Settings is a native Qt window with model, voice, emotion-bar, companion, appearance and permission controls. The web server has been removed. See [Native Desktop](NATIVE_DESKTOP.md) for migration, offline dependencies, X11/Wayland behavior and login startup.
 
-Appearance changes write only to your user GTK and Hyprland config directories. Review existing files first because the panel manages `gtk-3.0/settings.ini`, `hyprpaper.conf`, and `hyprlock.conf`; theme changes may require restarting GTK apps or reloading Hyprland.
+The separate **Apply desktop appearance** button writes user GTK/Hyprland settings and backs up existing files. Saving unrelated AI or avatar preferences no longer overwrites those desktop files.
 
-Import the active desktop environment into the user service manager, then start the companion:
+Enable **Show corner companion**, then save. To start its resident process manually:
 
 ```bash
-systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE
-systemctl --user enable --now ai-os-avatar.service
+~/.ai_os/venv/bin/regenos-companion
 ```
 
-Click the companion to open the panel. Pixel particles morph between a core form and simple topic silhouettes (music, heart, code, idea, cloud) with spring motion. Extend the mapping in `ai_os/ai_os_core.py` as more topic shapes are added; this first mascot maps known topics rather than generating arbitrary pictures.
+Click the companion to reopen Settings. The same pixels travel between robot expressions, twelve built-in silhouettes and optional model-generated pixel grids. Activity and speech events change its appearance and six simulated emotion channels. The emotion baseline, response strength and motion intensity are editable in Settings.
 
 ## 3. Enable Voice Deliberately
 
-In the local panel, enable **Require wake word**, **Always listening**, and optionally **Speak responses**. With sandbox locking enabled, the panel asks for a local protected-settings confirmation.
+In the native panel, enable **Require wake word**, **Listen for wake word**, and optionally **Speak replies**. With sandbox locking enabled, the panel asks for a native protected-settings confirmation.
 
 Restart the daemon after saving:
 

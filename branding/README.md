@@ -16,4 +16,4 @@ branding/plymouth/regenos.script
 
 Do not commit copyrighted third-party logos or downloaded desktop themes unless their license permits redistribution.
 
-The atlas contains nine retro pixel poses for the companion. The desktop overlay currently uses a separate spring-driven particle renderer for expression and a small set of topic silhouettes; arbitrary subject illustration is not generated yet.
+The atlas contains nine retro pixel concept poses. The live companion is a native Qt particle renderer with its own pixel robot, twelve topic forms, simulated emotion channels and optional model-generated 24x24 pixel patterns. The atlas is reference artwork rather than an animation sprite engine.

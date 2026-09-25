@@ -1,5 +1,7 @@
 # Roadmap
 
+See [Feature Status](FEATURE_STATUS.md) for the detailed implemented/pending checklist and [Native Desktop](NATIVE_DESKTOP.md) for the Python/Qt settings and live pixel companion. The browser frontend has been removed.
+
 ## Phase 0: Portable Arch Base
 
 - Boot external NVMe Arch install.

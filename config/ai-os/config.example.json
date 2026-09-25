@@ -24,12 +24,28 @@
   "avatar_scale": 100,
   "avatar_animation_enabled": true,
   "avatar_accent": "#4de3a7",
+  "avatar_motion": 65,
+  "avatar_reactivity": 75,
+  "avatar_show_emotion_bars": true,
+  "avatar_topic_morphing": true,
+  "avatar_idle_shape": "core",
+  "avatar_emotions": {
+    "joy": 35,
+    "curiosity": 50,
+    "focus": 40,
+    "calm": 75,
+    "concern": 10,
+    "energy": 45
+  },
   "theme": "forest",
   "branding": {
     "brand_name": "REGENOS",
     "assistant_name": "Companion",
     "logo_path": "/usr/share/regenos/branding/regenos-mark.svg",
     "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",
-    "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png"
+    "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png",
+    "icon_theme": "Papirus-Dark",
+    "cursor_theme": "Bibata-Modern-Ice",
+    "font": "Noto Sans 10"
   }
 }

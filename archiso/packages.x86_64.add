@@ -20,3 +20,10 @@ waybar
 xdg-desktop-portal-hyprland
 ydotool
 plymouth
+libxkbcommon-x11
+xcb-util-cursor
+libxcb
+fontconfig
+noto-fonts
+desktop-file-utils
+xorg-xwayland

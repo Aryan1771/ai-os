@@ -5,12 +5,32 @@ from copy import deepcopy
 from pathlib import Path
 
 from PySide6.QtCore import QProcess, Qt, QTimer
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFontMetrics, QIcon
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QColorDialog, QComboBox, QDoubleSpinBox, QFileDialog,
-    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSlider,
-    QSpinBox, QStackedWidget, QStyle, QToolButton, QVBoxLayout, QWidget,
+    QApplication,
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QScrollArea,
+    QSlider,
+    QSpinBox,
+    QStackedWidget,
+    QStyle,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ai_os.companion_state import EMOTIONS, SHAPE_NAMES, read_state
@@ -35,6 +55,8 @@ class SettingsWindow(QMainWindow):
         root.setContentsMargins(22, 18, 22, 18)
         header = QHBoxLayout()
         brand = QLabel("REGENOS")
+        self.brand = brand
+        brand.setMaximumWidth(360)
         brand.setObjectName("product")
         header.addWidget(brand)
         header.addStretch()
@@ -62,7 +84,9 @@ class SettingsWindow(QMainWindow):
         self.status.setWordWrap(True)
         footer.addWidget(self.status, 1)
         reset = self.button("Revert", QStyle.StandardPixmap.SP_BrowserReload, self.restore)
-        self.save_button = self.button("Save changes", QStyle.StandardPixmap.SP_DialogSaveButton, self.save)
+        self.save_button = self.button(
+            "Save changes", QStyle.StandardPixmap.SP_DialogSaveButton, self.save
+        )
         self.save_button.setObjectName("primary")
         footer.addWidget(reset)
         footer.addWidget(self.save_button)
@@ -176,8 +200,18 @@ class SettingsWindow(QMainWindow):
         self.check(form, "avatar_show_emotion_bars", "Show emotion bars in corner")
         self.check(form, "avatar_animation_enabled", "Animate pixels")
         self.check(form, "avatar_topic_morphing", "Morph with topics and tasks")
-        self.choice(form, "avatar_corner", "Corner", [(key, key.replace("-", " ").title()) for key in ("bottom-right", "bottom-left", "top-right", "top-left")])
-        self.choice(form, "avatar_idle_shape", "Resting form", [(key, key.title()) for key in SHAPE_NAMES])
+        self.choice(
+            form,
+            "avatar_corner",
+            "Corner",
+            [
+                (key, key.replace("-", " ").title())
+                for key in ("bottom-right", "bottom-left", "top-right", "top-left")
+            ],
+        )
+        self.choice(
+            form, "avatar_idle_shape", "Resting form", [(key, key.title()) for key in SHAPE_NAMES]
+        )
         self.slider(form, "avatar_scale", "Size (%)", 60, 160)
         self.slider(form, "avatar_motion", "Fluid motion", 0, 100)
         self.slider(form, "avatar_reactivity", "Emotional response", 0, 100)
@@ -198,7 +232,12 @@ class SettingsWindow(QMainWindow):
     def _assistant_page(self):
         layout = self.page("AI connection", QStyle.StandardPixmap.SP_DriveNetIcon)
         form = self.form(layout)
-        self.choice(form, "ai_provider", "Provider", [("ollama", "Ollama"), ("openai_compatible", "OpenAI-compatible")])
+        self.choice(
+            form,
+            "ai_provider",
+            "Provider",
+            [("ollama", "Ollama"), ("openai_compatible", "OpenAI-compatible")],
+        )
         self.text(form, "ollama_url", "Endpoint")
         self.text(form, "ollama_model", "Model")
         key = self.text(form, "api_key_env", "API key variable")
@@ -227,27 +266,72 @@ class SettingsWindow(QMainWindow):
         self.text(form, "whisper_model", "Whisper model", file=True)
         self.text(form, "piper_model", "Piper voice", file=True)
         controls = QHBoxLayout()
-        controls.addWidget(self.button("Start listener", QStyle.StandardPixmap.SP_MediaPlay, lambda: self.control_service("start")))
-        controls.addWidget(self.button("Restart", QStyle.StandardPixmap.SP_BrowserReload, lambda: self.control_service("restart")))
-        controls.addWidget(self.button("Stop", QStyle.StandardPixmap.SP_MediaStop, lambda: self.control_service("stop")))
+        controls.addWidget(
+            self.button(
+                "Start listener",
+                QStyle.StandardPixmap.SP_MediaPlay,
+                lambda: self.control_service("start"),
+            )
+        )
+        controls.addWidget(
+            self.button(
+                "Restart",
+                QStyle.StandardPixmap.SP_BrowserReload,
+                lambda: self.control_service("restart"),
+            )
+        )
+        controls.addWidget(
+            self.button(
+                "Stop", QStyle.StandardPixmap.SP_MediaStop, lambda: self.control_service("stop")
+            )
+        )
         layout.addLayout(controls)
         layout.addStretch()
 
     def _appearance_page(self):
         layout = self.page("Appearance", QStyle.StandardPixmap.SP_DesktopIcon)
         form = self.form(layout)
-        theme = self.choice(form, "theme", "Window theme", [(key, key.title()) for key in ("forest", "graphite", "ocean", "light")])
-        theme.currentIndexChanged.connect(lambda: self.setStyleSheet(theme_stylesheet(theme.currentData())))
-        for key, label in (("brand_name", "Product name"), ("assistant_name", "Companion name"), ("logo_path", "Logo"), ("wallpaper_path", "Wallpaper"), ("lockscreen_path", "Lock screen"), ("icon_theme", "Icon theme"), ("cursor_theme", "Cursor theme"), ("font", "Desktop font")):
+        theme = self.choice(
+            form,
+            "theme",
+            "Window theme",
+            [(key, key.title()) for key in ("forest", "graphite", "ocean", "light", "sunrise")],
+        )
+        theme.currentIndexChanged.connect(
+            lambda: self.setStyleSheet(theme_stylesheet(theme.currentData()))
+        )
+        for key, label in (
+            ("brand_name", "Product name"),
+            ("assistant_name", "Companion name"),
+            ("logo_path", "Logo"),
+            ("wallpaper_path", "Wallpaper"),
+            ("lockscreen_path", "Lock screen"),
+            ("icon_theme", "Icon theme"),
+            ("cursor_theme", "Cursor theme"),
+            ("font", "Desktop font"),
+        ):
             self.text(form, f"branding.{key}", label, file=key.endswith("_path"))
-        layout.addWidget(self.button("Apply desktop appearance", QStyle.StandardPixmap.SP_DialogApplyButton, self.apply_appearance))
+        layout.addWidget(
+            self.button(
+                "Apply desktop appearance",
+                QStyle.StandardPixmap.SP_DialogApplyButton,
+                self.apply_appearance,
+            )
+        )
         layout.addStretch()
 
     def _desktop_page(self):
         layout = self.page("Desktop", QStyle.StandardPixmap.SP_FileDialogListView)
         form = self.form(layout)
         self.check(form, "hyprland_enabled", "Allow Hyprland window tools")
-        for keys, action in (("Super + A", "REGENOS Settings"), ("Super + Space", "Application launcher"), ("Super + Enter", "Terminal"), ("Super + R", "Start AI service"), ("Super + Ctrl + R", "Stop AI service"), ("Super + L", "Lock screen")):
+        for keys, action in (
+            ("Super + A", "REGENOS Settings"),
+            ("Super + Space", "Application launcher"),
+            ("Super + Enter", "Terminal"),
+            ("Super + R", "Start AI service"),
+            ("Super + Ctrl + R", "Stop AI service"),
+            ("Super + L", "Lock screen"),
+        ):
             form.addRow(keys, QLabel(action))
         layout.addStretch()
 
@@ -256,7 +340,9 @@ class SettingsWindow(QMainWindow):
         form = self.form(layout)
         self.check(form, "sandbox_lock_settings", "Confirm protected setting changes")
         label = QLabel("System actions: terminal approval")
-        label.setToolTip("Destructive actions need a human terminal approval. A background daemon denies requests without an interactive terminal.")
+        label.setToolTip(
+            "Destructive actions need a human terminal approval. A background daemon denies requests without an interactive terminal."
+        )
         form.addRow(label)
         layout.addStretch()
 
@@ -267,7 +353,9 @@ class SettingsWindow(QMainWindow):
             self.update_swatch()
 
     def update_swatch(self):
-        self.accent.setStyleSheet(f"background: {self.accent_value}; border: 1px solid #8d9ca3; border-radius: 4px;")
+        self.accent.setStyleSheet(
+            f"background: {self.accent_value}; border: 1px solid #8d9ca3; border-radius: 4px;"
+        )
 
     def restore(self):
         for key, control in self.fields.items():
@@ -286,6 +374,17 @@ class SettingsWindow(QMainWindow):
         self.accent_value = self.saved["avatar_accent"]
         self.update_swatch()
         self.setStyleSheet(theme_stylesheet(self.saved["theme"]))
+        self.apply_branding()
+
+    def apply_branding(self):
+        name = self.saved["branding"]["brand_name"] or "REGENOS"
+        self.brand.setText(
+            QFontMetrics(self.brand.font()).elidedText(name, Qt.TextElideMode.ElideRight, 350)
+        )
+        self.brand.setToolTip(name)
+        self.setWindowTitle(f"{name} Settings")
+        logo = self.saved["branding"]["logo_path"]
+        self.setWindowIcon(QIcon(logo) if logo and Path(logo).is_file() else QIcon())
 
     def collect(self) -> dict:
         data = deepcopy(self.saved)
@@ -297,7 +396,9 @@ class SettingsWindow(QMainWindow):
             elif isinstance(control, (QSpinBox, QDoubleSpinBox)):
                 value = control.value()
             elif isinstance(control, QPlainTextEdit):
-                value = [line.strip() for line in control.toPlainText().splitlines() if line.strip()]
+                value = [
+                    line.strip() for line in control.toPlainText().splitlines() if line.strip()
+                ]
             else:
                 value = control.text()
             parts = key.split(".")
@@ -318,8 +419,19 @@ class SettingsWindow(QMainWindow):
         changes = {key: value for key, value in values.items() if value != self.saved.get(key)}
         confirmed = False
         if self.saved["sandbox_lock_settings"] and protected_changes(self.saved, changes):
-            names = ", ".join(sorted(protected_changes(self.saved, changes)))
-            confirmed = QMessageBox.question(self, "Protected settings", f"Apply changes to {names}?", QMessageBox.StandardButton.Apply | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Apply
+            names = ", ".join(
+                key.replace("_", " ") for key in sorted(protected_changes(self.saved, changes))
+            )
+            confirmed = (
+                QMessageBox.question(
+                    self,
+                    "Protected settings",
+                    f"Apply changes to {names}?",
+                    QMessageBox.StandardButton.Apply | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel,
+                )
+                == QMessageBox.StandardButton.Apply
+            )
             if not confirmed:
                 return False
         try:
@@ -329,7 +441,21 @@ class SettingsWindow(QMainWindow):
             return False
         if self.launch_companion and self.saved["avatar_enabled"]:
             self.ensure_companion()
-        self.status.setText("Saved. Voice changes take effect on service restart." if any(key in changes for key in ("always_listening_enabled", "wake_word_enabled", "speech_enabled", "piper_model", "whisper_model")) else "Settings saved")
+        self.apply_branding()
+        self.status.setText(
+            "Saved. Voice changes take effect on service restart."
+            if any(
+                key in changes
+                for key in (
+                    "always_listening_enabled",
+                    "wake_word_enabled",
+                    "speech_enabled",
+                    "piper_model",
+                    "whisper_model",
+                )
+            )
+            else "Settings saved"
+        )
         return True
 
     def ensure_companion(self):
@@ -340,14 +466,19 @@ class SettingsWindow(QMainWindow):
             return
         try:
             apply_user_appearance(self.saved)
-            self.status.setText("Desktop appearance saved. Restart wallpaper and GTK applications to apply.")
+            self.status.setText(
+                "Desktop appearance saved. Restart wallpaper and GTK applications to apply."
+            )
         except (OSError, ValueError) as exc:
             QMessageBox.warning(self, "Appearance was not applied", str(exc))
 
     def control_service(self, action):
         if action != "stop" and not self.save():
             return
-        if self.service_process and self.service_process.state() != QProcess.ProcessState.NotRunning:
+        if (
+            self.service_process
+            and self.service_process.state() != QProcess.ProcessState.NotRunning
+        ):
             return
         process = QProcess(self)
         self.service_process = process
@@ -355,17 +486,29 @@ class SettingsWindow(QMainWindow):
 
         def finished(code, _status):
             output = bytes(process.readAllStandardOutput()).decode(errors="replace").strip()
-            self.status.setText(f"AI service: {action} complete" if code == 0 else output or "Service action failed")
+            self.status.setText(
+                f"AI service: {action} complete" if code == 0 else output or "Service action failed"
+            )
 
         process.finished.connect(finished)
         process.errorOccurred.connect(lambda _error: self.status.setText(process.errorString()))
         self.status.setText(f"AI service: {action}...")
         process.start("systemctl", ["--user", action, "ai-os.service"])
-        QTimer.singleShot(8000, process, lambda: process.kill() if process.state() != QProcess.ProcessState.NotRunning else None)
+        QTimer.singleShot(
+            8000,
+            process,
+            lambda: process.kill() if process.state() != QProcess.ProcessState.NotRunning else None,
+        )
 
     def closeEvent(self, event):
         if self.collect() != self.saved:
-            answer = QMessageBox.question(self, "Unsaved settings", "Discard unsaved changes?", QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Cancel)
+            answer = QMessageBox.question(
+                self,
+                "Unsaved settings",
+                "Discard unsaved changes?",
+                QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel,
+            )
             if answer != QMessageBox.StandardButton.Discard:
                 event.ignore()
                 return

@@ -6,28 +6,36 @@ import os
 import re
 import shutil
 from io import StringIO
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
 
 from ai_os.companion_state import EMOTIONS, SHAPE_NAMES
 from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, atomic_json, load_raw_config
 
-
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
 PROTECTED_KEYS = {
-    "allow_external_apis", "allowed_api_hosts", "hyprland_enabled", "ai_provider",
-    "ollama_url", "always_listening_enabled", "sandbox_lock_settings", "whisper_cli",
+    "allow_external_apis",
+    "allowed_api_hosts",
+    "hyprland_enabled",
+    "ai_provider",
+    "ollama_url",
+    "always_listening_enabled",
+    "sandbox_lock_settings",
+    "whisper_cli",
 }
 CHOICES = {
     "ai_provider": {"ollama", "openai_compatible"},
     "avatar_corner": {"top-left", "top-right", "bottom-left", "bottom-right"},
-    "theme": {"forest", "graphite", "ocean", "light"},
+    "theme": {"forest", "graphite", "ocean", "light", "sunrise"},
     "avatar_idle_shape": set(SHAPE_NAMES),
 }
 BOUNDS = {
-    "avatar_scale": (60, 160), "avatar_motion": (0, 100), "avatar_reactivity": (0, 100),
-    "voice_command_seconds": (2, 30), "wake_word_threshold": (0, 1),
+    "avatar_scale": (60, 160),
+    "avatar_motion": (0, 100),
+    "avatar_reactivity": (0, 100),
+    "voice_command_seconds": (2, 30),
+    "wake_word_threshold": (0, 1),
 }
 
 
@@ -65,7 +73,11 @@ def validate_setting(key: str, value: Any) -> Any:
     elif key == "allowed_api_hosts":
         if not isinstance(value, list) or len(value) > 64:
             raise ValueError("Provide at most 64 approved hostnames.")
-        if any(not isinstance(host, str) or not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?", host) for host in value):
+        if any(
+            not isinstance(host, str)
+            or not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?", host)
+            for host in value
+        ):
             raise ValueError("Approved hosts must be lowercase hostnames without paths or ports.")
     elif key == "avatar_emotions":
         if not isinstance(value, dict) or set(value) - set(EMOTIONS):
@@ -81,9 +93,14 @@ def validate_setting(key: str, value: Any) -> Any:
             if not isinstance(item, str) or len(item) > 512 or any(ord(c) < 32 for c in item):
                 raise ValueError(f"Invalid branding field: {name}")
             if name.endswith("_path") and item:
-                if not Path(item).is_absolute() or any(c in item for c in ",{}#$"):
-                    raise ValueError(f"{name} requires an absolute path without configuration syntax.")
-            elif name in {"icon_theme", "cursor_theme", "font"} and not re.fullmatch(r"[A-Za-z0-9 ._-]{1,80}", item):
+                absolute = Path(item).is_absolute() or PurePosixPath(item).is_absolute()
+                if not absolute or any(c in item for c in ",{}#$"):
+                    raise ValueError(
+                        f"{name} requires an absolute path without configuration syntax."
+                    )
+            elif name in {"icon_theme", "cursor_theme", "font"} and not re.fullmatch(
+                r"[A-Za-z0-9 ._-]{1,80}", item
+            ):
                 raise ValueError(f"Invalid {name}.")
     elif isinstance(default, str):
         if not isinstance(value, str) or len(value) > 512 or any(ord(c) < 32 for c in value):
@@ -101,7 +118,9 @@ def protected_changes(current: dict, changes: dict) -> set[str]:
     return {key for key in PROTECTED_KEYS.intersection(changes) if current.get(key) != changes[key]}
 
 
-def save_settings(changes: dict[str, Any], home: Path = AI_OS_HOME, *, human_confirmed=False) -> dict[str, Any]:
+def save_settings(
+    changes: dict[str, Any], home: Path = AI_OS_HOME, *, human_confirmed=False
+) -> dict[str, Any]:
     current = load_raw_config(home)
     validated = {key: validate_setting(key, value) for key, value in changes.items()}
     protected = protected_changes(current, validated)
@@ -122,7 +141,11 @@ def apply_user_appearance(config: dict[str, Any], config_root: Path | None = Non
         gtk.read(gtk_path, encoding="utf-8")
     if not gtk.has_section("Settings"):
         gtk.add_section("Settings")
-    for field, key in (("icon_theme", "gtk-icon-theme-name"), ("cursor_theme", "gtk-cursor-theme-name"), ("font", "gtk-font-name")):
+    for field, key in (
+        ("icon_theme", "gtk-icon-theme-name"),
+        ("cursor_theme", "gtk-cursor-theme-name"),
+        ("font", "gtk-font-name"),
+    ):
         gtk.set("Settings", key, branding[field])
     buffer = StringIO()
     gtk.write(buffer)

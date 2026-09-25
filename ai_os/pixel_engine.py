@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from ai_os.companion_state import validate_pixels
 
-
 # Each material remains a discrete pixel while the same particles change targets.
 FORMS = {
     "core": """
@@ -184,8 +183,12 @@ def target_pixels(shape: str, levels: dict[str, float], custom: list[str] | None
             grid[6][8:14] = list("o+++oo")
             grid[9][9:13] = list("+oo+")
     width, height = max(map(len, grid)), len(grid)
-    return [(x - (width - 1) / 2, y - (height - 1) / 2, cell)
-            for y, row in enumerate(grid) for x, cell in enumerate(row) if cell != "."]
+    return [
+        (x - (width - 1) / 2, y - (height - 1) / 2, cell)
+        for y, row in enumerate(grid)
+        for x, cell in enumerate(row)
+        if cell != "."
+    ]
 
 
 @dataclass
@@ -218,7 +221,10 @@ class PixelEngine:
         available = set(range(len(self.pixels)))
         for x, y, material in targets:
             if available:
-                index = min(available, key=lambda i: (self.pixels[i].x - x) ** 2 + (self.pixels[i].y - y) ** 2)
+                index = min(
+                    available,
+                    key=lambda i: (self.pixels[i].x - x) ** 2 + (self.pixels[i].y - y) ** 2,
+                )
                 available.remove(index)
                 pixel = self.pixels[index]
                 pixel.tx, pixel.ty, pixel.material, pixel.active = x, y, material, True

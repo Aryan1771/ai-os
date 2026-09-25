@@ -4,7 +4,9 @@ Offline-first AI interface layer and Arch-based desktop product for a portable e
 
 ![REGENOS pixel-cycle mark](branding/regenos-mark.svg)
 
-The companion concept is a retro pixel character with expressive poses; its live overlay uses spring-driven pixel particles and currently morphs among a core, heart, music, code, idea, and cloud. The settings panel and desktop bindings are included. A branded Archiso live image is documented; a graphical disk installer is not yet packaged or safe to ship.
+REGENOS Settings and the corner companion are native Python/Qt applications. The companion rearranges colored pixels in real time, with six simulated emotion bars, twelve built-in forms and validated model-generated pixel patterns. No browser or HTTP settings server is needed. A branded Archiso live image is documented; the graphical disk installer remains unfinished.
+
+![Native REGENOS Settings](docs/images/native-settings.png)
 
 This repository stores the source code, systemd templates, security templates, and Arch setup instructions. It does not store the Python virtual environment, Ollama models, ChromaDB state, downloaded voice models, or private API keys.
 
@@ -45,22 +47,25 @@ ai_os/services/
   local Whisper.cpp adapter, optional wake-word adapter, allowlisted external API broker,
   ClamAV scanner, and cooperative background job registry
 
-ai_os/settings_server.py and ai_os/web/
-  loopback-only settings application for AI, voice, companion, appearance, desktop, and sandbox controls
+ai_os/native_settings.py and ai_os/settings_store.py
+  native Qt settings application and validated local preferences
 
-ai_os/avatar_overlay.py
-  pixel-particle companion with spring morphs and topic/emotion forms
+ai_os/avatar_overlay.py, ai_os/pixel_engine.py, ai_os/companion_state.py
+  native pixel companion, particle morphing and activity/emotion state
 ```
 
 ## Start Here
 
-Read and execute in this order:
+Start with the Arch installation and native desktop guides:
 
 ```bash
 docs/INSTALL_ON_ARCH.md
+docs/NATIVE_DESKTOP.md
+docs/VOICE_AND_COMPANION.md
 docs/PHASE_5_DESKTOP.md
 docs/BRANDING_AND_ARCHISO.md
-docs/VOICE_AND_COMPANION.md
 ```
+
+See [the detailed feature checklist](docs/FEATURE_STATUS.md) for implemented features, integration gaps and target-hardware verification still required.
 
 `docs/ARCH_RUNBOOK.md` remains the detailed Phase 1 checklist. REGENOS is the product identity; the source repository and Python package retain their `ai-os` names for compatibility. REGENOS is an independent Arch-based project and does not replace or claim ownership of Arch Linux, the kernel, or third-party projects.

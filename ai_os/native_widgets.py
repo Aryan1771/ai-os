@@ -6,22 +6,26 @@ from pathlib import Path
 from PySide6.QtCore import QLockFile, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import QLabel, QProgressBar, QVBoxLayout, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from ai_os.companion_state import EMOTIONS, emotion_levels
 from ai_os.config import DEFAULT_CONFIG
 from ai_os.pixel_engine import PixelEngine
 
-
 EMOTION_COLORS = {
-    "joy": "#e8ba71", "curiosity": "#79c8de", "focus": "#b6baf3",
-    "calm": "#72d4ad", "concern": "#ee9188", "energy": "#d8cb81",
+    "joy": "#e8ba71",
+    "curiosity": "#79c8de",
+    "focus": "#b6baf3",
+    "calm": "#72d4ad",
+    "concern": "#ee9188",
+    "energy": "#d8cb81",
 }
 THEMES = {
     "forest": ("#14191b", "#1e2629", "#e9f0f0", "#9baeb3", "#72d4ad"),
     "graphite": ("#18181c", "#25252b", "#f0f0f4", "#aaaab8", "#e8ba71"),
     "ocean": ("#151c21", "#222e34", "#ecf5f7", "#a0b4be", "#79c8de"),
     "light": ("#f3f5f7", "#ffffff", "#222a30", "#586872", "#147c62"),
+    "sunrise": ("#202024", "#2b2b30", "#f5f3f0", "#b0aaaf", "#e6a575"),
 }
 
 
@@ -63,6 +67,7 @@ class LocalInstance:
         (home / "run").mkdir(parents=True, exist_ok=True)
         self.address = str(home / "run" / f"{name}.sock")
         self.lock = QLockFile(str(home / "run" / f"{name}.lock"))
+        self.lock.setStaleLockTime(0)
         self.server = QLocalServer()
         self.server.setSocketOptions(QLocalServer.SocketOption.UserAccessOption)
 
@@ -95,6 +100,7 @@ class EmotionBars(QWidget):
     def __init__(self, compact: bool = False, parent=None) -> None:
         super().__init__(parent)
         self.bars = {}
+        self.values = {}
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 5, 10, 5)
         layout.setSpacing(4 if compact else 9)
@@ -105,17 +111,27 @@ class EmotionBars(QWidget):
             bar = QProgressBar()
             bar.setRange(0, 100)
             bar.setFixedHeight(10 if compact else 17)
-            bar.setTextVisible(not compact)
+            bar.setTextVisible(False)
             bar.setAccessibleName(key.capitalize())
-            bar.setStyleSheet(f"QProgressBar::chunk {{background: {EMOTION_COLORS[key]}; border-radius: 3px;}}")
+            bar.setStyleSheet(
+                f"QProgressBar::chunk {{background: {EMOTION_COLORS[key]}; border-radius: 3px;}}"
+            )
             self.bars[key] = bar
             row.addWidget(label)
             row.addWidget(bar, 1)
+            if not compact:
+                value = QLabel("0")
+                value.setFixedWidth(30)
+                value.setAlignment(Qt.AlignmentFlag.AlignRight)
+                self.values[key] = value
+                row.addWidget(value)
             layout.addLayout(row)
 
     def set_levels(self, levels: dict[str, float]) -> None:
         for key, bar in self.bars.items():
             bar.setValue(round(levels[key]))
+            if key in self.values:
+                self.values[key].setText(str(round(levels[key])))
 
 
 class CompanionCanvas(QWidget):
@@ -156,7 +172,9 @@ class CompanionCanvas(QWidget):
             return
         for key in self.levels:
             self.levels[key] += (self.target_levels[key] - self.levels[key]) * min(1, dt * 5)
-        self.engine.advance(dt, self.config["avatar_motion"] / 100, self.config["avatar_animation_enabled"])
+        self.engine.advance(
+            dt, self.config["avatar_motion"] / 100, self.config["avatar_animation_enabled"]
+        )
         self.levels_changed.emit(self.levels.copy())
         self.update()
 

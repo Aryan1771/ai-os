@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import threading
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 AI_OS_HOME = Path(os.environ.get("AI_OS_HOME", "~/.ai_os")).expanduser()
+_JSON_WRITE_LOCK = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -74,8 +75,12 @@ DEFAULT_CONFIG = {
     "avatar_topic_morphing": True,
     "avatar_idle_shape": "core",
     "avatar_emotions": {
-        "joy": 35, "curiosity": 50, "focus": 40,
-        "calm": 75, "concern": 10, "energy": 45,
+        "joy": 35,
+        "curiosity": 50,
+        "focus": 40,
+        "calm": 75,
+        "concern": 10,
+        "energy": 45,
     },
     "theme": "forest",
     "branding": {
@@ -134,7 +139,8 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(value, handle, indent=2, allow_nan=False)
             handle.write("\n")
-        temporary.replace(path)
+        with _JSON_WRITE_LOCK:
+            temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
 

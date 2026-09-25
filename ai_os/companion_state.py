@@ -9,12 +9,35 @@ from typing import Any
 
 from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, atomic_json
 
-
 EMOTIONS = tuple(DEFAULT_CONFIG["avatar_emotions"])
-PHASES = {"idle", "listening", "transcribing", "thinking", "working", "speaking", "reply", "error"}
-SHAPE_NAMES = ("core", "heart", "music", "code", "idea", "cloud", "gear", "shield", "folder", "chip", "search", "clock")
+PHASES = {
+    "idle",
+    "armed",
+    "listening",
+    "transcribing",
+    "thinking",
+    "working",
+    "speaking",
+    "reply",
+    "error",
+}
+SHAPE_NAMES = (
+    "core",
+    "heart",
+    "music",
+    "code",
+    "idea",
+    "cloud",
+    "gear",
+    "shield",
+    "folder",
+    "chip",
+    "search",
+    "clock",
+)
 PHASE_LEVELS = {
     "idle": {},
+    "armed": {"calm": 85, "curiosity": 55},
     "listening": {"curiosity": 85, "focus": 70},
     "transcribing": {"focus": 85, "energy": 60},
     "thinking": {"curiosity": 85, "focus": 90, "energy": 60},
@@ -78,7 +101,10 @@ def topic_shape(text: str, phase: str = "idle") -> str:
 
 
 def publish_state(
-    phase: str, text: str = "", *, home: Path = AI_OS_HOME,
+    phase: str,
+    text: str = "",
+    *,
+    home: Path = AI_OS_HOME,
     avatar: Any = None,
 ) -> dict[str, Any]:
     if phase not in PHASES:
@@ -86,9 +112,12 @@ def publish_state(
     metadata = visual_metadata(avatar)
     emotions = PHASE_LEVELS[phase] | metadata.get("emotions", {})
     state = {
-        "version": 1, "updated_at": time.time(), "phase": phase,
+        "version": 1,
+        "updated_at": time.time(),
+        "phase": phase,
         "shape": metadata.get("shape", topic_shape(text, phase)),
-        "emotions": emotions, "pixels": metadata.get("pixels"),
+        "emotions": emotions,
+        "pixels": metadata.get("pixels"),
     }
     atomic_json(home / "run" / "avatar_state.json", state)
     return state
@@ -117,6 +146,9 @@ def emotion_levels(state: dict[str, Any], config: dict[str, Any]) -> dict[str, f
     influence = config.get("avatar_reactivity", 75) / 100
     targets = PHASE_LEVELS.get(state["phase"], {}) | state.get("emotions", {})
     return {
-        key: max(0, min(100, baseline[key] + (targets.get(key, baseline[key]) - baseline[key]) * influence))
+        key: max(
+            0,
+            min(100, baseline[key] + (targets.get(key, baseline[key]) - baseline[key]) * influence),
+        )
         for key in EMOTIONS
     }

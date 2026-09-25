@@ -13,6 +13,8 @@ Copy the rest of your normal Hyprland configuration into `~/.config/hypr/hyprlan
 exec-once = hyprpaper
 exec-once = waybar
 source = ~/.config/hypr/regenos-bindings.conf
+source = ~/.config/hypr/regenos-companion.conf
+exec-once = ~/.ai_os/venv/bin/regenos-companion
 ```
 
 The bindings use the Super key (the Windows-logo key on most laptops): Super+Space opens the app launcher; Super+Enter opens Kitty; Super+E opens Thunar; Super+A opens REGENOS Settings; Super+R starts the AI daemon, Super+Shift+R restarts it, and Super+Ctrl+R stops it; Super+V toggles mute; Super+Up/Down changes volume; Super+Shift+Up/Down changes brightness; Super+L locks; Super+Shift+Q closes the active window. These are Hyprland bindings, not global shortcuts for a TTY or another desktop. Resolve conflicts with existing bindings before sourcing the file.

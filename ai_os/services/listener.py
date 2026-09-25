@@ -79,6 +79,8 @@ class AlwaysListeningService:
         if self._process.stdout is None:
             raise RuntimeError("PipeWire recorder did not provide an audio stream.")
 
+        self.on_activity("armed")
+        last_heartbeat = time.monotonic()
         try:
             while not self._stop.is_set():
                 audio = self._process.stdout.read(chunk_bytes)
@@ -89,6 +91,9 @@ class AlwaysListeningService:
                 frame = np.frombuffer(audio, dtype=np.int16)
                 if self.playback_active():
                     continue
+                if time.monotonic() - last_heartbeat > 30:
+                    self.on_activity("armed")
+                    last_heartbeat = time.monotonic()
                 if self.wake_word.detect_frame(frame):
                     self.on_activity("listening")
                     transcript = self._capture_and_transcribe(audio, chunk_bytes)

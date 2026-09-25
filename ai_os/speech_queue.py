@@ -5,9 +5,9 @@ import re
 import shutil
 import subprocess
 import threading
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,12 @@ class SpeechItem:
 
 
 class SpeechQueue:
-    def __init__(self, piper_model: Path | None = None, *, on_activity: Callable[[str, str, dict | None], None] | None = None) -> None:
+    def __init__(
+        self,
+        piper_model: Path | None = None,
+        *,
+        on_activity: Callable[[str, str, dict | None], None] | None = None,
+    ) -> None:
         self.piper_model = piper_model
         self._queue: queue.PriorityQueue[tuple[int, int, SpeechItem]] = queue.PriorityQueue()
         self._counter = 0
@@ -31,7 +36,9 @@ class SpeechQueue:
 
     def enqueue(self, text: str, priority: int = 10, *, avatar: dict | None = None) -> None:
         self._counter += 1
-        self._queue.put((priority, self._counter, SpeechItem(text=text, priority=priority, avatar=avatar)))
+        self._queue.put(
+            (priority, self._counter, SpeechItem(text=text, priority=priority, avatar=avatar))
+        )
 
     def enqueue_bridge(self, text: str) -> None:
         self.enqueue(f"Oh, by the way. {text}", priority=5)
@@ -56,7 +63,17 @@ class SpeechQueue:
                         stderr=subprocess.DEVNULL,
                     )
                     player_process = subprocess.Popen(
-                        [player, "--raw", "--rate", "22050", "--channels", "1", "--format", "s16", "-"],
+                        [
+                            player,
+                            "--raw",
+                            "--rate",
+                            "22050",
+                            "--channels",
+                            "1",
+                            "--format",
+                            "s16",
+                            "-",
+                        ],
                         stdin=piper.stdout,
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,

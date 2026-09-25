@@ -15,8 +15,13 @@ from ai_os.settings_store import save_settings
 
 class AvatarOverlay(QWidget):
     def __init__(self, home: Path = AI_OS_HOME) -> None:
-        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
-                         Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        super().__init__(
+            None,
+            Qt.WindowType.Tool
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowDoesNotAcceptFocus,
+        )
         self.home = home
         self.setWindowTitle("REGENOS Companion")
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -24,7 +29,9 @@ class AvatarOverlay(QWidget):
         self.canvas = CompanionCanvas()
         self.status = QLabel("Idle")
         self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status.setFixedHeight(24)
         self.bars = EmotionBars(compact=True)
+        self.bars.setFixedHeight(126)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 0, 8, 8)
         layout.setSpacing(3)
@@ -52,10 +59,17 @@ class AvatarOverlay(QWidget):
             return
         if config != self.last_config:
             self.last_config = config
+            branding = config["branding"]
+            self.setWindowTitle(f"{branding['brand_name']} {branding['assistant_name']}")
             scale = config["avatar_scale"] / 100
             self.canvas.setFixedHeight(round(230 * scale))
-            self.setFixedSize(max(210, round(260 * scale)), round(230 * scale) + 30 + (138 if config["avatar_show_emotion_bars"] else 0))
-            self.setStyleSheet(theme_stylesheet(config["theme"]) + "AvatarOverlay {background: transparent;}")
+            self.setFixedSize(
+                max(210, round(260 * scale)),
+                round(230 * scale) + 30 + (138 if config["avatar_show_emotion_bars"] else 0),
+            )
+            self.setStyleSheet(
+                theme_stylesheet(config["theme"]) + "AvatarOverlay {background: transparent;}"
+            )
             self.bars.setVisible(config["avatar_show_emotion_bars"])
             self.setVisible(config["avatar_enabled"])
             self.place()
@@ -79,7 +93,9 @@ class AvatarOverlay(QWidget):
     def contextMenuEvent(self, event) -> None:
         menu = QMenu(self)
         menu.addAction("Settings", self.open_settings)
-        menu.addAction("Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home))
+        menu.addAction(
+            "Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home)
+        )
         menu.exec(event.globalPos())
 
 

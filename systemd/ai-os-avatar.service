@@ -13,8 +13,6 @@ RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=false
 ProtectSystem=full
-ProtectHome=read-only
-ReadWritePaths=%h/.ai_os %h/.local/share/ai_os
 
 [Install]
 WantedBy=graphical-session.target
