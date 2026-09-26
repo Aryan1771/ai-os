@@ -8,7 +8,10 @@ ai-os/
 │   ├── config.py
 │   ├── hardware_monitor.py
 │   ├── logging_utils.py
-│   ├── native_settings.py          # Qt Widgets settings window
+│   ├── native_settings.py          # Previous Python settings UI (regression coverage)
+│   ├── hub_launcher.py             # Launch installed C++ hub
+│   ├── hub_bridge.py               # Private JSON pipes, shared backend validation
+│   ├── conversation_memory.py      # Local SQLite history and context notes
 │   ├── native_widgets.py           # Native canvas, emotion bars, local IPC
 │   ├── settings_store.py           # Config validation and persistence
 │   ├── settings_server.py          # Legacy import/launch shim; no HTTP server
@@ -31,6 +34,7 @@ ai-os/
 │   ├── ai-os/config.example.json
 │   ├── desktop/                   # Native application menu entries
 │   └── hypr/                      # Hyprland wallpaper, lock, and Super bindings
+├── native/hub/                    # C++17 Qt6 Widgets hub, CMake and Qt tests
 ├── docs/                          # Arch setup, security, desktop, voice, and ISO guides
 ├── install/                       # Staged Arch installer script
 ├── scripts/                       # Package, runtime, security, and smoke-check scripts
@@ -46,6 +50,7 @@ Runtime files are created on the Arch system, not committed to Git:
 ```text
 ~/.ai_os/
 ├── venv/
+├── bin/regenos-hub                # Compiled on Arch, never a Windows binary
 ├── config.json
 ├── habit_engine.json
 ├── slang_vocab.json

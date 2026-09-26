@@ -1,6 +1,6 @@
 # Roadmap
 
-See [Feature Status](FEATURE_STATUS.md) for the detailed implemented/pending checklist and [Native Desktop](NATIVE_DESKTOP.md) for the Python/Qt settings and live pixel companion. The browser frontend has been removed.
+See [Feature Status](FEATURE_STATUS.md) for the detailed checklist, [C++ Hub](CPP_HUB.md) for settings/conversation/memory, and [Native Desktop](NATIVE_DESKTOP.md) for the live pixel companion. [Implementation handoff](IMPLEMENTATION_HANDOFF.md) separates remaining software work from Arch validation. The browser frontend has been removed.
 
 ## Phase 0: Portable Arch Base
 

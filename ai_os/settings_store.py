@@ -24,6 +24,8 @@ PROTECTED_KEYS = {
     "always_listening_enabled",
     "sandbox_lock_settings",
     "whisper_cli",
+    "wake_word_model",
+    "memory_enabled",
 }
 CHOICES = {
     "ai_provider": {"ollama", "openai_compatible"},
@@ -37,6 +39,9 @@ BOUNDS = {
     "avatar_reactivity": (0, 100),
     "voice_command_seconds": (2, 30),
     "wake_word_threshold": (0, 1),
+    "piper_length_scale": (0.5, 2.0),
+    "memory_retention_days": (1, 365),
+    "model_context_tokens": (1024, 8192),
 }
 
 

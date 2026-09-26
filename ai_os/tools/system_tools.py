@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
 import signal
@@ -38,50 +39,6 @@ class CommandResult:
     stderr: str
     duration_sec: float
 
-
-SAFE_READ_COMMANDS = {
-    "awk",
-    "basename",
-    "cat",
-    "date",
-    "df",
-    "dirname",
-    "du",
-    "echo",
-    "file",
-    "find",
-    "free",
-    "grep",
-    "head",
-    "hostnamectl",
-    "id",
-    "ip",
-    "journalctl",
-    "ls",
-    "lsblk",
-    "lscpu",
-    "lspci",
-    "lsusb",
-    "nvidia-smi",
-    "pacman",
-    "pgrep",
-    "ps",
-    "pwd",
-    "rg",
-    "sed",
-    "sensors",
-    "ss",
-    "stat",
-    "systemctl",
-    "tail",
-    "uname",
-    "uptime",
-    "wc",
-    "which",
-    "whoami",
-    "wpctl",
-    "brightnessctl",
-}
 
 MODERATE_COMMANDS = {"kill", "killall", "pkill", "mv", "cp", "chmod", "chown", "chgrp"}
 
@@ -145,13 +102,16 @@ def assess_command(command: str | list[str]) -> CommandAssessment:
 
     if executable == "pacman":
         readonly_flags = {"-Q", "-Qs", "-Qi", "-Ql", "-Qq", "-Qe", "-Qu"}
-        if any(flag in argv for flag in readonly_flags):
+        if (argv[0] in {"pacman", "/usr/bin/pacman"} and len(argv) >= 2
+                and argv[1] in readonly_flags
+                and all(re.fullmatch(r"[A-Za-z0-9@_+.][A-Za-z0-9@_.+:-]*", arg) for arg in argv[2:])):
             return CommandAssessment(argv, RiskLevel.SAFE, "Read-only pacman query.", False)
         return CommandAssessment(argv, RiskLevel.DESTRUCTIVE, "Package database mutation possible.", True)
 
     if executable == "systemctl":
-        readonly_verbs = {"status", "is-active", "is-enabled", "list-units", "list-unit-files"}
-        if len(argv) >= 2 and argv[1] in readonly_verbs:
+        readonly_verbs = {"is-active", "is-enabled"}
+        if (argv[0] in {"systemctl", "/usr/bin/systemctl"} and len(argv) == 3
+                and argv[1] in readonly_verbs and re.fullmatch(r"[A-Za-z0-9@_.-]+", argv[2])):
             return CommandAssessment(argv, RiskLevel.SAFE, "Read-only systemctl query.", False)
         return CommandAssessment(argv, RiskLevel.DESTRUCTIVE, "Service state mutation possible.", True)
 
@@ -161,8 +121,15 @@ def assess_command(command: str | list[str]) -> CommandAssessment:
     if executable in DESTRUCTIVE_COMMANDS:
         return CommandAssessment(argv, RiskLevel.DESTRUCTIVE, f"{executable} can modify system state.", True)
 
-    if executable in SAFE_READ_COMMANDS:
-        return CommandAssessment(argv, RiskLevel.SAFE, "Recognized read/query command.", False)
+    safe_arguments = {
+        "uname": {(), ("-a",), ("-r",)}, "id": {(), ("-u",)}, "whoami": {()},
+        "uptime": {()}, "free": {(), ("-h",), ("-m",)}, "lscpu": {(), ("-J",)},
+        "lsblk": {(), ("-J",), ("-f",)}, "df": {(), ("-h",)},
+        "nvidia-smi": {(), ("-q",)}, "pwd": {()},
+    }
+    if (argv[0] in {executable, f"/usr/bin/{executable}"}
+            and tuple(argv[1:]) in safe_arguments.get(executable, set())):
+        return CommandAssessment(argv, RiskLevel.SAFE, "Exact read-only diagnostic invocation.", False)
 
     return CommandAssessment(argv, RiskLevel.MODERATE, "Unknown command requires approval.", True)
 
@@ -176,6 +143,7 @@ def run_command(
 ) -> CommandResult:
     assessment = assess_command(command)
     start = time.monotonic()
+    timeout_sec = max(1, min(60, int(timeout_sec)))
 
     if assessment.risk == RiskLevel.PROHIBITED:
         return CommandResult(False, assessment, None, "", "Command prohibited by safety policy.", 0.0)
@@ -191,8 +159,12 @@ def run_command(
         )
 
     try:
+        argv = list(assessment.command)
+        if assessment.risk == RiskLevel.SAFE and os.name == "posix":
+            # Do not let a user-writable PATH entry impersonate an approved diagnostic.
+            argv[0] = "/usr/bin/" + Path(argv[0]).name
         proc = subprocess.run(
-            assessment.command,
+            argv,
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -380,4 +352,3 @@ if __name__ == "__main__":
         "destructive_command_test": run_command(["sudo", "pacman", "-S", "vim"]),
     }
     print(json.dumps(snapshot, indent=2, default=dataclass_json))
-

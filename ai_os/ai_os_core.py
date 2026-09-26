@@ -12,8 +12,9 @@ from typing import Any
 
 import requests
 
-from ai_os.companion_state import SHAPE_NAMES, publish_state, visual_metadata
+from ai_os.companion_state import SHAPE_NAMES, publish_state, read_state, visual_metadata
 from ai_os.config import AI_OS_HOME, load_config
+from ai_os.conversation_memory import ConversationMemory
 from ai_os.logging_utils import configure_logging
 from ai_os.security.consent_broker import ConsentDecision, ConsentRequest, request_cli_consent
 from ai_os.services.listener import AlwaysListeningService
@@ -60,7 +61,9 @@ def json_default(value: Any) -> Any:
 
 
 def system_prompt(registered_tools: set[str] | None = None) -> str:
-    tool_names = ", ".join(sorted(registered_tools or build_tool_registry()))
+    tool_names = ", ".join(
+        sorted(registered_tools if registered_tools is not None else build_tool_registry())
+    )
     return f"""You are the local REgenOS assistant.
 For a text reply, prefer a JSON object with a reply string and optional avatar metadata:
 {{"reply": "Your spoken answer", "avatar": {{"shape": "core", "emotions": {{"joy": 50}}}}}}
@@ -80,16 +83,28 @@ Never request destructive commands unless the user clearly asked.
 Hyprland/Wayland UI automation is disabled until the user enables Phase 5."""
 
 
-def ask_ollama(user_text: str, registered_tools: set[str] | None = None) -> str:
-    config = load_config()
+def ask_ollama(
+    user_text: str, registered_tools: set[str] | None = None, home: Path = AI_OS_HOME
+) -> str:
+    config = load_config(home)
+    context = (
+        ConversationMemory(home).context(
+            user_text,
+            days=config.memory_retention_days,
+            budget=min(8000, config.model_context_tokens),
+        )
+        if config.memory_enabled
+        else []
+    )
     payload = {
         "model": config.ollama_model,
         "stream": False,
         "messages": [
             {"role": "system", "content": system_prompt(registered_tools)},
+            *context,
             {"role": "user", "content": user_text},
         ],
-        "options": {"temperature": 0.2},
+        "options": {"temperature": 0.2, "num_ctx": config.model_context_tokens},
     }
     headers: dict[str, str] = {}
     validate_model_endpoint(asdict(config))
@@ -175,10 +190,12 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
 def handle_user_text(
     user_text: str, registry: dict[str, ToolFn] | None = None, *, home: Path = AI_OS_HOME
 ) -> dict[str, Any]:
-    registry = registry or build_tool_registry()
+    if not isinstance(user_text, str) or not user_text.strip() or len(user_text) > 8000:
+        raise ValueError("Messages must contain 1-8000 characters.")
+    registry = registry if registry is not None else build_tool_registry()
     publish_state("thinking", user_text, home=home)
     try:
-        model_text = ask_ollama(user_text, set(registry))
+        model_text = ask_ollama(user_text, set(registry), home)
         tool_call = parse_tool_call(model_text)
         if tool_call:
             publish_state("working", tool_call["tool"], home=home)
@@ -189,14 +206,22 @@ def handle_user_text(
                 else getattr(result, "ok", True) is False
             )
             publish_state("error" if failed else "reply", tool_call["tool"], home=home)
-            return {"type": "tool_result", "tool": tool_call["tool"], "result": result}
+            response = {"type": "tool_result", "tool": tool_call["tool"], "result": result}
+            _remember_turn(home, user_text, json.dumps(response, default=json_default))
+            return response
         text, avatar = parse_visual_reply(model_text)
-        memory_tools.remember_event("assistant_text", {"user": user_text, "assistant": text})
+        _remember_turn(home, user_text, text)
         publish_state("reply", text, home=home, avatar=avatar)
         return {"type": "text", "content": text, "avatar": avatar}
     except Exception:
         publish_state("error", home=home)
         raise
+
+
+def _remember_turn(home: Path, user: str, reply: str) -> None:
+    config = load_config(home)
+    if config.memory_enabled:
+        ConversationMemory(home).append(user, reply, days=config.memory_retention_days)
 
 
 def parse_visual_reply(model_text: str) -> tuple[str, dict]:
@@ -232,6 +257,7 @@ def start_voice_services(
     speech = (
         SpeechQueue(
             config.piper_model,
+            length_scale=config.piper_length_scale,
             on_activity=lambda phase, text, avatar: publish_state(
                 phase, text, home=config.home, avatar=avatar
             ),
@@ -244,7 +270,7 @@ def start_voice_services(
 
     def on_transcript(transcript: str) -> None:
         try:
-            response = handle_user_text(transcript, registry)
+            response = handle_user_text(transcript, registry, home=config.home)
             print(
                 json.dumps(
                     {"type": "voice", "transcript": transcript, "response": response},
@@ -263,8 +289,11 @@ def start_voice_services(
         on_transcript=on_transcript,
         wake_word_threshold=config.wake_word_threshold,
         command_seconds=config.voice_command_seconds,
+        wake_word_model=config.wake_word_model,
         on_activity=lambda phase: publish_state(phase, home=config.home),
-        playback_active=speech.is_speaking if speech else None,
+        playback_active=lambda: (
+            bool(speech and speech.is_speaking()) or read_state(config.home)["phase"] == "speaking"
+        ),
     )
 
     def run_listener() -> None:

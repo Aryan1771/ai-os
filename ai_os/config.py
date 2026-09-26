@@ -41,6 +41,11 @@ class AiOsConfig:
     avatar_scale: int
     avatar_animation_enabled: bool
     avatar_accent: str
+    wake_word_model: str
+    piper_length_scale: float
+    memory_enabled: bool
+    memory_retention_days: int
+    model_context_tokens: int
 
 
 DEFAULT_CONFIG = {
@@ -82,7 +87,12 @@ DEFAULT_CONFIG = {
         "concern": 10,
         "energy": 45,
     },
-    "theme": "forest",
+    "theme": "graphite",
+    "wake_word_model": "",
+    "piper_length_scale": 1.0,
+    "memory_enabled": True,
+    "memory_retention_days": 30,
+    "model_context_tokens": 4096,
     "branding": {
         "brand_name": "REgenOS",
         "assistant_name": "Companion",
@@ -174,4 +184,9 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         avatar_scale=max(60, min(160, int(raw["avatar_scale"]))),
         avatar_animation_enabled=bool(raw["avatar_animation_enabled"]),
         avatar_accent=str(raw["avatar_accent"]),
+        wake_word_model=str(home / raw["wake_word_model"]) if raw["wake_word_model"] else "",
+        piper_length_scale=float(raw["piper_length_scale"]),
+        memory_enabled=bool(raw["memory_enabled"]),
+        memory_retention_days=int(raw["memory_retention_days"]),
+        model_context_tokens=int(raw["model_context_tokens"]),
     )

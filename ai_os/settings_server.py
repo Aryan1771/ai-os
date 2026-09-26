@@ -4,7 +4,7 @@ from ai_os.settings_store import save_settings  # noqa: F401
 
 
 def main() -> int:
-    from ai_os.native_settings import main as native_main
+    from ai_os.hub_launcher import main as native_main
 
     return native_main()
 

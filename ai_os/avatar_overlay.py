@@ -88,7 +88,7 @@ class AvatarOverlay(QWidget):
         self.move(x, y)
 
     def open_settings(self) -> None:
-        QProcess.startDetached(sys.executable, ["-m", "ai_os.native_settings"])
+        QProcess.startDetached(sys.executable, ["-m", "ai_os.hub_launcher"])
 
     def contextMenuEvent(self, event) -> None:
         menu = QMenu(self)

@@ -15,6 +15,7 @@ fi
 
 sudo pacman -S --needed libxkbcommon-x11 xcb-util-cursor libxcb fontconfig noto-fonts desktop-file-utils
 "${RUNTIME_DIR}/venv/bin/python" -m pip install -e "${REPO_ROOT}[desktop]"
+bash "${REPO_ROOT}/scripts/install_cpp_hub.sh"
 mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/scalable/apps"
 install -m 0644 "${REPO_ROOT}/branding/regenos-mark.svg" "${HOME}/.local/share/icons/hicolor/scalable/apps/regenos.svg"
 for app in regenos-settings regenos-companion; do

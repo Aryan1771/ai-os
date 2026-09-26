@@ -22,7 +22,7 @@ EMOTION_COLORS = {
 }
 THEMES = {
     "forest": ("#14191b", "#1e2629", "#e9f0f0", "#9baeb3", "#72d4ad"),
-    "graphite": ("#18181c", "#25252b", "#f0f0f4", "#aaaab8", "#e8ba71"),
+    "graphite": ("#202020", "#2b2b2b", "#e5e5e5", "#a0a0a0", "#79b8ec"),
     "ocean": ("#151c21", "#222e34", "#ecf5f7", "#a0b4be", "#79c8de"),
     "light": ("#f3f5f7", "#ffffff", "#222a30", "#586872", "#147c62"),
     "sunrise": ("#202024", "#2b2b30", "#f5f3f0", "#b0aaaf", "#e6a575"),
@@ -30,7 +30,7 @@ THEMES = {
 
 
 def theme_stylesheet(name: str) -> str:
-    bg, surface, text, muted, accent = THEMES.get(name, THEMES["forest"])
+    bg, surface, text, muted, accent = THEMES.get(name, THEMES["graphite"])
     return f"""
     QWidget {{ background: {bg}; color: {text}; font-family: 'Noto Sans', 'Segoe UI'; font-size: 13px; }}
     QLabel#product {{ font-size: 23px; font-weight: 650; }}

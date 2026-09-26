@@ -1,0 +1,34 @@
+name: Native hub and Python tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux-software-tests:
+    runs-on: ubuntu-24.04
+    env:
+      QT_QPA_PLATFORM: offscreen
+      REGENOS_HUB_NO_COMPANION: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install native build and conversion dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build qt6-base-dev libegl1 libopengl0 libxkbcommon0 libmagickwand-dev
+          python -m pip install -e '.[desktop,dev]' win2xcur==0.1.2
+      - name: Python tests including cursor conversion
+        run: python -m pytest -q
+      - name: Build and test native C++ hub
+        run: |
+          cmake -S native/hub -B build/hub -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/hub --parallel 2
+          REGENOS_TEST_PYTHON="$(command -v python)" ctest --test-dir build/hub --output-on-failure
+      - name: Installer shell syntax
+        run: |
+          bash -n scripts/install_cpp_hub.sh
+          bash -n scripts/install_native_desktop.sh
+          bash -n scripts/install_cursor_theme.sh

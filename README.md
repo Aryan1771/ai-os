@@ -7,9 +7,9 @@ Offline-first AI interface layer and Arch-based desktop product for a portable e
 
 ![REgenOS pixel-cycle mark](branding/regenos-mark.svg)
 
-REgenOS Settings and the corner companion are native Python/Qt applications. The companion rearranges colored pixels in real time, with six simulated emotion bars, twelve built-in forms and validated model-generated pixel patterns. No browser or HTTP settings server is needed. A branded Archiso live image is documented; the graphical disk installer remains unfinished.
+REgenOS Hub is a compiled **C++17/Qt 6 Widgets** application with an ordinary Graphite dark default. It connects model settings, conversation, voice, local context notes, companion preferences and desktop appearance to the Python backend. The corner companion remains native Python/Qt and rearranges colored pixels with six simulated emotion bars. No browser or HTTP settings server is needed. A branded Archiso live image is documented; the graphical disk installer remains unfinished.
 
-![Native REgenOS Settings](docs/images/native-settings.png)
+![Native C++ REgenOS Hub](docs/images/cpp-hub.png)
 
 This repository stores the source code, systemd templates, security templates, and Arch setup instructions. It does not store the Python virtual environment, Ollama models, ChromaDB state, downloaded voice models, or private API keys.
 
@@ -41,7 +41,7 @@ ai_os/hardware_monitor.py
   udev and system snapshot diff monitor
 
 ai_os/speech_queue.py
-  sentence-aware speech/event queue for Piper or terminal fallback
+  sentence-aware Piper WAV playback with sample-rate metadata and bounded subprocesses
 
 ai_os/security/consent_broker.py
   human approval flow for risky commands
@@ -50,8 +50,11 @@ ai_os/services/
   local Whisper.cpp adapter, optional wake-word adapter, allowlisted external API broker,
   ClamAV scanner, and cooperative background job registry
 
-ai_os/native_settings.py and ai_os/settings_store.py
-  native Qt settings application and validated local preferences
+native/hub/ and ai_os/hub_bridge.py
+  C++ Qt Widgets hub and private JSON child-process bridge to validated Python services
+
+ai_os/conversation_memory.py
+  bounded persistent conversation history and explicit context notebook in local SQLite
 
 ai_os/avatar_overlay.py, ai_os/pixel_engine.py, ai_os/companion_state.py
   native pixel companion, particle morphing and activity/emotion state
@@ -64,6 +67,8 @@ Start with the Arch installation and native desktop guides:
 ```bash
 docs/INSTALL_ON_ARCH.md
 docs/NATIVE_DESKTOP.md
+docs/CPP_HUB.md
+docs/IMPLEMENTATION_HANDOFF.md
 docs/VOICE_AND_COMPANION.md
 docs/PHASE_5_DESKTOP.md
 docs/BRANDING_AND_ARCHISO.md

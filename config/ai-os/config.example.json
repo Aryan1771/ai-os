@@ -37,7 +37,12 @@
     "concern": 10,
     "energy": 45
   },
-  "theme": "forest",
+  "theme": "graphite",
+  "wake_word_model": "",
+  "piper_length_scale": 1.0,
+  "memory_enabled": true,
+  "memory_retention_days": 30,
+  "model_context_tokens": 4096,
   "branding": {
     "brand_name": "REgenOS",
     "assistant_name": "Companion",

@@ -25,7 +25,7 @@ dev = ["pytest>=8.0.0", "ruff>=0.5.0"]
 packages = ["ai_os", "ai_os.tools", "ai_os.security", "ai_os.services"]
 
 [project.gui-scripts]
-regenos-settings = "ai_os.native_settings:main"
+regenos-settings = "ai_os.hub_launcher:main"
 regenos-companion = "ai_os.avatar_overlay:main"
 
 [tool.ruff]

@@ -29,11 +29,12 @@ class AlwaysListeningService:
         sample_rate: int = 16_000,
         on_activity: Callable[[str], None] | None = None,
         playback_active: Callable[[], bool] | None = None,
+        wake_word_model: str = "",
     ) -> None:
         self.run_dir = run_dir
         self.transcriber = transcriber
         self.on_transcript = on_transcript
-        self.wake_word = WakeWordService(wake_word_threshold)
+        self.wake_word = WakeWordService(wake_word_threshold, wake_word_model)
         self.command_seconds = max(2, min(30, int(command_seconds)))
         self.sample_rate = sample_rate
         self.on_activity = on_activity or (lambda _phase: None)

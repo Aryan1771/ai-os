@@ -4,7 +4,10 @@ import queue
 import re
 import shutil
 import subprocess
+import sys
+import tempfile
 import threading
+import wave
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,8 +26,12 @@ class SpeechQueue:
         piper_model: Path | None = None,
         *,
         on_activity: Callable[[str, str, dict | None], None] | None = None,
+        length_scale: float = 1.0,
     ) -> None:
         self.piper_model = piper_model
+        self.length_scale = max(0.5, min(2.0, float(length_scale)))
+        self._counter_lock = threading.Lock()
+        self.last_error: str | None = None
         self._queue: queue.PriorityQueue[tuple[int, int, SpeechItem]] = queue.PriorityQueue()
         self._counter = 0
         self._stop = threading.Event()
@@ -35,10 +42,11 @@ class SpeechQueue:
         return self._speaking.is_set()
 
     def enqueue(self, text: str, priority: int = 10, *, avatar: dict | None = None) -> None:
-        self._counter += 1
-        self._queue.put(
-            (priority, self._counter, SpeechItem(text=text, priority=priority, avatar=avatar))
-        )
+        with self._counter_lock:
+            self._counter += 1
+            self._queue.put(
+                (priority, self._counter, SpeechItem(text=text, priority=priority, avatar=avatar))
+            )
 
     def enqueue_bridge(self, text: str) -> None:
         self.enqueue(f"Oh, by the way. {text}", priority=5)
@@ -52,44 +60,51 @@ class SpeechQueue:
                 yield chunk
 
     def speak_text(self, text: str) -> None:
-        if self.piper_model and self.piper_model.exists():
-            player = shutil.which("pw-play")
-            if player and shutil.which("piper"):
-                try:
-                    piper = subprocess.Popen(
-                        ["piper", "--model", str(self.piper_model), "--output-raw"],
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.DEVNULL,
-                    )
-                    player_process = subprocess.Popen(
-                        [
-                            player,
-                            "--raw",
-                            "--rate",
-                            "22050",
-                            "--channels",
-                            "1",
-                            "--format",
-                            "s16",
-                            "-",
-                        ],
-                        stdin=piper.stdout,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                    if piper.stdin:
-                        piper.stdin.write(text.encode("utf-8"))
-                        piper.stdin.close()
-                    piper.wait(timeout=30)
-                    player_process.wait(timeout=30)
-                    return
-                except (OSError, subprocess.TimeoutExpired):
-                    if "piper" in locals():
-                        piper.kill()
-                    if "player_process" in locals():
-                        player_process.kill()
-        print(f"[speech] {text}", flush=True)
+        if not self.piper_model or not self.piper_model.is_file():
+            raise RuntimeError("Piper voice model is missing.")
+        player, piper = shutil.which("pw-play"), shutil.which("piper")
+        venv_piper = Path(sys.executable).with_name(
+            "piper.exe" if sys.platform == "win32" else "piper"
+        )
+        if venv_piper.is_file():
+            piper = str(venv_piper)
+        if not player or not piper:
+            raise RuntimeError("Piper and pw-play must be installed to speak.")
+        if not text.strip() or len(text) > 8000:
+            raise ValueError("Speech text must contain 1-8000 characters.")
+        # WAV metadata supplies each voice's real sample rate; no fixed raw PCM rate.
+        with tempfile.TemporaryDirectory(prefix="regenos-speech-") as directory:
+            output = Path(directory) / "speech.wav"
+            subprocess.run(
+                [
+                    piper,
+                    "--model",
+                    str(self.piper_model),
+                    "--output_file",
+                    str(output),
+                    "--length_scale",
+                    str(self.length_scale),
+                ],
+                input=text.encode("utf-8"),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                timeout=60,
+                check=True,
+            )
+            with wave.open(str(output), "rb") as wav:
+                if not wav.getnframes() or not 8000 <= wav.getframerate() <= 192000:
+                    raise ValueError("Piper generated an invalid or empty WAV.")
+                duration = wav.getnframes() / wav.getframerate()
+                if duration > 180:
+                    raise ValueError("Speech output exceeds the playback duration limit.")
+            if not self._stop.is_set():
+                subprocess.run(
+                    [player, str(output)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    timeout=duration + 10,
+                    check=True,
+                )
 
     def run_forever(self) -> None:
         while not self._stop.is_set():
@@ -98,13 +113,26 @@ class SpeechQueue:
             except queue.Empty:
                 continue
             self._speaking.set()
+            failed = False
             try:
                 for sentence in self.sentence_chunks(item.text):
                     if self._stop.is_set():
                         break
                     self.on_activity("speaking", sentence, item.avatar)
                     self.speak_text(sentence)
+            except (
+                OSError,
+                ValueError,
+                RuntimeError,
+                subprocess.SubprocessError,
+                wave.Error,
+            ) as exc:
+                failed = True
+                self.last_error = str(exc)
+                self.on_activity("error", "Speech playback failed", None)
             finally:
                 self._speaking.clear()
-                self.on_activity("idle", "", None)
+                if not failed:
+                    self.last_error = None
+                    self.on_activity("idle", "", None)
                 self._queue.task_done()

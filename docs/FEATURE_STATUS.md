@@ -4,14 +4,14 @@
   desktop defaults and appearance-panel integration; see [cursor guide](CURSOR_THEME.md).
 - [ ] Validate converted cursor hotspots, animation and compositor behavior on Arch.
 
-Updated 2026-09-25. Checked items mean implemented in this repository, not certified on the Arch laptop. The Python/Qt tests run on Windows with offscreen Qt rendering. PipeWire, NVIDIA, systemd, AppArmor, Hyprland and ISO installation need target-system validation. This is an application/distribution prototype, not a completed independently installable operating system.
+Updated 2026-09-26. Checked items mean implemented in this repository, not certified on the Arch laptop. The C++/Qt hub compiles and runs on Windows, including offscreen widget tests and a real Python bridge round-trip. Python tests also run here. PipeWire, NVIDIA, systemd, AppArmor, Hyprland and ISO installation need target-system validation. This is an application/distribution prototype, not a completed independently installable operating system. See [remaining-work ownership](IMPLEMENTATION_HANDOFF.md) and the [C++ hub guide](CPP_HUB.md).
 
 ## Native Desktop And Companion
 
-- [x] Native Python/Qt Settings application with application-menu launcher. No browser, HTML, JavaScript frontend, HTTP settings endpoint, Electron or WebEngine.
-- [x] Six settings pages: companion, AI connection, voice/listening, appearance, desktop and permissions.
+- [x] Compiled C++17/Qt 6 Widgets hub with application-menu launcher and a private child-process Python backend. No browser, HTML, JavaScript frontend, HTTP settings endpoint, Electron or WebEngine. The animated overlay remains Python/Qt.
+- [x] Eight pages: conversation, AI connection, voice/listening, companion, appearance, memory preferences, permissions and context notebook. All persisted settings are described by the backend and represented with native controls.
 - [x] Native checkboxes, selectors, numeric controls, sliders, color dialog, file pickers, confirmation dialogs and status feedback.
-- [x] Five REgenOS window themes: forest, graphite, ocean, light and sunrise.
+- [x] Five REgenOS window themes: forest, graphite, ocean, light and sunrise. Graphite is the ordinary charcoal dark default for new configurations, not high-contrast mode. Existing choices are preserved.
 - [x] Saved product/companion names update native window identity; an existing local logo path supplies the Settings window icon. This does not rewrite `/etc/os-release` or boot branding.
 - [x] Save/revert preferences; validate values before an atomic config write; keep existing nested defaults when upgrading older configs.
 - [x] Native transparent corner companion, shown/hidden from Settings; independent lifetime after closing Settings; click to reopen Settings; context-menu hide.
@@ -45,7 +45,8 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [x] Risky command consent and process-termination consent. Model-supplied `approve=true` cannot approve its own request through the router.
 - [x] Background/noninteractive consent requests are denied instead of waiting on nonexistent terminal input.
 - [ ] Complete autonomous planning loop with multiple tool steps, result-grounded follow-up answers, retry policies and durable task recovery.
-- [ ] Native conversation window and native system-action approval broker. Current conversational entry points are voice and the terminal.
+- [x] Native C++ conversation window, with recent-history loading and optional spoken replies using the saved Piper voice.
+- [ ] Native system-action approval broker. Background risky actions still fail closed; the hub is not a privileged approval channel.
 - [ ] Native adapters for every provider's proprietary protocol. Present remote support assumes an OpenAI-compatible chat-completions schema.
 - [ ] Hard enforcement of an 8 GB VRAM ceiling, GPU admission control, adaptive model unloading and model performance benchmarks.
 
@@ -62,7 +63,8 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [ ] Verified microphone selection, hotplug recovery, user-calibrated voice activity detection and noise suppression on the laptop.
 - [ ] Full acoustic echo cancellation, reliable interruption/barge-in, streaming transcription and streaming speech.
 - [ ] Voice/model download manager and all wake/embedding model assets pre-provisioned for first-run offline use.
-- [ ] Speech backend supervision and support for all Piper voice sample rates; the current playback path assumes 22050 Hz.
+- [x] Piper WAV playback uses each voice's sample rate rather than fixed 22050 Hz; bounded synthesis/playback subprocesses are reaped on timeouts, temporary audio is removed, and failures are surfaced without killing the speech worker. Real audio remains unverified here.
+- [x] Custom ONNX/TFLite wake-word file selection, voice duration multiplier and native voice-test command. A custom phrase requires a trained wake-word model, not simply typing a new name.
 - [ ] End-to-end Arch audio validation with the installed Ollama, Whisper and Piper models.
 
 ## Memory And Personalization
@@ -71,8 +73,9 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [x] Slang/jargon replacement dictionary and protected-term handling.
 - [x] Local event log and recent-event text search.
 - [x] Optional ChromaDB store/search helper functions and persistent local collection path.
-- [ ] Automatic retrieval of relevant memories into every model request. The helper tools exist; full conversational memory is not connected.
-- [ ] Curated import/export, retention/deletion UI, sensitive-data filtering and memory conflict resolution.
+- [x] Bounded persistent recent conversation history and automatic keyword retrieval of explicitly curated context notes into model requests, shared by default across terminal, voice and hub. Local SQLite; no embedding download required. Can be disabled.
+- [x] Context note create/edit/delete, text/Markdown import, validated JSON import/export, conversation retention and clear-history controls in the C++ hub.
+- [ ] Semantic retrieval of older conversation facts, sensitive-data filtering, automatic summarization and memory conflict resolution. Keyword notes plus recent history are not unlimited memory.
 - [ ] Self-training or local model fine-tuning. Saving facts and preferences does not modify model weights.
 - [ ] Offline provisioning/verification of Chroma's embedding model and full semantic-memory integration tests.
 
@@ -84,7 +87,8 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [x] Protected `/etc`, `/boot`, `/usr` writes in the supplied AppArmor policy.
 - [x] No model-executed avatar code, no rendering URLs or scripts, and no browser-based settings server.
 - [ ] Independent OS-level trust separation between daemon, settings, consent and user files. A settings dialog under the same Linux account is not a full security boundary.
-- [ ] Exhaustive safe-command policy. The current read-command allowlist is broad and needs argument-level restrictions before unattended unrestricted tools are trusted.
+- [x] Silent command execution limited to exact diagnostic argument forms, restricted package/service queries and trusted `/usr/bin` resolution on Linux. General-purpose interpreters/editors/search tools now require approval.
+- [ ] Independent command-policy audit and OS-level confinement. Restricted diagnostics alone are not a complete sandbox.
 - [ ] Network-wide domain-only egress enforcement. The current UFW baseline permits outbound DNS, HTTP and HTTPS generally; the Python provider broker enforces its own hostname policy.
 - [ ] Audited AppArmor enforcement on the actual Arch install, seccomp policy, dedicated service identity and secure secrets storage.
 - [ ] Verified `noexec` mount policy for temporary/cache directories; a script/template alone does not establish this.
@@ -111,7 +115,8 @@ Updated 2026-09-25. Checked items mean implemented in this repository, not certi
 - [x] Separate native-UI installation stage that does not require Hyprland.
 - [x] Archiso package additions and branded-live-image instructions.
 - [x] Calamares integration plan and references.
-- [x] Automated Python/Qt checks for config changes, native UI persistence/visibility, state parsing, pixel validation/motion, tool consent and speech activity; offscreen window screenshots at desktop and compact sizes.
+- [x] Automated Python/Qt checks plus C++ widget and real-backend load/save checks; offscreen hub screenshots at desktop and compact sizes. Local result: 58 Python tests passed, one cursor conversion test skipped without ImageMagick; C++ test suite passed.
+- [x] Linux CI workflow for Python, real cursor conversion, C++ compilation and offscreen bridge tests. CI is not Arch hardware certification.
 - [ ] Finished graphical disk installer, complete Calamares modules/branding/launcher and reproducible signed package source.
 - [ ] Reproducible release ISO, verified installed target system, Secure Boot policy, upgrades, rollback and recovery media.
 - [ ] Partitioning/encryption/bootloader failure-path testing in disposable VMs and spare drives.
