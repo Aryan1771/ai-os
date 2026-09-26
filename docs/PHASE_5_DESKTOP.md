@@ -14,6 +14,7 @@ exec-once = hyprpaper
 exec-once = waybar
 source = ~/.config/hypr/regenos-bindings.conf
 source = ~/.config/hypr/regenos-companion.conf
+source = ~/.config/hypr/regenos-cursor.conf
 exec-once = ~/.ai_os/venv/bin/regenos-companion
 ```
 

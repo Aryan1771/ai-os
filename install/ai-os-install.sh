@@ -40,7 +40,7 @@ install_security() {
 install_desktop() {
   bash "${REPO_ROOT}/scripts/install_native_desktop.sh"
   sudo pacman -S --needed hyprland hyprlock hyprpaper hypridle waybar xorg-xwayland wofi kitty thunar \
-    papirus-icon-theme bibata-cursor-theme noto-fonts noto-fonts-emoji ttf-jetbrains-mono \
+    papirus-icon-theme adwaita-cursors noto-fonts noto-fonts-emoji ttf-jetbrains-mono \
     xdg-desktop-portal-hyprland ydotool plymouth imagemagick
   mkdir -p "${HOME}/.config/hypr"
   install -m 0644 "${REPO_ROOT}/config/hypr/hyprlock.conf" "${HOME}/.config/hypr/hyprlock.conf"

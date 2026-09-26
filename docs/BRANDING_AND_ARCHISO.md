@@ -30,6 +30,9 @@ The DE background is configured with Hyprpaper and lock screen with Hyprlock; se
 
 ## Build A Branded Live ISO
 
+Include the default cursor artwork and new-user preferences using the
+[cursor packaging guide](CURSOR_THEME.md#ship-in-a-future-iso).
+
 Build the image on Arch after the runtime and desktop have been validated. These commands make a branded live image; they do **not** create an installer that partitions a disk.
 
 ```bash

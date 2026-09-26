@@ -1,5 +1,9 @@
 # REgenOS Feature Checklist
 
+- [x] Original Cool cursor artwork, Linux conversion/installation tooling,
+  desktop defaults and appearance-panel integration; see [cursor guide](CURSOR_THEME.md).
+- [ ] Validate converted cursor hotspots, animation and compositor behavior on Arch.
+
 Updated 2026-09-25. Checked items mean implemented in this repository, not certified on the Arch laptop. The Python/Qt tests run on Windows with offscreen Qt rendering. PipeWire, NVIDIA, systemd, AppArmor, Hyprland and ISO installation need target-system validation. This is an application/distribution prototype, not a completed independently installable operating system.
 
 ## Native Desktop And Companion

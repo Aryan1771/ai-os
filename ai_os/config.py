@@ -90,7 +90,7 @@ DEFAULT_CONFIG = {
         "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",
         "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png",
         "icon_theme": "Papirus-Dark",
-        "cursor_theme": "Bibata-Modern-Ice",
+        "cursor_theme": "REgenOS-Cool",
         "font": "Noto Sans 10",
     },
 }

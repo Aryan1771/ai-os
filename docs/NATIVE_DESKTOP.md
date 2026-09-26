@@ -1,5 +1,11 @@
 # Native REgenOS Desktop
 
+The native installer also installs and applies the original `REgenOS-Cool`
+cursor theme. See [cursor setup](CURSOR_THEME.md) for session-specific activation,
+backups, and rollback. Appearance applies cursor preferences to GTK 3/4 and
+writes Xcursor environment and Hyprland session fragments; existing session
+configuration must load those fragments as documented.
+
 REgenOS Settings and Companion are Python programs using Qt Widgets through PySide6. They use local files and a user-local single-instance socket. They do not start an HTTP server, require a browser, use WebEngine/Electron, or download UI assets at runtime. Qt uses its Linux display backend; the daemon can still run on a bare TTY, while the two graphical programs need an X11 or Wayland desktop session.
 
 ## Install Or Upgrade On Arch

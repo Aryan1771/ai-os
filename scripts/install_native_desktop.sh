@@ -23,6 +23,7 @@ for app in regenos-settings regenos-companion; do
   desktop-file-edit --set-key=Exec --set-value="\"${RUNTIME_DIR}/venv/bin/${app}\"" "${target}"
 done
 update-desktop-database "${HOME}/.local/share/applications"
+bash "${REPO_ROOT}/scripts/install_cursor_theme.sh" --apply
 # Disable the removed HTTP service when upgrading a previous checkout.
 systemctl --user disable --now ai-os-settings.service 2>/dev/null || true
 echo "Launch: ${RUNTIME_DIR}/venv/bin/regenos-settings"

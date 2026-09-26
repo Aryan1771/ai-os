@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from ai_os.companion_state import EMOTIONS, SHAPE_NAMES
 from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, atomic_json, load_raw_config
+from ai_os.cursor_theme import apply_preferences
 
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
 PROTECTED_KEYS = {
@@ -169,3 +170,9 @@ def apply_user_appearance(config: dict[str, Any], config_root: Path | None = Non
         temporary = target.with_suffix(".regenos-tmp")
         temporary.write_text(content, encoding="utf-8")
         temporary.replace(target)
+    data_root = (
+        Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+        if config_root is None
+        else None
+    )
+    apply_preferences(root, data_root, branding["cursor_theme"])

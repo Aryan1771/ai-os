@@ -1,5 +1,8 @@
 # REgenOS
 
+The default desktop pointer is the author's original **REgenOS Cool** cursor
+pack. See [cursor installation and ISO defaults](docs/CURSOR_THEME.md).
+
 Offline-first AI interface layer and Arch-based desktop product for a portable external NVMe install.
 
 ![REgenOS pixel-cycle mark](branding/regenos-mark.svg)
