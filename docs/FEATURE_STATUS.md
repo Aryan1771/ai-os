@@ -96,6 +96,9 @@ Updated 2026-09-26. Checked items mean implemented in this repository, not certi
 
 ## Hardware, Desktop And Branding
 
+- [x] Read-only x86-64 Linux capability profiles, installed-model RAM admission, bounded context/threads, opt-in installed-model fallback and per-machine CPU overrides. Rechecked at daemon startup and before requests; no automatic downloads or driver changes. See [portability setup and acceptance tests](HARDWARE_PORTABILITY.md).
+- [x] Native C++ Hardware settings/report page and cross-process inference lock for REgenOS clients. NPU detection is informational, not NPU inference support.
+- [ ] Exact memory reservation/VRAM enforcement, NPU inference adapters, runtime backend provisioning and universal hardware compatibility.
 - [x] Hardware snapshot comparison, polling monitor and optional block-device udev event monitor.
 - [x] Cooperative background job registry with pause/cancel state; it is a library rather than a full daemon scheduler.
 - [x] Phase-gated Hyprland window listing and a separate typing adapter; typing is not exposed as a registered daemon tool.
@@ -115,7 +118,7 @@ Updated 2026-09-26. Checked items mean implemented in this repository, not certi
 - [x] Separate native-UI installation stage that does not require Hyprland.
 - [x] Archiso package additions and branded-live-image instructions.
 - [x] Calamares integration plan and references.
-- [x] Automated Python/Qt checks plus C++ widget and real-backend load/save checks; offscreen hub screenshots at desktop and compact sizes. Local result: 58 Python tests passed, one cursor conversion test skipped without ImageMagick; C++ test suite passed.
+- [x] Automated Python/Qt checks plus C++ widget and real-backend load/save checks; offscreen hub screenshots at desktop and compact sizes. Local result: 84 Python tests passed, one cursor conversion test skipped without ImageMagick; C++ test suite passed. Hardware policy tests use synthetic device inventories, not Arch hardware.
 - [x] Linux CI workflow for Python, real cursor conversion, C++ compilation and offscreen bridge tests. CI is not Arch hardware certification.
 - [ ] Finished graphical disk installer, complete Calamares modules/branding/launcher and reproducible signed package source.
 - [ ] Reproducible release ISO, verified installed target system, Secure Boot policy, upgrades, rollback and recovery media.

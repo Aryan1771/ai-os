@@ -16,7 +16,7 @@ This repository stores the source code, systemd templates, security templates, a
 ## Target Runtime
 
 - OS: Arch Linux, Zen kernel, systemd, PipeWire
-- GPU: NVIDIA RTX 4060 Laptop 8 GB VRAM
+- Initial test target: NVIDIA RTX 4060 Laptop 8 GB VRAM; portable x86-64 Linux hardware awareness is implemented, but other machines require validation.
 - Local LLM: Ollama with `qwen2.5:7b-instruct-q4_K_M`
 - Python: 3.12+ in `~/.ai_os/venv`
 - Runtime directory: `~/.ai_os`
@@ -39,6 +39,9 @@ ai_os/tools/ui_tools.py
 
 ai_os/hardware_monitor.py
   udev and system snapshot diff monitor
+
+ai_os/hardware_profile.py
+  read-only discovery, per-machine overrides and conservative local inference admission
 
 ai_os/speech_queue.py
   sentence-aware Piper WAV playback with sample-rate metadata and bounded subprocesses
@@ -68,6 +71,7 @@ Start with the Arch installation and native desktop guides:
 docs/INSTALL_ON_ARCH.md
 docs/NATIVE_DESKTOP.md
 docs/CPP_HUB.md
+docs/HARDWARE_PORTABILITY.md
 docs/IMPLEMENTATION_HANDOFF.md
 docs/VOICE_AND_COMPANION.md
 docs/PHASE_5_DESKTOP.md

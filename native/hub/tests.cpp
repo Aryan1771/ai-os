@@ -7,12 +7,22 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QPushButton>
+#include <QPlainTextEdit>
 #include <QTemporaryDir>
 #include <QtTest>
 
 class HubTests : public QObject {
     Q_OBJECT
 private slots:
+    void destroyDuringRequest() {
+        const auto python = qEnvironmentVariable("REGENOS_TEST_PYTHON");
+        if (python.isEmpty()) QSKIP("Set REGENOS_TEST_PYTHON for process cleanup test");
+        QTemporaryDir directory;
+        auto *hub = new Hub(python, directory.path(), false);
+        hub->request({{"action", "load"}}, [](QJsonObject) {});
+        QTest::qWait(10);
+        delete hub;
+    }
     void realBackendRoundTrip() {
         const auto python = qEnvironmentVariable("REGENOS_TEST_PYTHON");
         if (python.isEmpty()) QSKIP("Set REGENOS_TEST_PYTHON for the real bridge integration test");
@@ -21,6 +31,9 @@ private slots:
         Hub hub(python, directory.path());
         hub.show();
         QTRY_VERIFY_WITH_TIMEOUT(hub.ready(), 15000);
+        QVERIFY(hub.findChild<QCheckBox *>("hardware_auto_adapt"));
+        QVERIFY(hub.findChild<QComboBox *>("hardware_backend"));
+        QVERIFY(hub.findChild<QPlainTextEdit *>("hardwareReport")->isReadOnly());
         hub.findChild<QDoubleSpinBox *>("piper_length_scale")->setValue(1.3);
         auto *save = hub.findChild<QPushButton *>("primary");
         QVERIFY(save);
@@ -32,6 +45,15 @@ private slots:
         QCOMPARE(config["piper_length_scale"].toDouble(), 1.3);
         QCOMPARE(config["theme"].toString(), "graphite");
         QCOMPARE(hub.collected(), config);
+        bool receivedHardware = false;
+        QJsonObject hardware;
+        hub.request({{"action", "hardware"}}, [&](QJsonObject reply) {
+            hardware = reply["report"].toObject();
+            receivedHardware = true;
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(receivedHardware, 20000);
+        QVERIFY(hardware.contains("hardware"));
+        QVERIFY(hardware["policy"].toObject().contains("reason"));
     }
     void settingsRoundTrip() {
         QTemporaryDir directory;

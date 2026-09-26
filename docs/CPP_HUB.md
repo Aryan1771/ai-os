@@ -60,6 +60,9 @@ applications and the complete Linux desktop are not forcibly recolored.
 - Memory: opt-out, retention, recent conversation loading/clearing, and a
   context notebook with editable/importable/exportable notes.
 - Permissions: protected-setting confirmations and Hyprland tool opt-in.
+- Hardware: automatic adaptation, compute policy, opt-in installed fallback models,
+  read-only capability/inference report and confirmed per-machine override.
+  See [hardware portability](HARDWARE_PORTABILITY.md) for behavior and limits.
 
 Custom wake words require an existing trained `.onnx` or `.tflite` model and
 openWakeWord's locally provisioned feature models. Selecting a file does not

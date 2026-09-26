@@ -93,6 +93,10 @@ DEFAULT_CONFIG = {
     "memory_enabled": True,
     "memory_retention_days": 30,
     "model_context_tokens": 4096,
+    "hardware_auto_adapt": True,
+    "hardware_backend": "auto",
+    "hardware_allow_model_fallback": False,
+    "hardware_fallback_models": ["qwen2.5:3b-instruct-q4_K_M", "qwen2.5:1.5b-instruct-q4_K_M"],
     "branding": {
         "brand_name": "REgenOS",
         "assistant_name": "Companion",

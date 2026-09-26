@@ -7,7 +7,13 @@ ollama
 pipewire
 pipewire-pulse
 wireplumber
-nvidia-utils
+linux-firmware
+sof-firmware
+mesa
+vulkan-intel
+vulkan-radeon
+intel-ucode
+amd-ucode
 brightnessctl
 ufw
 clamav

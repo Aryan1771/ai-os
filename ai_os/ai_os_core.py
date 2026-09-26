@@ -15,6 +15,7 @@ import requests
 from ai_os.companion_state import SHAPE_NAMES, publish_state, read_state, visual_metadata
 from ai_os.config import AI_OS_HOME, load_config
 from ai_os.conversation_memory import ConversationMemory
+from ai_os.hardware_profile import inference_slot, refresh_profile, runtime_policy
 from ai_os.logging_utils import configure_logging
 from ai_os.security.consent_broker import ConsentDecision, ConsentRequest, request_cli_consent
 from ai_os.services.listener import AlwaysListeningService
@@ -86,26 +87,38 @@ Hyprland/Wayland UI automation is disabled until the user enables Phase 5."""
 def ask_ollama(
     user_text: str, registered_tools: set[str] | None = None, home: Path = AI_OS_HOME
 ) -> str:
+    with inference_slot(home):
+        return _ask_model(user_text, registered_tools, home)
+
+
+def _ask_model(user_text: str, registered_tools: set[str] | None, home: Path) -> str:
     config = load_config(home)
+    policy = runtime_policy(home)
+    context_tokens = policy["options"]["num_ctx"] if policy else config.model_context_tokens
     context = (
         ConversationMemory(home).context(
             user_text,
             days=config.memory_retention_days,
-            budget=min(8000, config.model_context_tokens),
+            budget=min(8000, context_tokens),
         )
         if config.memory_enabled
         else []
     )
     payload = {
-        "model": config.ollama_model,
+        "model": policy["model"] if policy else config.ollama_model,
         "stream": False,
         "messages": [
             {"role": "system", "content": system_prompt(registered_tools)},
             *context,
             {"role": "user", "content": user_text},
         ],
-        "options": {"temperature": 0.2, "num_ctx": config.model_context_tokens},
+        "options": {
+            "temperature": 0.2,
+            **(policy["options"] if policy else {"num_ctx": context_tokens}),
+        },
     }
+    if policy:
+        payload["keep_alive"] = policy["keep_alive"]
     headers: dict[str, str] = {}
     validate_model_endpoint(asdict(config))
     if config.ai_provider == "openai_compatible":
@@ -312,6 +325,11 @@ def main() -> int:
     config = load_config()
     logger = configure_logging(config.log_dir)
     logger.info("REgenOS daemon started")
+    try:
+        report = refresh_profile(config.home)
+        logger.info("Hardware policy: %s", report["policy"]["reason"])
+    except Exception:
+        logger.exception("Hardware discovery failed; inference will recheck on request")
     print("REgenOS ready. Type 'exit' to quit.")
 
     registry = build_tool_registry()

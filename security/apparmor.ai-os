@@ -39,6 +39,17 @@ profile ai-os flags=(attach_disconnected,mediate_deleted) {
 
   owner @{HOME}/.ai_os/venv/bin/piper ix,
 
+  /proc/cpuinfo r,
+  /proc/meminfo r,
+  /proc/asound/cards r,
+  /sys/bus/pci/devices/ r,
+  /sys/class/drm/ r,
+  /sys/devices/**/class r,
+  /sys/devices/**/vendor r,
+  /sys/devices/**/device r,
+  /sys/devices/**/mem_info_vram_total r,
+  /sys/devices/**/status r,
+
   network inet stream,
   network inet dgram,
 

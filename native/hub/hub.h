@@ -18,6 +18,7 @@ class QProgressBar;
 class Hub : public QMainWindow {
 public:
     explicit Hub(QString python, QString home, bool connectBackend = true);
+    ~Hub() override;
     void loadDocument(const QJsonObject &document);
     QJsonObject collected() const;
     void applyTheme(const QString &name);

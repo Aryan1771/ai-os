@@ -27,6 +27,10 @@ def revision(config: dict) -> str:
 def schema() -> list[dict]:
     fields = []
     labels = {
+        "hardware_auto_adapt": "Adapt inference to this computer",
+        "hardware_backend": "Default compute policy",
+        "hardware_allow_model_fallback": "Allow installed fallback models",
+        "hardware_fallback_models": "Allowed fallback models",
         "allow_external_apis": "Allow approved online providers",
         "allowed_api_hosts": "Approved hostnames",
         "speech_enabled": "Speak replies",
@@ -50,7 +54,9 @@ def schema() -> list[dict]:
     }
     for key, default in DEFAULT_CONFIG.items():
         page = "AI connection"
-        if key.startswith("avatar_"):
+        if key.startswith("hardware_"):
+            page = "Hardware"
+        elif key.startswith("avatar_"):
             page = "Companion"
         elif key.startswith(("wake_", "whisper", "piper", "voice_")) or key in {
             "speech_enabled",
@@ -99,6 +105,14 @@ def schema() -> list[dict]:
 def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     action = request.get("action")
     config = load_raw_config(home)
+    if action in {"hardware", "hardware_override"}:
+        from ai_os.hardware_profile import discover, refresh_profile, save_override
+
+        if action == "hardware_override":
+            if request.get("confirmed") is not True:
+                raise PermissionError("Hardware overrides require local confirmation.")
+            save_override(home, discover()["machine_key"], request.get("override"))
+        return {"report": refresh_profile(home)}
     if action == "load":
         return {
             "config": config,

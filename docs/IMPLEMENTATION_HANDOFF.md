@@ -6,6 +6,10 @@ The C++ hub, persistent conversation history, context notebook, Piper WAV
 playback and argument-level command restrictions were implemented in the
 2026-09-26 update. Not every unchecked feature is finished by this update.
 
+The follow-up adds hardware profiles, conservative RAM admission, installed-model
+fallback opt-in and a native Hardware page. See `HARDWARE_PORTABILITY.md` before
+moving the external SSD. Simulated tests do not certify drivers, boot or NPU use.
+
 ## Software Work Still Possible Here
 
 | Remaining area | Next implementation and required proof |
@@ -23,7 +27,7 @@ playback and argument-level command restrictions were implemented in the
 
 | Area | Why the target matters |
 | --- | --- |
-| Speed and VRAM | Measure cold/warm Ollama, CPU/GPU offload, context pressure, transcription and playback latency on the RTX 4060; add admission control using real measurements. |
+| Speed and VRAM | Measure cold/warm Ollama, CPU/GPU offload, context pressure, transcription and playback latency on the RTX 4060; calibrate the conservative admission estimates against real measurements. |
 | Audio | Device selection/hotplug, noise suppression, VAD, acoustic echo cancellation, interruption and streaming need real PipeWire routes, microphone and speakers. |
 | Cursor and display | Run real conversion tests; test hotspots/animation in GTK/Qt; verify X11/XWayland positioning. Pure Wayland layer-shell needs protocol integration and compositor tests. |
 | Isolation | Dedicated service identity, AppArmor enforcement, seccomp, secrets, domain egress, noexec mounts and adversarial testing require Linux facilities. |

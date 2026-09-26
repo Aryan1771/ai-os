@@ -102,6 +102,17 @@ Hub::Hub(QString interpreter, QString runtimeHome, bool connectBackend)
     if (connectBackend) QTimer::singleShot(0, this, &Hub::reload);
 }
 
+Hub::~Hub() {
+    // QProcess destruction can emit finished after child widgets have been deleted.
+    for (auto *process : findChildren<QProcess *>()) {
+        process->disconnect(this);
+        if (process->state() != QProcess::NotRunning) {
+            process->kill();
+            process->waitForFinished(3000);
+        }
+    }
+}
+
 void Hub::applyTheme(const QString &name) {
     const bool light = name == "light";
     QString bg = light ? "#f3f3f3" : "#202020";
@@ -272,8 +283,8 @@ void Hub::addConversation() {
 }
 
 void Hub::addSettingsPages() {
-    const QStringList names = {"AI connection", "Voice & listening", "Companion", "Appearance", "Memory preferences", "Permissions"};
-    const QList<QStyle::StandardPixmap> icons = {QStyle::SP_DriveNetIcon, QStyle::SP_MediaVolume, QStyle::SP_ComputerIcon, QStyle::SP_DesktopIcon, QStyle::SP_DriveHDIcon, QStyle::SP_MessageBoxWarning};
+    const QStringList names = {"AI connection", "Voice & listening", "Companion", "Appearance", "Memory preferences", "Permissions", "Hardware"};
+    const QList<QStyle::StandardPixmap> icons = {QStyle::SP_DriveNetIcon, QStyle::SP_MediaVolume, QStyle::SP_ComputerIcon, QStyle::SP_DesktopIcon, QStyle::SP_DriveHDIcon, QStyle::SP_MessageBoxWarning, QStyle::SP_ComputerIcon};
     for (int index = 0; index < names.size(); ++index) {
         const auto name = names[index];
         navigation->addItem(new QListWidgetItem(style()->standardIcon(icons[index]), name));
@@ -362,6 +373,36 @@ void Hub::addSettingsPages() {
             fields[key] = control;
             if (type == "bool") form->addRow(control);
             else form->addRow(label, rowWidget ? rowWidget : control);
+        }
+        if (name == "Hardware") {
+            auto *report = new QPlainTextEdit(page);
+            report->setObjectName("hardwareReport");
+            report->setAccessibleName("Current hardware and inference policy");
+            report->setReadOnly(true);
+            report->setMinimumHeight(220);
+            auto display = [report](QJsonObject reply) {
+                report->setPlainText(QString::fromUtf8(QJsonDocument(reply["report"].toObject()).toJson(QJsonDocument::Indented)));
+            };
+            auto *actions = new QHBoxLayout;
+            layout->addWidget(button(this, "Refresh hardware", QStyle::SP_BrowserReload, [this, display] {
+                save([this, display] { request({{"action", "hardware"}}, display); });
+            }));
+            auto *mode = new QComboBox(page);
+            mode->setAccessibleName("This computer's compute override");
+            mode->addItem("Follow defaults", "inherit");
+            mode->addItem("CPU only", "cpu");
+            mode->addItem("Ollama automatic", "auto");
+            actions->addWidget(mode);
+            actions->addWidget(button(this, "Apply to this computer", QStyle::SP_DialogApplyButton, [this, mode, display] {
+                if (!confirm("Hardware override", "Replace this computer's hardware override? Drivers and boot settings are not changed.")) return;
+                const auto backend = mode->currentData().toString();
+                const QJsonObject value = backend == "inherit" ? QJsonObject{} : QJsonObject{{"backend", backend}};
+                save([this, value, display] {
+                    request({{"action", "hardware_override"}, {"override", value}, {"confirmed", true}}, display);
+                });
+            }));
+            layout->addLayout(actions);
+            layout->addWidget(report);
         }
         if (name == "Voice & listening") {
             auto *actions = new QHBoxLayout;

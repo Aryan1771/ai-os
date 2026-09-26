@@ -16,6 +16,10 @@ from ai_os.cursor_theme import apply_preferences
 
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
 PROTECTED_KEYS = {
+    "hardware_auto_adapt",
+    "hardware_backend",
+    "hardware_allow_model_fallback",
+    "hardware_fallback_models",
     "allow_external_apis",
     "allowed_api_hosts",
     "hyprland_enabled",
@@ -28,6 +32,7 @@ PROTECTED_KEYS = {
     "memory_enabled",
 }
 CHOICES = {
+    "hardware_backend": {"auto", "cpu"},
     "ai_provider": {"ollama", "openai_compatible"},
     "avatar_corner": {"top-left", "top-right", "bottom-left", "bottom-right"},
     "theme": {"forest", "graphite", "ocean", "light", "sunrise"},
@@ -76,6 +81,17 @@ def validate_setting(key: str, value: Any) -> Any:
             raise ValueError(f"{key} must be between {low} and {high}.")
         if isinstance(default, int) and int(value) != value:
             raise ValueError(f"{key} must be a whole number.")
+    elif key == "hardware_fallback_models":
+        if (
+            not isinstance(value, list)
+            or len(value) > 16
+            or any(
+                not isinstance(name, str)
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", name)
+                for name in value
+            )
+        ):
+            raise ValueError("Provide at most 16 valid installed model names.")
     elif key == "allowed_api_hosts":
         if not isinstance(value, list) or len(value) > 64:
             raise ValueError("Provide at most 64 approved hostnames.")

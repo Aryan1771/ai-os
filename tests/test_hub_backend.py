@@ -131,6 +131,7 @@ def test_custom_wake_word_uses_selected_model(tmp_path, monkeypatch):
 
 
 def test_model_receives_history_and_memory_disable_is_respected(tmp_path, monkeypatch):
+    monkeypatch.setattr(core, "runtime_policy", lambda _home: None)
     memory = ConversationMemory(tmp_path)
     memory.append("My name is Aryan", "Hello Aryan")
     calls = []

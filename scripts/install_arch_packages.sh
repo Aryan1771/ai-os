@@ -10,7 +10,8 @@ pacman -Syu --needed \
   base-devel git neovim nano curl wget unzip jq \
   python python-pip python-virtualenv \
   linux-zen linux-zen-headers dkms \
-  nvidia-dkms nvidia-utils cuda opencl-nvidia \
+  linux-firmware sof-firmware mesa vulkan-intel vulkan-radeon \
+  intel-ucode amd-ucode \
   pipewire pipewire-pulse pipewire-alsa wireplumber alsa-utils \
   brightnessctl lm_sensors pciutils usbutils \
   ollama ffmpeg \
@@ -21,4 +22,4 @@ systemctl enable apparmor
 systemctl enable ufw
 
 echo "Arch package installation complete."
-
+echo "GPU-specific drivers and inference backends require review: docs/HARDWARE_PORTABILITY.md"
