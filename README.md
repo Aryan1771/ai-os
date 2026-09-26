@@ -69,6 +69,7 @@ Start with the Arch installation and native desktop guides:
 
 ```bash
 docs/INSTALL_ON_ARCH.md
+docs/ARCH_HANDOFF.md
 docs/NATIVE_DESKTOP.md
 docs/CPP_HUB.md
 docs/HARDWARE_PORTABILITY.md
