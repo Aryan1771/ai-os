@@ -8,6 +8,19 @@ but that alone did not deploy or validate their features.
 
 ## Resume verification (same date, after reboot)
 
+**Latest result after the user restarted Ollama:** the same probe now reports
+`size_vram=size=4748056984` bytes for Qwen 7B Q4 at 4096 context, confirming GPU
+allocation. First/warm requests took 5.487/0.405 seconds, including 5.055/0.001
+seconds loading. Generation of 21 tokens took 0.387/0.382 seconds (about 55
+tokens/second warm). Across 34 samples there were no sampling errors and the
+device-wide peak was **4662 MiB** of 8188 MiB. This small synthetic run verifies
+GPU inference but not sustained/concurrent use, maximum context, or hard VRAM
+enforcement. Tests ran first: **121 passed, 1 skipped**. Commands were the same
+pytest and `scripts/verify_gpu_runtime.py` invocations listed below. Package and
+venv inventory is recorded in [PREINSTALL](PREINSTALL.md).
+
+### Earlier checks before the successful restart
+
 Latest follow-up: the user installed `ollama-cuda 0.34.4-1`, matching Ollama.
 `pacman -Ql ollama-cuda` confirms the `cuda_v13` libraries, including
 `libggml-cuda.so`. Tests reran: **121 passed, 1 skipped**. The same GPU probe
