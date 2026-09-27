@@ -44,6 +44,7 @@ class AiOsConfig:
     avatar_animation_enabled: bool
     avatar_accent: str
     wake_word_model: str
+    wake_backend: str
     piper_length_scale: float
     memory_enabled: bool
     memory_allow_remote: bool
@@ -65,6 +66,7 @@ DEFAULT_CONFIG = {
     ],
     "hyprland_enabled": False,
     "wake_word_enabled": False,
+    "wake_backend": "re_whisper",
     "whisper_cli": "whisper-cli",
     "whisper_model": "models/ggml-base.en.bin",
     "whisper_language": "auto",
@@ -182,6 +184,7 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         allowed_api_hosts=tuple(str(host) for host in raw["allowed_api_hosts"]),
         hyprland_enabled=bool(raw["hyprland_enabled"]),
         wake_word_enabled=bool(raw["wake_word_enabled"]),
+        wake_backend=str(raw["wake_backend"]),
         whisper_cli=str(raw["whisper_cli"]),
         whisper_model=home / str(raw["whisper_model"]),
         whisper_language=str(raw["whisper_language"]),

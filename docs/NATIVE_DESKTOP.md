@@ -39,6 +39,12 @@ The renderer moves persistent colored pixels through damped springs and a wave f
 
 ## Start At Login
 
+For the current installed Hyprland 0.56 / GNOME host, use the tested
+[RE session installer](RE_SESSION_AND_IDENTITY.md). It installs GNOME autostart
+and Hyprland **Lua** integration while retaining the active GNOME desktop.
+The `.conf` instructions below describe older Hyprland versions; do not use them
+unchanged on 0.55+.
+
 For a desktop with XDG autostart support:
 
 ```bash

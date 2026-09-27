@@ -8,6 +8,27 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- 2026-09-28 RE/session checkpoint: assistant named RE (spoken R E); user login
+  startup installed for core and companion with graphical environment import.
+  Core active/enabled, one companion process. GNOME kept as requested; original
+  Cool cursor remains selected. Installed Hyprland 0.56.2 requires Lua; new
+  integration and combined user config pass its parser. AI window tools enabled,
+  actual Hyprland-session control pending. **193 tests passed**, lint clean under
+  correctness rules; native XWayland/local Ollama smoke passed.
+- Local experimental Whisper RE detector is selected; both listening switches
+  remain off. Synthetic Piper → Whisper returned `RE.` and matched; real wake
+  accuracy/false activations are pending. `find_commands` falls back to installed
+  manual names because the host apropos index is empty (network finds 33 topics).
+- User wants face/voice to replace normal password prompts after enrollment.
+  Neither unlock feature is implemented; hub reports unavailable. No camera
+  capture, enrollment, PAM edits or password changes. See
+  [RE_SESSION_AND_IDENTITY](RE_SESSION_AND_IDENTITY.md) for exact commands,
+  backups, limitations and remaining authentication/boot work.
+- User approved the exact system-identity installer (os-release, two logos, TTY
+  banner). `sudo -n` required a password; native pkexec authentication timed out
+  after 60s. Verified OS identity remains Arch. Run the already approved
+  `sudo /usr/bin/python scripts/apply_system_identity.py --apply` locally, then
+  verify and record its backup. No repeat permission request for this operation.
 - 2026-09-28 access-grant follow-up: exact pending-command and timed session
   grants are implemented with trusted terminal/native confirmation, expiry,
   countdown and revocation. Seconds/minutes/hours, up to 24 hours; timed scope

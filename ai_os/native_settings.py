@@ -303,6 +303,10 @@ class SettingsWindow(QMainWindow):
         form = self.form(layout)
         self.check(form, "always_listening_enabled", "Listen for wake word")
         self.check(form, "wake_word_enabled", "Require wake word")
+        self.choice(form, "wake_backend", "Wake detector", [("openwakeword", "Trained openWakeWord model"), ("re_whisper", "RE (R E) — experimental local Whisper")])
+        note = QLabel("RE is spoken as R E. Whisper wake detection uses more CPU than a trained model. Say the name, pause, then speak your command when the companion shows Listening. Neither detector verifies who is speaking.")
+        note.setWordWrap(True)
+        layout.addWidget(note)
         self.check(form, "speech_enabled", "Speak replies")
         threshold = QDoubleSpinBox()
         threshold.setRange(0, 1)
@@ -399,6 +403,9 @@ class SettingsWindow(QMainWindow):
             ("restricted", "Restricted: diagnostics and application launch"),
             ("supervised", "Full command access — approve each change"),
         ])
+        identity = QLabel("Login recognition: not enrolled. Face and voice unlocking are not installed; password login remains active. RE wake detection starts the assistant only and cannot unlock your session. Enrollment and a reviewed system authentication backend are required before unlock controls can be enabled.")
+        identity.setWordWrap(True)
+        layout.addWidget(identity)
         label = QLabel("Full command access shows an approval dialog for each change. Sudo passwords stay in your terminal. Disk safety blocks remain active.")
         label.setWordWrap(True)
         label.setToolTip(

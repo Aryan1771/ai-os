@@ -30,3 +30,7 @@
   separately from source. Back up affected private runtime data before migrations.
 - Hindi/English voice assets are installed; consult the handoff for validation
   limits before enabling listening. Never claim expressive behavior is sentience.
+- The assistant is RE, pronounced as the letters R E. Wake detection is not
+  identity verification; never use it to approve actions or unlock a session.
+- This host uses GNOME; preserve it while integrating installed Hyprland 0.56 Lua
+  configuration. Biometric enrollment/PAM and boot changes require separate review.

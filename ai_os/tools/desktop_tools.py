@@ -12,6 +12,28 @@ APPLICATIONS = {
     "terminal": "kitty.desktop",
     "settings": "org.gnome.Settings.desktop",
 }
+MAN_ROOT = Path("/usr/share/man")
+
+
+def _manual_topics(query):
+    words = query.lower().split()
+    aliases = {"network": {"ip", "nmcli", "networkctl", "ss"},
+               "packages": {"pacman", "makepkg", "pacman-conf"},
+               "services": {"systemctl", "journalctl"},
+               "audio": {"wpctl", "pw-cli", "pw-record", "pw-play"}}
+    names = set().union(*(aliases.get(word, set()) for word in words))
+    found = []
+    for section in (1, 5, 8):
+        folder = MAN_ROOT / f"man{section}"
+        if not folder.is_dir():
+            continue
+        for path in folder.iterdir():
+            name = re.sub(r"\.[1-9](?:\.(?:gz|xz|zst|bz2))?$", "", path.name)
+            if name in names or any(word in name.lower() for word in words):
+                found.append(f"{name} ({section}) — installed manual")
+                if len(found) >= 100:
+                    return sorted(found)
+    return sorted(found)
 
 
 def launch_intent(text):
@@ -57,5 +79,23 @@ def command_help(command: str):
                                 capture_output=True, text=True, timeout=8, shell=False)
         return {"ok": result.returncode == 0, "source": f"local man page: {command}",
                 "text": result.stdout[:16000], "error": result.stderr[:500]}
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def find_commands(query: str):
+    """Discover installed manual topics without executing candidate commands."""
+    if not isinstance(query, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _+-]{0,79}", query):
+        raise ValueError("Use a short command topic without options or shell syntax")
+    try:
+        result = subprocess.run(["/usr/bin/apropos", "--", query],
+                                env={"PATH": "/usr/bin", "LANG": "C.UTF-8"},
+                                capture_output=True, text=True, timeout=8, shell=False)
+        if result.returncode == 16:
+            topics = _manual_topics(query)
+            return {"ok": bool(topics), "source": "installed manual filenames (apropos index unavailable or no match)",
+                    "text": "\n".join(topics), "error": "" if topics else "No local manual topics found"}
+        return {"ok": result.returncode == 0, "source": "installed manual index",
+                "text": result.stdout[:12000], "error": result.stderr[:500]}
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {"ok": False, "error": str(exc)}

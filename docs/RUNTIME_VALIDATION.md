@@ -8,6 +8,40 @@ but that alone did not deploy or validate their features.
 
 ## 2026-09-28 command, companion and appearance checkpoint
 
+### RE name, session startup and Hyprland follow-up
+
+**193 tests passed in 2.34s**; correctness lint and diff checks pass. New coverage
+includes wake parsing/cleanup/silence, disabled/injected Hyprland actions, legacy
+and modern dispatch generation, session environment cleanup, idempotent installation,
+manual discovery fallback and replacing os-release without writing through its
+upstream symlink. Native smoke passes: nine pages, xcb, visible companion and local
+Ollama reply. Core is enabled/active with zero restarts and exit status zero;
+one resident companion process is present after graphical session startup.
+
+Installed and standalone Lua files pass Hyprland 0.56.2 parser validation. GNOME
+remains active; real Hyprland window operation is pending. Cool cursor remains
+selected. Synthetic Piper name transcription returned `RE.` and matched the
+experimental detector. No real microphone/camera capture or enrollment occurred;
+both continuous-listening switches remain false. Face/voice unlocking is not
+implemented. Host apropos has no index; new filename fallback found 33 network
+manual topics, and pacman manual retrieval succeeded. This is retrieval, not training.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests scripts/install_user_session.py scripts/apply_system_identity.py
+luac -p config/hypr/regenos.lua
+Hyprland --verify-config -c config/hypr/regenos.lua
+~/.ai_os/venv/bin/python -m ai_os.runtime_backup
+~/.ai_os/venv/bin/python scripts/install_user_session.py
+Hyprland --verify-config -c ~/.config/hypr/hyprland.lua
+~/.ai_os/venv/bin/python scripts/verify_native_runtime.py
+systemctl --user show ai-os.service -p ActiveState -p SubState -p ExecMainStatus -p NRestarts
+```
+
+`hyprland_enabled=True` and `wake_backend=re_whisper` were saved after the runtime
+backup. Existing listening switches stayed false. Detailed rollback and identity/
+authentication boundaries: [RE_SESSION_AND_IDENTITY](RE_SESSION_AND_IDENTITY.md).
+
 ### Access-grant follow-up
 
 **173 tests passed in 2.25s**, with correctness lint passing. Tests cover duration

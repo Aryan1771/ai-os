@@ -88,7 +88,7 @@ class SpeechQueue:
                     "--length_scale",
                     str(self.length_scale),
                 ],
-                input=text.encode("utf-8"),
+                input=re.sub(r"\bRE\b", "R E", text).encode("utf-8"),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 timeout=60,

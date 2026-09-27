@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from ai_os.services.stt import WhisperCppTranscriber
-from ai_os.services.wakeword import WakeWordService
+from ai_os.services.wakeword import WakeWordService, ReWhisperWakeWord
 
 
 class AlwaysListeningService:
@@ -30,11 +30,15 @@ class AlwaysListeningService:
         on_activity: Callable[[str], None] | None = None,
         playback_active: Callable[[], bool] | None = None,
         wake_word_model: str = "",
+        wake_backend: str = "openwakeword",
     ) -> None:
         self.run_dir = run_dir
         self.transcriber = transcriber
         self.on_transcript = on_transcript
-        self.wake_word = WakeWordService(wake_word_threshold, wake_word_model)
+        if wake_backend not in {"openwakeword", "re_whisper"}:
+            raise ValueError("Unsupported wake detector")
+        self.wake_word = (ReWhisperWakeWord(transcriber, run_dir) if wake_backend == "re_whisper"
+                          else WakeWordService(wake_word_threshold, wake_word_model))
         self.command_seconds = max(2, min(30, int(command_seconds)))
         self.sample_rate = sample_rate
         self.on_activity = on_activity or (lambda _phase: None)
@@ -96,6 +100,8 @@ class AlwaysListeningService:
                     continue
                 frame = np.frombuffer(audio, dtype=np.int16)
                 if self.playback_active():
+                    if hasattr(self.wake_word, "reset"):
+                        self.wake_word.reset()
                     continue
                 if time.monotonic() - last_heartbeat > 30:
                     self.on_activity("armed")

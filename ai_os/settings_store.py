@@ -30,10 +30,12 @@ PROTECTED_KEYS = {
     "sandbox_lock_settings",
     "whisper_cli",
     "wake_word_model",
+    "wake_backend",
     "memory_enabled",
     "memory_allow_remote",
 }
 CHOICES = {
+    "wake_backend": {"openwakeword", "re_whisper"},
     "command_access": {"restricted", "supervised"},
     "whisper_language": {"auto", "en", "hi"},
     "hardware_backend": {"auto", "cpu"},

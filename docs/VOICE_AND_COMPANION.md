@@ -1,5 +1,10 @@
 # Voice, Listening, Companion, And Settings
 
+Current assistant name: **RE**, spoken **R E**. The new experimental local Whisper
+wake option and current installed assets/validation are documented in
+[RE session and identity](RE_SESSION_AND_IDENTITY.md). The older openWakeWord path
+below remains selectable. An installed Jarvis model cannot detect RE by renaming it.
+
 The microphone is disabled by default. When enabled, the pipeline is local:
 
 ```text

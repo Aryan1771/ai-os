@@ -12,6 +12,7 @@
   ],
   "hyprland_enabled": false,
   "wake_word_enabled": false,
+  "wake_backend": "re_whisper",
   "whisper_cli": "whisper-cli",
   "whisper_model": "models/ggml-base.en.bin",
   "piper_model": "models/en_US-lessac-medium.onnx",
