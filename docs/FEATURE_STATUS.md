@@ -1,5 +1,12 @@
 # REgenOS Feature Checklist
 
+Current installed-state and latency evidence: [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md).
+The supported desktop is Python/PySide6, now with conversation, memory, hardware,
+voice and companion controls. C++ references below are historical implementation
+claims, not the supported desktop. The [100-item audit](IMPLEMENTATION_CHECKLIST.md)
+covers every checkbox, distinguishes missing code/integration/hardware checks, and
+orders the remaining work. Do not equate these source checkmarks with deployment.
+
 - [x] Original Cool cursor artwork, Linux conversion/installation tooling,
   desktop defaults and appearance-panel integration; see [cursor guide](CURSOR_THEME.md).
 - [ ] Validate converted cursor hotspots, animation and compositor behavior on Arch.

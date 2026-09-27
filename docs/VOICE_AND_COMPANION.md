@@ -74,3 +74,18 @@ systemctl --user stop ai-os.service
 Do not fine-tune the 7B model first. Start with local memory: permanent habits, temporary overrides, slang vocabulary, event history, and optional Chroma semantic memory. These stay under `~/.ai_os` and `~/.local/share/ai_os/chroma`.
 
 For better long-term behavior, collect only consented, non-sensitive examples in a separate dataset; remove secrets, private documents, and credentials; validate behavior against a held-out test set; then fine-tune a copy of the model on stronger hardware. Never train directly on an unattended live microphone stream.
+
+## Hindi and English preparation (models deferred)
+
+The Python panel now exposes `whisper_language` (`auto`, `en`, `hi`) and an
+optional `piper_hindi_model`. Keep listening disabled until assets and real audio
+are validated. Hindi recognition requires a multilingual Whisper model, not an
+English-only `.en` model. `auto` supplies `-l auto`; transcription does not request
+translation to English. See the [upstream CLI options](https://github.com/ggml-org/whisper.cpp/blob/master/examples/cli/README.md).
+
+Piper routes sentences containing Devanagari to the explicitly configured Hindi
+voice; other sentences use the primary voice. Missing Hindi voice fails clearly.
+Hindi danda sentence boundaries are supported. Romanized Hindi detection,
+code-switching pronunciation, expressive prosody and voice quality are unverified.
+This routing is not a claim of complete bilingual understanding. No models were
+downloaded in the current validation session. See [results](RUNTIME_VALIDATION.md).

@@ -70,9 +70,12 @@ class SettingsWindow(QMainWindow):
         body.addWidget(self.navigation)
         body.addWidget(self.pages, 1)
         root.addLayout(body, 1)
+        self._conversation_page()
         self._companion_page()
         self._assistant_page()
+        self._hardware_page()
         self._voice_page()
+        self._memory_page()
         self._appearance_page()
         self._desktop_page()
         self._sandbox_page()
@@ -240,6 +243,7 @@ class SettingsWindow(QMainWindow):
         )
         self.text(form, "ollama_url", "Endpoint")
         self.text(form, "ollama_model", "Model")
+        self.slider(form, "model_context_tokens", "Context limit", 1024, 8192)
         key = self.text(form, "api_key_env", "API key variable")
         key.setToolTip("The environment variable holding the key, for example AI_OS_API_KEY.")
         self.check(form, "allow_external_apis", "Allow approved online providers")
@@ -249,6 +253,50 @@ class SettingsWindow(QMainWindow):
         self.fields["allowed_api_hosts"] = hosts
         form.addRow("Approved hosts", hosts)
         layout.addStretch()
+
+    def _hardware_page(self):
+        layout = self.page("Hardware policy", QStyle.StandardPixmap.SP_ComputerIcon)
+        form = self.form(layout)
+        self.check(form, "hardware_auto_adapt", "Adapt to detected hardware")
+        self.choice(
+            form,
+            "hardware_backend",
+            "Compute policy",
+            [("auto", "Ollama automatic"), ("cpu", "CPU only")],
+        )
+        self.check(
+            form,
+            "hardware_allow_model_fallback",
+            "Allow explicitly listed installed fallback models",
+        )
+        models = QPlainTextEdit()
+        models.setMaximumHeight(90)
+        self.fields["hardware_fallback_models"] = models
+        form.addRow("Fallback models, one per line", models)
+        note = QLabel(
+            "Automatic selection uses estimates, not a hard VRAM reservation. "
+            "It never downloads a model. Per-machine overrides, if present, take precedence."
+        )
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        layout.addStretch()
+
+    def _conversation_page(self):
+        from ai_os.conversation_widget import ConversationWidget
+
+        layout = self.page("Conversation", QStyle.StandardPixmap.SP_MessageBoxInformation)
+        self.conversation = ConversationWidget(self.home)
+        layout.addWidget(self.conversation)
+
+    def _memory_page(self):
+        from ai_os.memory_widget import MemoryWidget
+
+        layout = self.page("Memory", QStyle.StandardPixmap.SP_FileDialogDetailedView)
+        form = self.form(layout)
+        self.check(form, "memory_enabled", "Remember local conversations")
+        self.check(form, "memory_allow_remote", "Allow saved memory in remote model requests")
+        self.slider(form, "memory_retention_days", "History retention (days)", 1, 365)
+        layout.addWidget(MemoryWidget(self.home))
 
     def _voice_page(self):
         layout = self.page("Voice & listening", QStyle.StandardPixmap.SP_MediaVolume)
@@ -264,7 +312,15 @@ class SettingsWindow(QMainWindow):
         self.slider(form, "voice_command_seconds", "Capture time (seconds)", 2, 30)
         self.text(form, "whisper_cli", "Whisper executable", file=True)
         self.text(form, "whisper_model", "Whisper model", file=True)
-        self.text(form, "piper_model", "Piper voice", file=True)
+        self.choice(form, "whisper_language", "Recognition language", [("auto", "Automatic (multilingual model)"), ("en", "English"), ("hi", "Hindi")])
+        self.text(form, "piper_model", "English Piper voice", file=True)
+        self.text(form, "piper_hindi_model", "Hindi Piper voice (optional)", file=True)
+        self.text(form, "wake_word_model", "Custom wake-word model", file=True)
+        duration = QDoubleSpinBox()
+        duration.setRange(0.5, 2.0)
+        duration.setSingleStep(0.1)
+        self.fields["piper_length_scale"] = duration
+        form.addRow("Speech duration multiplier", duration)
         controls = QHBoxLayout()
         controls.addWidget(
             self.button(
@@ -512,6 +568,7 @@ class SettingsWindow(QMainWindow):
             if answer != QMessageBox.StandardButton.Discard:
                 event.ignore()
                 return
+        self.conversation.cancel()
         event.accept()
 
 

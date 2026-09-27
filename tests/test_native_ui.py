@@ -26,6 +26,14 @@ def app():
     return application
 
 
+def test_compatibility_launchers_use_python_settings(monkeypatch):
+    from ai_os import hub_launcher, settings_server
+
+    monkeypatch.setattr("ai_os.native_settings.main", lambda: 17)
+    assert hub_launcher.main() == 17
+    assert settings_server.main() == 17
+
+
 def test_native_settings_persist_emotion_bars_and_toggle(app, tmp_path):
     window = SettingsWindow(tmp_path, launch_companion=False)
     window.show()
@@ -45,6 +53,7 @@ def test_native_settings_persist_emotion_bars_and_toggle(app, tmp_path):
 def test_native_pages_render_and_canvas_has_visible_pixels(app, tmp_path):
     window = SettingsWindow(tmp_path, launch_companion=False)
     window.resize(780, 570)
+    window.navigation.setCurrentRow(1)  # Companion page, after Conversation.
     window.show()
     QTest.qWait(600)
     assert QFontMetrics(window.save_button.font()).inFontUcs4(ord("A"))
@@ -95,3 +104,41 @@ def test_native_single_instance_activates_existing_window(app, tmp_path):
     assert raised == [True]
     first.server.close()
     first.lock.unlock()
+
+
+def test_memory_widget_inspection_is_explicit_and_forget_is_confirmed(app, tmp_path, monkeypatch):
+    from ai_os.conversation_memory import ConversationMemory
+    from ai_os.memory_widget import MemoryWidget
+
+    memory = ConversationMemory(tmp_path)
+    memory.append('Favorite color is lavender', 'Understood')
+    widget = MemoryWidget(tmp_path)
+    assert not widget.output.toPlainText()
+    widget.inspect()
+    assert 'lavender' in widget.output.toPlainText()
+    widget.value.setPlainText('lavender')
+    monkeypatch.setattr(widget, 'confirmed', lambda message: False)
+    widget.forget()
+    assert memory.history()
+    monkeypatch.setattr(widget, 'confirmed', lambda message: True)
+    widget.forget()
+    assert memory.history() == []
+    assert 'lavender' not in widget.output.toPlainText()
+
+
+def test_chat_cancel_reaps_backend_and_empty_input_is_rejected(app, tmp_path):
+    import sys
+
+    from PySide6.QtCore import QProcess
+
+    from ai_os.conversation_widget import ConversationWidget
+
+    widget = ConversationWidget(tmp_path)
+    widget.send()
+    assert widget.process.state() == QProcess.ProcessState.NotRunning
+    assert '8000' in widget.status.text()
+    widget.process.start(sys.executable, ['-c', 'import time; time.sleep(30)'])
+    assert widget.process.waitForStarted(2000)
+    widget.cancel()
+    assert widget.process.state() == QProcess.ProcessState.NotRunning
+    assert not widget.timer.isActive()

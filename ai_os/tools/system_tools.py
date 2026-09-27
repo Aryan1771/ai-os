@@ -125,7 +125,16 @@ def assess_command(command: str | list[str]) -> CommandAssessment:
         "uname": {(), ("-a",), ("-r",)}, "id": {(), ("-u",)}, "whoami": {()},
         "uptime": {()}, "free": {(), ("-h",), ("-m",)}, "lscpu": {(), ("-J",)},
         "lsblk": {(), ("-J",), ("-f",)}, "df": {(), ("-h",)},
-        "nvidia-smi": {(), ("-q",)}, "pwd": {()},
+        "nvidia-smi": {
+            (), ("-q",),
+            (
+                "--query-gpu=name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu,power.draw",
+                "--format=csv,noheader,nounits",
+            ),
+        },
+        "wpctl": {("get-volume", "@DEFAULT_AUDIO_SINK@")},
+        "brightnessctl": {("get",), ("max",)},
+        "pwd": {()},
     }
     if (argv[0] in {executable, f"/usr/bin/{executable}"}
             and tuple(argv[1:]) in safe_arguments.get(executable, set())):

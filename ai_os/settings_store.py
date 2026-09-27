@@ -30,8 +30,10 @@ PROTECTED_KEYS = {
     "whisper_cli",
     "wake_word_model",
     "memory_enabled",
+    "memory_allow_remote",
 }
 CHOICES = {
+    "whisper_language": {"auto", "en", "hi"},
     "hardware_backend": {"auto", "cpu"},
     "ai_provider": {"ollama", "openai_compatible"},
     "avatar_corner": {"top-left", "top-right", "bottom-left", "bottom-right"},

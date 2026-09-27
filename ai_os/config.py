@@ -30,7 +30,9 @@ class AiOsConfig:
     wake_word_enabled: bool
     whisper_cli: str
     whisper_model: Path
+    whisper_language: str
     piper_model: Path
+    piper_hindi_model: Path | None
     speech_enabled: bool
     always_listening_enabled: bool
     wake_word_threshold: float
@@ -44,6 +46,7 @@ class AiOsConfig:
     wake_word_model: str
     piper_length_scale: float
     memory_enabled: bool
+    memory_allow_remote: bool
     memory_retention_days: int
     model_context_tokens: int
 
@@ -63,7 +66,9 @@ DEFAULT_CONFIG = {
     "wake_word_enabled": False,
     "whisper_cli": "whisper-cli",
     "whisper_model": "models/ggml-base.en.bin",
+    "whisper_language": "auto",
     "piper_model": "models/en_US-lessac-medium.onnx",
+    "piper_hindi_model": "",
     "speech_enabled": False,
     "always_listening_enabled": False,
     "wake_word_threshold": 0.5,
@@ -91,6 +96,7 @@ DEFAULT_CONFIG = {
     "wake_word_model": "",
     "piper_length_scale": 1.0,
     "memory_enabled": True,
+    "memory_allow_remote": False,
     "memory_retention_days": 30,
     "model_context_tokens": 4096,
     "hardware_auto_adapt": True,
@@ -177,7 +183,9 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         wake_word_enabled=bool(raw["wake_word_enabled"]),
         whisper_cli=str(raw["whisper_cli"]),
         whisper_model=home / str(raw["whisper_model"]),
+        whisper_language=str(raw["whisper_language"]),
         piper_model=home / str(raw["piper_model"]),
+        piper_hindi_model=home / str(raw["piper_hindi_model"]) if raw["piper_hindi_model"] else None,
         speech_enabled=bool(raw["speech_enabled"]),
         always_listening_enabled=bool(raw["always_listening_enabled"]),
         wake_word_threshold=max(0.0, min(1.0, float(raw["wake_word_threshold"]))),
@@ -191,6 +199,7 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         wake_word_model=str(home / raw["wake_word_model"]) if raw["wake_word_model"] else "",
         piper_length_scale=float(raw["piper_length_scale"]),
         memory_enabled=bool(raw["memory_enabled"]),
+        memory_allow_remote=bool(raw["memory_allow_remote"]),
         memory_retention_days=int(raw["memory_retention_days"]),
         model_context_tokens=int(raw["model_context_tokens"]),
     )

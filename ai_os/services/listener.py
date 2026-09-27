@@ -54,6 +54,11 @@ class AlwaysListeningService:
         self._stop.set()
         if self._process and self._process.poll() is None:
             self._process.terminate()
+            try:
+                self._process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
+                self._process.wait(timeout=2)
 
     def run_forever(self) -> None:
         ready, reason = self.availability()

@@ -8,10 +8,15 @@ ai-os/
 │   ├── config.py
 │   ├── hardware_monitor.py
 │   ├── logging_utils.py
-│   ├── native_settings.py          # Previous Python settings UI (regression coverage)
-│   ├── hub_launcher.py             # Launch installed C++ hub
+│   ├── native_settings.py          # Supported Python/PySide6 settings UI
+│   ├── hub_launcher.py             # Compatibility launcher for Python Settings
 │   ├── hub_bridge.py               # Private JSON pipes, shared backend validation
-│   ├── conversation_memory.py      # Local SQLite history and context notes
+│   ├── conversation_memory.py      # SQLite sessions, retrieval, preferences and forgetting
+│   ├── conversation_widget.py      # Native chat with bounded Python child
+│   ├── memory_widget.py            # Human inspect/remember/forget controls
+│   ├── memory_cli.py               # Explicit terminal memory controls
+│   ├── runtime_backup.py           # Private pre-migration backup
+│   ├── latency_probe.py            # Synthetic timing metrics, no private prompts
 │   ├── native_widgets.py           # Native canvas, emotion bars, local IPC
 │   ├── settings_store.py           # Config validation and persistence
 │   ├── settings_server.py          # Legacy import/launch shim; no HTTP server
@@ -50,7 +55,7 @@ Runtime files are created on the Arch system, not committed to Git:
 ```text
 ~/.ai_os/
 ├── venv/
-├── bin/regenos-hub                # Compiled on Arch, never a Windows binary
+├── bin/regenos-hub                # Historical C++ executable; no longer required
 ├── config.json
 ├── habit_engine.json
 ├── slang_vocab.json

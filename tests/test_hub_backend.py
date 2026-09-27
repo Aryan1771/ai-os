@@ -179,6 +179,8 @@ def test_piper_uses_wav_rate_and_temporary_audio_is_removed(tmp_path, monkeypatc
     model = tmp_path / "voice.onnx"
     model.touch()
     monkeypatch.setattr("ai_os.speech_queue.shutil.which", lambda name: name)
+    # Isolate discovery from a real Piper installed beside the test interpreter.
+    monkeypatch.setattr("ai_os.speech_queue.sys.executable", str(tmp_path / "python"))
     calls = []
 
     def run(argv, **kwargs):

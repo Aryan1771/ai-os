@@ -150,7 +150,7 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     if action == "chat":
         from ai_os.ai_os_core import handle_user_text, json_default
 
-        result = handle_user_text(request.get("text"), home=home)
+        result = handle_user_text(request.get("text"), home=home, session=request.get("session", "default"))
         return {"response": json.loads(json.dumps(result, default=json_default))}
     if action in {"speech_test", "speech_text"}:
         from ai_os.companion_state import publish_state
@@ -166,7 +166,7 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
             raise ValueError("Speech text must contain 1-8000 characters.")
         publish_state("speaking", home=home)
         try:
-            SpeechQueue(voice.piper_model, length_scale=voice.piper_length_scale).speak_text(text)
+            SpeechQueue(voice.piper_model, length_scale=voice.piper_length_scale, hindi_model=voice.piper_hindi_model).speak_text(text)
         except Exception:
             publish_state("error", home=home)
             raise

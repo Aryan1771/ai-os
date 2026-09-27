@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=REgenOS Hub
+Name=REgenOS Settings
 Comment=AI, companion, voice and desktop settings
 Exec=regenos-settings
 Icon=regenos
 Terminal=false
 Categories=Settings;Utility;
-StartupWMClass=regenos-hub
+StartupWMClass=regenos-settings

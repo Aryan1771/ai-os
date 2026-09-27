@@ -27,8 +27,10 @@ class SpeechQueue:
         *,
         on_activity: Callable[[str, str, dict | None], None] | None = None,
         length_scale: float = 1.0,
+        hindi_model: Path | None = None,
     ) -> None:
         self.piper_model = piper_model
+        self.hindi_model = hindi_model
         self.length_scale = max(0.5, min(2.0, float(length_scale)))
         self._counter_lock = threading.Lock()
         self.last_error: str | None = None
@@ -55,13 +57,14 @@ class SpeechQueue:
         self._stop.set()
 
     def sentence_chunks(self, text: str) -> Iterable[str]:
-        for chunk in re.split(r"(?<=[.!?])\s+", text.strip()):
+        for chunk in re.split(r"(?<=[.!?।])\s+", text.strip()):
             if chunk:
                 yield chunk
 
     def speak_text(self, text: str) -> None:
-        if not self.piper_model or not self.piper_model.is_file():
-            raise RuntimeError("Piper voice model is missing.")
+        model = self.hindi_model if re.search(r"[\u0900-\u097f]", text) else self.piper_model
+        if not model or not model.is_file():
+            raise RuntimeError("Piper voice model for the requested language is missing.")
         player, piper = shutil.which("pw-play"), shutil.which("piper")
         venv_piper = Path(sys.executable).with_name(
             "piper.exe" if sys.platform == "win32" else "piper"
@@ -79,7 +82,7 @@ class SpeechQueue:
                 [
                     piper,
                     "--model",
-                    str(self.piper_model),
+                    str(model),
                     "--output_file",
                     str(output),
                     "--length_scale",

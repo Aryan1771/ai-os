@@ -16,12 +16,19 @@ class TranscriptionResult:
 class WhisperCppTranscriber:
     """Minimal, shell-free adapter for a locally installed whisper.cpp CLI."""
 
-    def __init__(self, executable: str, model: Path, timeout_sec: int = 120) -> None:
+    def __init__(
+        self, executable: str, model: Path, timeout_sec: int = 120, *, language: str = "auto"
+    ) -> None:
         self.executable = executable
         self.model = model
-        self.timeout_sec = timeout_sec
+        if language not in {"auto", "en", "hi"}:
+            raise ValueError("Whisper language must be auto, en or hi")
+        self.language = language
+        self.timeout_sec = max(1, min(180, timeout_sec))
 
     def availability(self) -> tuple[bool, str]:
+        if self.language == "hi" and ".en" in self.model.name:
+            return False, "Hindi requires a multilingual Whisper model, not an .en model."
         if not shutil.which(self.executable):
             return False, f"{self.executable} is not installed or not on PATH."
         if not self.model.is_file():
@@ -37,7 +44,16 @@ class WhisperCppTranscriber:
 
         try:
             result = subprocess.run(
-                [self.executable, "-m", str(self.model), "-f", str(audio_file), "-nt"],
+                [
+                    self.executable,
+                    "-m",
+                    str(self.model),
+                    "-f",
+                    str(audio_file),
+                    "-nt",
+                    "-l",
+                    self.language,
+                ],
                 capture_output=True,
                 check=False,
                 text=True,

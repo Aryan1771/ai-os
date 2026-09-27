@@ -1,6 +1,9 @@
 # Install On Arch
 
-Run these commands only after booting the external NVMe into Arch Linux. Windows is the editing machine; it cannot validate PipeWire, NVIDIA, udev, systemd, or Hyprland.
+Run these commands only on the intended external Arch installation. Inspect the
+[current handoff](HANDOFF.md) first: this host already has a runtime and Ollama.
+Do not rerun installation stages blindly. Privileged package, security, boot and
+disk changes require explicit approval. Windows checks cannot validate Linux hardware.
 
 ## 1. Clone And Inspect
 

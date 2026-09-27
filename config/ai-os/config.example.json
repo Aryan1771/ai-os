@@ -46,7 +46,10 @@
   "hardware_auto_adapt": true,
   "hardware_backend": "auto",
   "hardware_allow_model_fallback": false,
-  "hardware_fallback_models": ["qwen2.5:3b-instruct-q4_K_M", "qwen2.5:1.5b-instruct-q4_K_M"],
+  "hardware_fallback_models": [
+    "qwen2.5:3b-instruct-q4_K_M",
+    "qwen2.5:1.5b-instruct-q4_K_M"
+  ],
   "branding": {
     "brand_name": "REgenOS",
     "assistant_name": "Companion",
@@ -56,5 +59,8 @@
     "icon_theme": "Papirus-Dark",
     "cursor_theme": "REgenOS-Cool",
     "font": "Noto Sans 10"
-  }
+  },
+  "memory_allow_remote": false,
+  "whisper_language": "auto",
+  "piper_hindi_model": ""
 }

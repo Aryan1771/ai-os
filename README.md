@@ -7,9 +7,16 @@ Offline-first AI interface layer and Arch-based desktop product for a portable e
 
 ![REgenOS pixel-cycle mark](branding/regenos-mark.svg)
 
-REgenOS Hub is a compiled **C++17/Qt 6 Widgets** application with an ordinary Graphite dark default. It connects model settings, conversation, voice, local context notes, companion preferences and desktop appearance to the Python backend. The corner companion remains native Python/Qt and rearranges colored pixels with six simulated emotion bars. No browser or HTTP settings server is needed. A branded Archiso live image is documented; the graphical disk installer remains unfinished.
+The supported desktop applications are Python/PySide6 Qt Widgets Settings and the
+pixel Companion. `regenos-settings` launches the Python settings window; no browser,
+HTML/JavaScript frontend, Electron or WebEngine is used. Earlier C++ hub sources
+remain in the repository as historical work, outside the supported runtime path.
+The Python window now includes conversation, named sessions, explicit local memory
+controls, hardware policy and Hindi/English voice configuration. Voice models and
+real bilingual speech validation remain pending.
 
-![Native C++ REgenOS Hub](docs/images/cpp-hub.png)
+See [the current Arch validation handoff](docs/HANDOFF.md) for measured results and
+blockers. REgenOS is a prototype, not a finished distribution.
 
 This repository stores the source code, systemd templates, security templates, and Arch setup instructions. It does not store the Python virtual environment, Ollama models, ChromaDB state, downloaded voice models, or private API keys.
 

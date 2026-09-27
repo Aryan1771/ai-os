@@ -6,7 +6,13 @@ backups, and rollback. Appearance applies cursor preferences to GTK 3/4 and
 writes Xcursor environment and Hyprland session fragments; existing session
 configuration must load those fragments as documented.
 
-REgenOS Hub is now C++17/Qt 6 Widgets; the Companion remains Python/PySide6. See the [C++ hub guide](CPP_HUB.md) for the current settings, memory and build instructions. They use local files and user-local IPC. They do not start an HTTP server, require a browser, use WebEngine/Electron, or download UI assets at runtime. The daemon can still run on a bare TTY; the graphical programs need an X11 or Wayland desktop session.
+The supported Settings and Companion applications use Python/PySide6 Qt Widgets.
+The earlier C++ hub is retained as historical source, but is no longer launched or
+built by the native installation stage. Python Conversation and Memory pages now provide named sessions, explicit
+preferences/context notes, inspect and forget controls. Hardware policy and
+Hindi/English voice controls are also present. See [runtime validation](RUNTIME_VALIDATION.md).
+Both applications use local files and user-local IPC, without a browser or HTTP
+settings endpoint. The core also runs on a bare TTY.
 
 ## Install Or Upgrade On Arch
 
@@ -21,7 +27,7 @@ bash install/ai-os-install.sh native
 ~/.ai_os/venv/bin/regenos-settings
 ```
 
-The native stage builds the C++ hub with system Qt and adds PySide6 to the existing venv for the companion. It does not install Hyprland. Launch **REgenOS Hub** from the application menu, or use the command above. The installer disables the old `ai-os-settings.service` HTTP service. The old `python -m ai_os.settings_server` entry point launches the C++ hub for compatibility.
+The native stage adds PySide6 to the existing venv for both applications. It does not install Hyprland. Launch **REgenOS Settings** from the application menu, or use the command above. The installer disables the old `ai-os-settings.service` HTTP service. The old `python -m ai_os.settings_server` entry point launches Python Settings for compatibility.
 
 ## Companion Controls
 
@@ -83,12 +89,5 @@ regenos-settings
 ```
 
 Manually verify: toggle visibility; move through all corners; resize the companion; change a baseline bar; disable animation; save/reopen Settings; then use voice and a harmless hardware query while observing the activity and forms. Observe `nvidia-smi` while Ollama, Whisper and Piper run together. Windows offscreen checks do not establish PipeWire behavior, compositor positioning, startup ordering or the 8 GB VRAM budget on the laptop.
-
-For a local C++ hub screenshot without starting the companion:
-
-```bash
-REGENOS_HUB_NO_COMPANION=1 ~/.ai_os/bin/regenos-hub \
-  --python ~/.ai_os/venv/bin/python --screenshot /tmp/regenos-hub.png --page 1
-```
 
 References: [Qt Widgets](https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QWidget.html), [QPainter](https://doc.qt.io/qtforpython-6/PySide6/QtGui/QPainter.html), [Hyprland window rules](https://wiki.hypr.land/0.53.0/Configuring/Window-Rules/).
