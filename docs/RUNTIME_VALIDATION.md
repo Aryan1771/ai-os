@@ -8,6 +8,17 @@ but that alone did not deploy or validate their features.
 
 ## Resume verification (same date, after reboot)
 
+Latest follow-up: the user installed `ollama-cuda 0.34.4-1`, matching Ollama.
+`pacman -Ql ollama-cuda` confirms the `cuda_v13` libraries, including
+`libggml-cuda.so`. Tests reran: **121 passed, 1 skipped**. The same GPU probe
+still reported `size_vram=0`; requests took 7.901/1.713 seconds, with 65 samples,
+no sampling errors and a 12 MiB device-wide sampled peak. The service start time
+remains `2026-09-27 08:01:43 IST`. An approved attempt with
+`sudo -n systemctl restart ollama.service` failed because sudo requires a password;
+no restart occurred. Next: user runs `sudo systemctl restart ollama.service`
+locally, then repeat the existing probe. Do not send a sudo password through chat.
+The package-absence observation below describes the earlier probe.
+
 This section supersedes earlier kernel, service and test-count observations below.
 Running kernel: `7.2.7-arch1-1`; loaded NVIDIA and userspace: `615.71.09`.
 Outside the tool sandbox, `nvidia-smi` identifies the RTX 4060 Laptop and 8188 MiB

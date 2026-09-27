@@ -14,8 +14,11 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
   PipeWire and WirePlumber are active; this resume did not start/restart them.
 - Ollama remains CPU-only: two synthetic requests took 4.601/1.609 seconds;
   `/api/ps` reported zero model VRAM. Across 52 device samples the maximum was
-  12 MiB. `ollama-cuda` is absent despite installed `ollama` and `cuda` packages.
-  Installing the backend and restarting Ollama requires user approval.
+  12 MiB. The user subsequently installed `ollama-cuda 0.34.4-1`; its CUDA
+  backend files are verified. A repeat probe still used CPU (7.901/1.713 seconds,
+  65 samples, peak 12 MiB). Ollama has not restarted since 08:01. The approved
+  `sudo -n systemctl restart ollama.service` attempt required a password and did
+  not restart it. User must run the restart locally before another GPU probe.
 - Resume checks: **121 passed, 1 skipped**, correctness lint passed. The sandbox
   denied one Qt local-socket test; the outside-sandbox suite passed. Real native
   smoke passed with nine pages, visible companion and completed synthetic chat.
@@ -74,9 +77,9 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 1. Use `~/.ai_os/venv/bin/regenos-settings` or
    `~/.ai_os/venv/bin/python -m ai_os.ai_os_core --session personal`, not bare Ollama
    CLI, to exercise connected memory/tools. Report any real conversation failures.
-2. With user approval, install the matching `ollama-cuda` backend and restart
-   Ollama, then rerun `scripts/verify_gpu_runtime.py`. Driver mismatch is resolved;
-   actual model offload and inference peak VRAM remain pending.
+2. User runs `sudo systemctl restart ollama.service` locally, then rerun
+   `scripts/verify_gpu_runtime.py`. Matching CUDA backend is now installed and
+   driver mismatch is resolved; actual model offload remains pending.
 3. Voice assets stay deferred per user. Later choose verified multilingual Whisper
    and suitable English/Hindi Piper voices; measure every audio stage separately.
 4. Finish tokenizer-aware limits, robust request ordering, streaming/tool-result loop,
