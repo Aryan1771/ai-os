@@ -6,6 +6,42 @@ REgenOS daemon or voice pipeline. Ollama CLI bypasses this project's memory,
 permissions, tools, companion and settings. Windows source changes were pulled,
 but that alone did not deploy or validate their features.
 
+## 2026-09-28 command, companion and appearance checkpoint
+
+**135 tests passed**, correctness lint and `git diff --check` passed. Coverage
+includes model approval rejection, restricted-mode rejection, explicit native
+approval/denial with a real child process and temporary file, prohibited disk
+commands, noninteractive sudo, argument-display controls, app launch arguments,
+offline knowledge retrieval and text emotion cues. Native XWayland smoke passed
+with nine pages and visible companion.
+
+Real local Ollama answered the synthetic greeting with “Hi! Ready to help. How
+are you doing?” and a warm heart expression. No private conversation was used.
+`command_help('pacman')` successfully read the installed manual. Official pacman
+documentation was refreshed into the runtime cache with source URL/date/hash.
+No downloaded documentation was executed or committed.
+
+First real Brave launch timed out because browser descendants inherited captured
+output pipes. The fix uses null stdout and a temporary diagnostic file instead
+of pipes. The repeated real launch returned `ok=True`; this verifies launcher
+acceptance, not visual window placement. Regression coverage checks pipe handling.
+
+Original cursor and wallpaper were applied through `apply_user_branding.py`, with
+backup at `~/.local/share/regenos/appearance-backup-h7dv8w3x`. No privileged policy,
+system identity, bootloader or login screen was modified. Full native command
+access remains opt-in, and the same-account confirmation dialog is not an
+independent privileged broker. See [COMMAND_ACCESS](COMMAND_ACCESS.md).
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests scripts/apply_user_branding.py
+~/.ai_os/venv/bin/python scripts/verify_native_runtime.py
+~/.ai_os/venv/bin/python -m ai_os.knowledge refresh pacman
+~/.ai_os/venv/bin/python scripts/apply_user_branding.py
+~/.ai_os/venv/bin/python -c 'from ai_os.tools.desktop_tools import launch_application; print(launch_application("brave"))'
+git diff --check
+```
+
 ## Resume verification (same date, after reboot)
 
 ### Voice audit after user installation

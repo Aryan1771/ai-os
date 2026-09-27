@@ -395,9 +395,14 @@ class SettingsWindow(QMainWindow):
         layout = self.page("Permissions", QStyle.StandardPixmap.SP_MessageBoxWarning)
         form = self.form(layout)
         self.check(form, "sandbox_lock_settings", "Confirm protected setting changes")
-        label = QLabel("System actions: terminal approval")
+        self.choice(form, "command_access", "Command access", [
+            ("restricted", "Restricted: diagnostics and application launch"),
+            ("supervised", "Full command access — approve each change"),
+        ])
+        label = QLabel("Full command access shows an approval dialog for each change. Sudo passwords stay in your terminal. Disk safety blocks remain active.")
+        label.setWordWrap(True)
         label.setToolTip(
-            "Destructive actions need a human terminal approval. A background daemon denies requests without an interactive terminal."
+            "Native chat can request approval when full command access is enabled. Background voice actions still fail closed. This is not an OS-level sandbox."
         )
         form.addRow(label)
         layout.addStretch()
@@ -474,7 +479,7 @@ class SettingsWindow(QMainWindow):
         values = self.collect()
         changes = {key: value for key, value in values.items() if value != self.saved.get(key)}
         confirmed = False
-        if self.saved["sandbox_lock_settings"] and protected_changes(self.saved, changes):
+        if (self.saved["sandbox_lock_settings"] or "command_access" in protected_changes(self.saved, changes)) and protected_changes(self.saved, changes):
             names = ", ".join(
                 key.replace("_", " ") for key in sorted(protected_changes(self.saved, changes))
             )

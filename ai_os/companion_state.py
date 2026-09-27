@@ -100,6 +100,18 @@ def topic_shape(text: str, phase: str = "idle") -> str:
     return "gear" if phase == "working" else "core"
 
 
+def conversation_expression(text: str) -> dict[str, Any]:
+    """Coarse text cues, including speech transcripts; never a diagnosis."""
+    words = set(re.findall(r"\w+", text.casefold()))
+    if words & {"sad", "upset", "lonely", "worried", "scared", "उदास", "परेशान"}:
+        return {"shape": "heart", "emotions": {"joy": 25, "concern": 75, "calm": 85, "energy": 35}}
+    if words & {"frustrated", "angry", "broken", "annoyed", "गुस्सा"}:
+        return {"shape": "gear", "emotions": {"focus": 85, "concern": 60, "calm": 80}}
+    if words & {"hello", "hi", "thanks", "happy", "excited", "नमस्ते", "धन्यवाद"}:
+        return {"shape": "heart", "emotions": {"joy": 80, "curiosity": 65, "calm": 75, "energy": 70}}
+    return {"emotions": {"curiosity": 70, "focus": 65, "calm": 75}}
+
+
 def publish_state(
     phase: str,
     text: str = "",

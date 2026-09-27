@@ -142,3 +142,26 @@ def test_chat_cancel_reaps_backend_and_empty_input_is_rejected(app, tmp_path):
     widget.cancel()
     assert widget.process.state() == QProcess.ProcessState.NotRunning
     assert not widget.timer.isActive()
+
+
+def test_native_command_review_denies_then_executes_exact_proposal(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from PySide6.QtCore import QProcess
+    from ai_os.conversation_widget import ConversationWidget
+
+    save_settings({"command_access": "supervised"}, tmp_path, human_confirmed=True)
+    widget = ConversationWidget(tmp_path)
+    target = tmp_path / "approved-only.txt"
+    proposal = {"tool": "run_command", "arguments": {"command": ["/usr/bin/touch", str(target)]}}
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: QMessageBox.StandardButton.No)
+    assert not widget.approve_command(proposal)
+    assert not target.exists()
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: QMessageBox.StandardButton.Yes)
+    assert widget.approve_command(proposal)
+    for _ in range(100):
+        QTest.qWait(50)
+        if widget.process.state() == QProcess.ProcessState.NotRunning:
+            break
+    assert target.exists()
+    assert widget.process.state() == QProcess.ProcessState.NotRunning
+    widget.cancel()

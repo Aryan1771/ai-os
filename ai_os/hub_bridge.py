@@ -67,7 +67,7 @@ def schema() -> list[dict]:
             page = "Appearance"
         elif key.startswith("memory_"):
             page = "Memory preferences"
-        elif key in {"sandbox_lock_settings", "hyprland_enabled"}:
+        elif key in {"sandbox_lock_settings", "hyprland_enabled", "command_access"}:
             page = "Permissions"
         for name, value in default.items() if isinstance(default, dict) else [(None, default)]:
             path = f"{key}.{name}" if name else key
@@ -105,6 +105,21 @@ def schema() -> list[dict]:
 def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     action = request.get("action")
     config = load_raw_config(home)
+    if action == "approved_command":
+        from ai_os.ai_os_core import build_tool_registry, execute_tool, json_default
+        from ai_os.security.consent_broker import ConsentDecision
+
+        if config["command_access"] != "supervised" or request.get("confirmed") is not True:
+            raise PermissionError("Enable full command access and confirm the exact command locally.")
+        # This bridge action is never a registered model tool. The native UI sends
+        # it only after showing the command; same-user IPC is not OS isolation.
+        arguments = request.get("arguments")
+        if not isinstance(arguments, dict) or set(arguments) - {"command", "cwd", "timeout_sec"}:
+            raise ValueError("Invalid command proposal")
+        result = execute_tool("run_command", arguments, build_tool_registry(),
+                              consent=lambda _: ConsentDecision.APPROVED)
+        return {"response": {"type": "tool_result", "tool": "run_command",
+                             "result": json.loads(json.dumps(result, default=json_default))}}
     if action in {"hardware", "hardware_override"}:
         from ai_os.hardware_profile import discover, refresh_profile, save_override
 

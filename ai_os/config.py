@@ -52,6 +52,7 @@ class AiOsConfig:
 
 
 DEFAULT_CONFIG = {
+    "command_access": "restricted",
     "ollama_url": "http://127.0.0.1:11434/api/chat",
     "ollama_model": "qwen2.5:7b-instruct-q4_K_M",
     "ai_provider": "ollama",

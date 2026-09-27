@@ -8,6 +8,17 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- 2026-09-28: see [COMMAND_ACCESS](COMMAND_ACCESS.md) for new direct app launching,
+  supervised native command approval, installed man-page help, explicit official
+  manual caching and warmer emotion-aware replies. Full command access defaults
+  to restricted; no sudo/root policy was changed. Background voice still fails
+  closed on command approval. Pacman manual cached; greeting tested on real Ollama.
+  **135 tests passed**, correctness lint passed, real native smoke passed. Brave
+  launch accepted after fixing inherited-output-pipe timeout; window placement
+  is not automatically verified. See runtime notes for exact commands.
+- Custom cursor and original wallpaper applied to GNOME with appearance backups.
+  System identity, boot splash and login branding remain pending privileged review.
+  User confirmed the previous live English voice reply was audible/relevant.
 - Latest user-requested live English check completed microphone → Whisper →
   local Ollama → Piper/PipeWire reply with temporary memory disabled and no tools.
   Eight-second capture; STT 0.88s, model 4.47s, synthesis/playback 6.58s. Recording

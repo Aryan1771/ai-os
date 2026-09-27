@@ -75,9 +75,15 @@ PROHIBITED_PATTERNS = [
 
 
 def _normalize_command(command: str | list[str]) -> list[str]:
+    if not isinstance(command, (str, list)):
+        raise ValueError("Command must be a string or argument list")
     if isinstance(command, str):
-        return shlex.split(command)
-    return [str(part) for part in command]
+        command = shlex.split(command)
+    if (len(command) > 128 or any(not isinstance(part, str) or not part or
+                                not part.isprintable() for part in command)
+            or sum(map(len, command)) > 8000):
+        raise ValueError("Command needs at most 128 nonempty arguments and 8000 characters, without control characters")
+    return command
 
 
 def assess_command(command: str | list[str]) -> CommandAssessment:
@@ -87,6 +93,9 @@ def assess_command(command: str | list[str]) -> CommandAssessment:
 
     raw = " ".join(shlex.quote(part) for part in argv)
     executable = Path(argv[0]).name
+
+    if any(re.match(r"/dev/(?:sd[a-z]|nvme\d|vd[a-z]|disk/)", arg) for arg in argv):
+        return CommandAssessment(argv, RiskLevel.PROHIBITED, "Direct disk device access is blocked.", True)
 
     for pattern in PROHIBITED_PATTERNS:
         if re.search(pattern, raw):
@@ -150,6 +159,8 @@ def run_command(
     cwd: str | None = None,
     approve: bool = False,
 ) -> CommandResult:
+    if cwd is not None and (not isinstance(cwd, str) or not cwd.isprintable() or len(cwd) > 4096):
+        raise ValueError("Working directory must be a printable path")
     assessment = assess_command(command)
     start = time.monotonic()
     timeout_sec = max(1, min(60, int(timeout_sec)))
@@ -169,6 +180,13 @@ def run_command(
 
     try:
         argv = list(assessment.command)
+        if Path(argv[0]).name == "sudo":
+            # Never collect passwords from model/chat input or wait for a hidden
+            # password prompt. Authentication, if needed, stays in the terminal.
+            target = argv[2:] if len(argv) > 1 and argv[1] == "-n" else argv[1:]
+            if not target or target[0].startswith("-"):
+                return CommandResult(False, assessment, None, "", "Use sudo followed directly by the executable; password-input options are prohibited.", 0.0)
+            argv = ["/usr/bin/sudo", "-n", *target]
         if assessment.risk == RiskLevel.SAFE and os.name == "posix":
             # Do not let a user-writable PATH entry impersonate an approved diagnostic.
             argv[0] = "/usr/bin/" + Path(argv[0]).name
@@ -180,13 +198,15 @@ def run_command(
             timeout=timeout_sec,
             check=False,
             shell=False,
+            stdin=subprocess.DEVNULL,
         )
         return CommandResult(
             ok=proc.returncode == 0,
             assessment=assessment,
             returncode=proc.returncode,
             stdout=proc.stdout.strip(),
-            stderr=proc.stderr.strip(),
+            stderr=(proc.stderr.strip() + " Authenticate/run this exact action in your terminal; do not enter passwords in chat."
+                    if Path(argv[0]).name == "sudo" and proc.returncode else proc.stderr.strip()),
             duration_sec=round(time.monotonic() - start, 3),
         )
     except FileNotFoundError as exc:

@@ -1,5 +1,11 @@
 # REgenOS Feature Checklist
 
+2026-09-28 update: [native command access](COMMAND_ACCESS.md) adds application
+launching, per-command native review, local manual help and an explicit official
+documentation cache. Emotion metadata and social greetings are connected. The
+historical checklists below do not imply OS-level sandbox certification or
+unattended administrative control.
+
 Current installed-state and latency evidence: [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md).
 The supported desktop is Python/PySide6, now with conversation, memory, hardware,
 voice and companion controls. C++ references below are historical implementation

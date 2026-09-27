@@ -18,6 +18,10 @@ real bilingual speech validation remain pending.
 See [the current Arch validation handoff](docs/HANDOFF.md) for measured results and
 blockers. REgenOS is a prototype, not a finished distribution.
 
+Native chat can open supported applications such as Brave, inspect installed
+command manuals and request per-command approval through the optional full
+command access setting. See [command access, emotions and knowledge refresh](docs/COMMAND_ACCESS.md).
+
 This repository stores the source code, systemd templates, security templates, and Arch setup instructions. It does not store the Python virtual environment, Ollama models, ChromaDB state, downloaded voice models, or private API keys.
 
 ## Target Runtime

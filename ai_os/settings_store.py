@@ -16,6 +16,7 @@ from ai_os.cursor_theme import apply_preferences
 
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
 PROTECTED_KEYS = {
+    "command_access",
     "hardware_auto_adapt",
     "hardware_backend",
     "hardware_allow_model_fallback",
@@ -33,6 +34,7 @@ PROTECTED_KEYS = {
     "memory_allow_remote",
 }
 CHOICES = {
+    "command_access": {"restricted", "supervised"},
     "whisper_language": {"auto", "en", "hi"},
     "hardware_backend": {"auto", "cpu"},
     "ai_provider": {"ollama", "openai_compatible"},
@@ -148,7 +150,7 @@ def save_settings(
     current = load_raw_config(home)
     validated = {key: validate_setting(key, value) for key, value in changes.items()}
     protected = protected_changes(current, validated)
-    if current["sandbox_lock_settings"] and protected and not human_confirmed:
+    if (current["sandbox_lock_settings"] or "command_access" in protected) and protected and not human_confirmed:
         raise PermissionError("Local confirmation required: " + ", ".join(sorted(protected)))
     result = current | validated
     validate_model_endpoint(result)
