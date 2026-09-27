@@ -1,5 +1,12 @@
 # Installed dependency audit — 2026-09-27
 
+**Update after user installation:** all immediate and optional desktop packages
+listed below are now installed, as is win2xcur 0.1.2. Whisper base, both Piper
+voices/configs and Jarvis ONNX are present. The remaining TFLite dependency warning
+does not prevent the explicitly selected ONNX wake model from loading. These
+sections retain the earlier installation commands for reference. Current voice
+test results and limitations are in [HANDOFF](HANDOFF.md).
+
 Verified against this host's pacman inventory, venv module discovery, `pip check`,
 configured model-file existence and repository installers. These are scoped
 preinstallation commands, not a requirement to run every installation stage.

@@ -8,6 +8,50 @@ but that alone did not deploy or validate their features.
 
 ## Resume verification (same date, after reboot)
 
+### Voice audit after user installation
+
+All requested immediate/optional packages and win2xcur are installed. The suite
+now passes **122 tests**, including real cursor conversion. Whisper base and both
+Piper ONNX SHA256 hashes match Hugging Face publisher API metadata. No model
+downloads or privileged installation were needed during this audit.
+
+The only corrected saved setting was `whisper_model`: the old English-only path
+did not exist, while the downloaded multilingual `ggml-base.bin` did. A private
+backup preceded `save_settings({'whisper_model':'models/ggml-base.bin'}, home)`.
+All three listening/wake/speech flags remain false. Daemon state was inactive,
+dead, zero restarts and exit status zero. It was not restarted by this audit.
+
+Synthetic testing in a temporary directory used the installed Piper CLI to make
+English/Hindi WAVs, FFmpeg to resample each to mono 16 kHz, and
+`whisper-cli -m ~/.ai_os/models/ggml-base.bin -f <synthetic.wav> -l <en|hi> -nt`.
+English synthesis/transcription took 1.06/0.87 seconds with a correct transcript.
+Hindi synthesis/transcription took 1.16/0.98 seconds, but the transcript used Urdu
+script and was not accepted as correct Hindi. Exit code zero alone is insufficient.
+These are short synthetic samples, not microphone accuracy benchmarks.
+
+`WakeWordService(model_path=<Jarvis ONNX>).start()` returned ready, and
+`detect_frame(numpy.zeros(1280, dtype=numpy.int16))` returned false. No real wake
+phrase was tested. `pip check` still reports missing tflite-runtime; the selected
+ONNX execution path works. A sandbox-only ONNX telemetry-write warning was also
+observed; it did not prevent model loading.
+
+Real `SpeechQueue.speak_text` calls with the saved English/Hindi voices completed
+synthesis and PipeWire playback in 4.50/4.56 seconds. Audible quality needs human
+confirmation. An existing microphone WAV has 80000 frames, mono, 16 kHz (five
+seconds); only its metadata was read. No recording was played, transcribed or
+deleted, and no microphone capture or continuous listening was started.
+
+Audit commands included:
+
+```bash
+pacman -Q whisper-cpp noto-fonts hyprlock hyprpaper hypridle wofi thunar papirus-icon-theme ttf-jetbrains-mono
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q
+~/.ai_os/venv/bin/python -m pip check
+systemctl --user show ai-os.service -p ActiveState -p SubState -p NRestarts -p ExecMainStatus
+```
+
+### GPU checkpoint
+
 **Latest result after the user restarted Ollama:** the same probe now reports
 `size_vram=size=4748056984` bytes for Qwen 7B Q4 at 4096 context, confirming GPU
 allocation. First/warm requests took 5.487/0.405 seconds, including 5.055/0.001

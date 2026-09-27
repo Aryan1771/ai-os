@@ -26,5 +26,5 @@
 
 - Ollama CLI use bypasses REgenOS memory/tools. Verify actual installed entry points
   separately from source. Back up affected private runtime data before migrations.
-- Hindi/English recognition and speech are planned; model assets are intentionally
-  deferred until structure is ready. Never claim expressive behavior is sentience.
+- Hindi/English voice assets are installed; consult the handoff for validation
+  limits before enabling listening. Never claim expressive behavior is sentience.

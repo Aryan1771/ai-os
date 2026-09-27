@@ -8,6 +8,24 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- Latest voice audit: all packages listed in PREINSTALL's immediate/optional
+  commands and win2xcur are installed. **122 tests passed, none skipped**.
+  Multilingual Whisper base, English Lessac and Hindi Pratham model SHA256 values
+  match publisher metadata. Both voice JSON files and Jarvis ONNX exist.
+- Corrected saved `whisper_model` from absent `models/ggml-base.en.bin` to
+  `models/ggml-base.bin`, after private runtime backup. Listening/wake/speech
+  remain false; daemon inactive, clean exit. No microphone capture was performed.
+- Synthetic English round-trip passed. Hindi synthesis works, but base Whisper
+  returned Urdu-script text with `-l hi`; Hindi recognition quality is pending.
+  Both voices passed the real speech adapter/PipeWire playback command (4.50/4.56s);
+  human audibility/quality confirmation is still needed. Jarvis ONNX loads and
+  rejects one silence frame; this does not validate real wake-word detection.
+- `pip check` still reports missing tflite-runtime, while the selected ONNX path
+  passes. Existing five-second microphone WAV was inspected only for metadata.
+  Untracked `:memory:.ses` was preserved and excluded from commits.
+
+### Earlier dependency and GPU checkpoint
+
 - Resume validation supersedes the earlier machine snapshot below: running kernel
   `7.2.7-arch1-1`, NVIDIA module/userspace `615.71.09`, RTX 4060 Laptop with
   8188 MiB VRAM. Driver access works outside the tool sandbox. The user daemon,
@@ -80,8 +98,8 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
    CLI, to exercise connected memory/tools. Report any real conversation failures.
 2. GPU smoke now passes. Next validate connected REgenOS requests and longer
    contexts under realistic load; sampled usage does not enforce a VRAM ceiling.
-3. Voice assets stay deferred per user. Later choose verified multilingual Whisper
-   and suitable English/Hindi Piper voices; measure every audio stage separately.
+3. Voice assets are installed. Improve/validate Hindi recognition, confirm audible
+   output, then explicitly opt into real microphone/wake-word end-to-end testing.
 4. Finish tokenizer-aware limits, robust request ordering, streaming/tool-result loop,
    speech cancellation/stall recovery and actual bilingual acceptance.
 5. Follow the audit dependency order for trusted native approvals/security, desktop,
