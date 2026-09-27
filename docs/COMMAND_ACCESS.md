@@ -26,8 +26,9 @@ that exact command to the child bridge; no model inference takes place between
 approval and execution. Select Restricted and Save to revoke this UI capability.
 The default remains Restricted; this checkpoint did not enable it for the user.
 
-Terminal requests retain per-action human approval. Background voice requests
-cannot display this native chat confirmation and fail closed. Model-supplied
+Terminal requests retain per-action human approval unless a confirmed applicable
+grant exists. Background voice requests without such a grant fail closed or leave
+a pending request for native review. Model-supplied
 `approve=true` is discarded. Full command access is supervised, not an unattended
 root shell. Prohibited formatting/wiping patterns and direct disk device access
 remain blocked. Sudo uses `-n`, stdin is closed, and password prompting is never
@@ -40,6 +41,48 @@ that cannot be understood by argument matching. Never approve an opaque script
 as a shortcut around restrictions. No AppArmor, firewall, sudoers or boot policy
 was changed. Commands remain bounded to 60 seconds; cancellation cannot undo
 already completed actions. Long-running administration needs a real terminal.
+
+## One-command and timed access grants
+
+Enable supervised command access in Settings → Permissions first. Then use these
+phrases in the REgenOS conversation or terminal (not bare Ollama):
+
+- `I give you full access to this command` requests one execution of the most
+  recent pending command in that session. Request the action first. The pending
+  command expires after two minutes; approval binds its argv, directory and timeout.
+- `I give you full access for 30 seconds`, `five minutes`, `1.5 hours`, or
+  `1 hour and 30 minutes` requests a timed grant. Supported durations are 1 second
+  through 24 hours, using seconds/minutes/hours and common English number words.
+- `revoke access` clears grants and pending requests for the current session.
+  `revoke all access` clears them for every session.
+
+The phrase requests permission; it does not itself activate access. In native
+Conversation, choose **Review access request**, inspect the scope or exact command,
+and confirm the default-No dialog. Terminal users receive a human consent prompt.
+Voice requests await native review because microphone input does not prove identity.
+The model cannot create or confirm grants through its tool registry.
+
+Timed scope is deliberately limited to audited diagnostics and new-file
+`mkdir`, `touch`, and `cp` operations below `~/Documents`, `~/Downloads`, or `/tmp`.
+It excludes hidden paths, runtime data, overwrites, deletion, sudo, shells, scripts,
+package/service changes and protected disk access. Other commands still need
+individual approval. Executables are pinned to `/usr/bin`; copy adds
+`--no-clobber`. This is application-level checking, not race-proof filesystem
+isolation or an OS sandbox. An exact-command grant can authorize a broader reviewed
+command once, but cannot override prohibited-command checks or OS permissions.
+
+The Conversation panel shows the selected session's countdown and **Revoke access**.
+The companion shows default-session access state and offers **Revoke all access
+grants** in its menu. Voice uses the default session. Changing the saved command
+access mode revokes all grants. Grants survive client restarts during their duration,
+but expire on reboot or their monotonic/wall-clock deadline. Pending confirmations
+expire after two minutes and use single-use tokens. One-command claims are atomic
+and consumed even if execution fails. Revocation blocks future claims; it does not
+cancel already-started commands or undo their effects.
+
+State is local at `~/.ai_os/run/private/access.sqlite3` (directory 0700, file 0600).
+Same-account processes are not isolated from that state or the native bridge.
+Do not interpret this feature as unattended unrestricted root access.
 
 ## Emotions and learning
 

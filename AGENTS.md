@@ -14,6 +14,8 @@
   firewall/AppArmor changes, boot changes, disk operations or other impactful changes.
 - Keep subprocesses shell-free and bounded. Audit arguments, not just executable
   names. Models cannot approve actions; background consent must fail closed.
+- Access-grant phrases request trusted human confirmation; never expose grant
+  confirmation as a model tool. Preserve expiry, scoped execution and revocation.
 - Continuous microphone listening requires explicit opt-in, visible state and an
   easy stop. Do not enable it during ordinary diagnostics. Simulated emotions are
   presentation state; saved memory does not train model weights.

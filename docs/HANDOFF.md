@@ -8,6 +8,15 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- 2026-09-28 access-grant follow-up: exact pending-command and timed session
+  grants are implemented with trusted terminal/native confirmation, expiry,
+  countdown and revocation. Seconds/minutes/hours, up to 24 hours; timed scope
+  is limited to diagnostics and new-file mkdir/touch/cp in approved directories.
+  Voice requests remain pending until native review; models cannot confirm.
+  See [COMMAND_ACCESS](COMMAND_ACCESS.md) for usage and security limits.
+  **173 tests passed**, correctness lint passed. No real user grant was activated
+  and no microphone listening was enabled. Native smoke result is recorded in
+  [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md).
 - 2026-09-28: see [COMMAND_ACCESS](COMMAND_ACCESS.md) for new direct app launching,
   supervised native command approval, installed man-page help, explicit official
   manual caching and warmer emotion-aware replies. Full command access defaults

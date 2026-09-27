@@ -154,6 +154,9 @@ def save_settings(
         raise PermissionError("Local confirmation required: " + ", ".join(sorted(protected)))
     result = current | validated
     validate_model_endpoint(result)
+    if "command_access" in validated:
+        from ai_os.security.access_grants import revoke_all
+        revoke_all(home)
     atomic_json(home / "config.json", result)
     return result
 

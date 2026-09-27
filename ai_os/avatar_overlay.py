@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import sys
+import time
+import sqlite3
 from pathlib import Path
 
 from PySide6.QtCore import QProcess, Qt, QTimer
@@ -11,6 +13,7 @@ from ai_os.companion_state import read_state
 from ai_os.config import AI_OS_HOME, load_raw_config
 from ai_os.native_widgets import CompanionCanvas, EmotionBars, LocalInstance, theme_stylesheet
 from ai_os.settings_store import save_settings
+from ai_os.security.access_grants import GrantStore, revoke_all
 
 
 class AvatarOverlay(QWidget):
@@ -76,6 +79,16 @@ class AvatarOverlay(QWidget):
         state = read_state(self.home)
         self.canvas.set_state(state, config)
         self.status.setText(state["phase"].capitalize())
+        if GrantStore(self.home).path.exists():
+            try:
+                access = GrantStore(self.home).status("default")
+                if "request" in access:
+                    self.status.setText("Access request · open Settings")
+                elif "grant" in access:
+                    seconds = max(0, int(access["grant"]["deadline"] - time.monotonic()))
+                    self.status.setText(f"Access active · {seconds}s")
+            except (OSError, ValueError, sqlite3.Error):
+                self.status.setText("Access status unavailable")
 
     def place(self) -> None:
         screen = QApplication.primaryScreen()
@@ -93,6 +106,7 @@ class AvatarOverlay(QWidget):
     def contextMenuEvent(self, event) -> None:
         menu = QMenu(self)
         menu.addAction("Settings", self.open_settings)
+        menu.addAction("Revoke all access grants", lambda: revoke_all(self.home))
         menu.addAction(
             "Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home)
         )

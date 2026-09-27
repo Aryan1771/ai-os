@@ -21,6 +21,9 @@ from PySide6.QtWidgets import (
 
 from ai_os.conversation_memory import ConversationMemory
 from ai_os.config import load_raw_config
+from ai_os.security.access_grants import GrantStore, SCOPE
+import time
+import sqlite3
 
 
 class ConversationWidget(QWidget):
@@ -42,6 +45,22 @@ class ConversationWidget(QWidget):
         self.session.setMaxLength(80)
         layout.addWidget(QLabel("Persistent session (use a different name to separate topics)"))
         layout.addWidget(self.session)
+        self.access_status = QLabel("No temporary access grant")
+        self.access_status.setWordWrap(True)
+        layout.addWidget(self.access_status)
+        grant_actions = QHBoxLayout()
+        self.confirm_grant_button = QPushButton("Review access request")
+        self.confirm_grant_button.clicked.connect(self.confirm_grant)
+        self.confirm_grant_button.setEnabled(False)
+        grant_actions.addWidget(self.confirm_grant_button)
+        self.revoke_grant_button = QPushButton("Revoke access")
+        self.revoke_grant_button.clicked.connect(self.revoke_grant)
+        grant_actions.addWidget(self.revoke_grant_button)
+        layout.addLayout(grant_actions)
+        self.grant_timer = QTimer(self)
+        self.grant_timer.setInterval(1000)
+        self.grant_timer.timeout.connect(self.refresh_grant)
+        self.grant_timer.start()
         self.history = QPlainTextEdit()
         self.history.setReadOnly(True)
         self.history.setMaximumBlockCount(500)
@@ -156,11 +175,65 @@ class ConversationWidget(QWidget):
         if box.exec() != QMessageBox.StandardButton.Yes:
             self.status.setText("Command denied.")
             return False
-        payload = json.dumps({"action": "approved_command", "arguments": arguments, "confirmed": True})
+        payload = json.dumps({"action": "approved_command", "arguments": arguments, "confirmed": True,
+                              "session": self.session.text() or "default"})
         self.send_button.setEnabled(False)
         self.session.setEnabled(False)
         self.load_button.setEnabled(False)
         self.status.setText("Running approved command…")
+        self.process.start(sys.executable, ["-m", "ai_os.hub_bridge"])
+        self.process.write(payload.encode())
+        self.process.closeWriteChannel()
+        self.timer.start()
+        return True
+
+    def refresh_grant(self):
+        try:
+            state = GrantStore(self.home).status(self.session.text() or "default")
+            grant = state.get("grant")
+            label = "No temporary access grant"
+            if grant:
+                remaining = max(0, int(min(grant["deadline"]-time.monotonic(), grant["wall_deadline"]-time.time())))
+                label = f"{grant['kind'].capitalize()} access: {remaining}s remaining — this session"
+            if "request" in state:
+                label += " · Access request awaiting your review"
+            self.access_status.setText(label)
+            self.confirm_grant_button.setEnabled("request" in state and self.process.state() == QProcess.ProcessState.NotRunning)
+        except (OSError, ValueError, sqlite3.Error):
+            self.access_status.setText("Access status unavailable — review disabled")
+            self.confirm_grant_button.setEnabled(False)
+
+    def revoke_grant(self):
+        GrantStore(self.home).revoke(self.session.text() or "default")
+        self.refresh_grant()
+        self.status.setText("Access revoked. Already running/completed actions are not undone.")
+
+    def confirm_grant(self):
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            return False
+        request = GrantStore(self.home).status(self.session.text() or "default").get("request")
+        if not request:
+            self.refresh_grant()
+            return False
+        box = QMessageBox(self)
+        box.setWindowTitle("Confirm temporary command access")
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        from ai_os.tools.system_tools import assess_command
+        description = SCOPE if request["kind"] == "timed" else (
+            "Run this exact command once. Risk: " + assess_command(request["spec"]["command"]).risk.value
+            + "\n" + json.dumps(request["spec"], ensure_ascii=True, indent=2))
+        box.setText(f"Session: {self.session.text() or 'default'}\nDuration: {request['seconds']} seconds\n\n{description}\n\nAccess expires automatically. Revoke access stops future commands, not effects already completed. This is not an OS sandbox.")
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            self.revoke_grant()
+            return False
+        payload = json.dumps({"action": "confirm_access_grant", "confirmed": True,
+                              "token": request["token"], "session": self.session.text() or "default"})
+        self.send_button.setEnabled(False)
+        self.session.setEnabled(False)
+        self.load_button.setEnabled(False)
+        self.status.setText("Confirming access…")
         self.process.start(sys.executable, ["-m", "ai_os.hub_bridge"])
         self.process.write(payload.encode())
         self.process.closeWriteChannel()

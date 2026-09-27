@@ -165,3 +165,35 @@ def test_native_command_review_denies_then_executes_exact_proposal(app, tmp_path
     assert target.exists()
     assert widget.process.state() == QProcess.ProcessState.NotRunning
     widget.cancel()
+
+
+def test_native_grant_confirmation_countdown_and_revoke(app, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from PySide6.QtCore import QProcess
+    from ai_os.conversation_widget import ConversationWidget
+    from ai_os.security.access_grants import GrantStore
+
+    save_settings({"command_access": "supervised"}, tmp_path, human_confirmed=True)
+    store = GrantStore(tmp_path)
+    store.request("default", {"kind": "timed", "seconds": 60})
+    widget = ConversationWidget(tmp_path)
+    widget.refresh_grant()
+    assert widget.confirm_grant_button.isEnabled()
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: QMessageBox.StandardButton.No)
+    assert not widget.confirm_grant()
+    assert store.status("default") == {}
+    store.request("default", {"kind": "timed", "seconds": 60})
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: QMessageBox.StandardButton.Yes)
+    assert widget.confirm_grant()
+    for _ in range(100):
+        QTest.qWait(50)
+        if widget.process.state() == QProcess.ProcessState.NotRunning:
+            break
+    assert "grant" in store.status("default")
+    widget.refresh_grant()
+    assert "remaining" in widget.access_status.text()
+    widget.revoke_grant()
+    assert store.status("default") == {}
+    assert "No temporary" in widget.access_status.text()
+    widget.grant_timer.stop()
+    widget.cancel()

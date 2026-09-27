@@ -21,6 +21,7 @@ from ai_os.conversation_memory import ConversationMemory
 from ai_os.hardware_profile import inference_slot, refresh_profile, runtime_policy
 from ai_os.logging_utils import configure_logging
 from ai_os.security.consent_broker import ConsentDecision, ConsentRequest, request_cli_consent
+from ai_os.security.access_grants import GrantStore, intent as grant_intent, SCOPE
 from ai_os.services.listener import AlwaysListeningService
 from ai_os.services.stt import WhisperCppTranscriber
 from ai_os.settings_store import validate_model_endpoint
@@ -190,7 +191,7 @@ def parse_tool_call(text: str) -> dict[str, Any] | None:
     return None
 
 
-def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, ToolFn], *, consent=None) -> Any:
+def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, ToolFn], *, consent=None, home=None, session="default") -> Any:
     if tool_name not in registry:
         return {"ok": False, "error": f"Unknown tool: {tool_name}"}
 
@@ -214,6 +215,9 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
         if assessment.risk == system_tools.RiskLevel.PROHIBITED:
             return {"ok": False, "error": "Command prohibited by safety policy."}
         if assessment.requires_approval:
+            granted = GrantStore(home).consume(session, arguments) if home is not None else None
+            if granted:
+                return registry[tool_name](**granted, approve=True)
             decision = consent(
                 ConsentRequest(
                     action="run command",
@@ -223,6 +227,8 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], registry: dict[str, 
                 )
             )
             if decision is not ConsentDecision.APPROVED:
+                if home is not None:
+                    GrantStore(home).pending_command(session, arguments)
                 return {"ok": False, "error": "Command needs human approval.",
                         "approval_required": {"tool": tool_name, "arguments": arguments,
                                               "risk": assessment.risk.value,
@@ -243,6 +249,41 @@ def handle_user_text(
         raise ValueError("Messages must contain 1-8000 characters.")
     if not isinstance(session, str) or not 1 <= len(session) <= 80:
         raise ValueError("Session names need 1-80 characters")
+    try:
+        choice = grant_intent(user_text)
+    except ValueError as exc:
+        return {"type": "text", "content": str(exc)}
+    if choice:
+        store = GrantStore(home)
+        if choice["kind"] == "revoke":
+            if choice.get("all_sessions"):
+                from ai_os.security.access_grants import revoke_all
+                revoke_all(home)
+            else:
+                store.revoke(session)
+            return {"type": "text", "content": "Access grants and pending approvals revoked. Already running or completed actions are not undone."}
+        from ai_os.config import load_raw_config
+        if load_raw_config(home)["command_access"] != "supervised":
+            return {"type": "text", "content": "Enable Full command access in Settings → Permissions first. No access was granted."}
+        try:
+            request = store.request(session, choice)
+        except ValueError as exc:
+            return {"type": "text", "content": str(exc)}
+        if sys.stdin.isatty():
+            decision = request_cli_consent(ConsentRequest(
+                action=f"Grant {choice['kind']} access for {choice['seconds']} seconds",
+                risk=system_tools.assess_command(request["spec"]["command"]).risk.value if request["spec"] else "moderate",
+                reason=SCOPE if choice["kind"] == "timed" else json.dumps(request["spec"]),
+                command=request["spec"]["command"] if request["spec"] else None))
+            if decision is ConsentDecision.APPROVED:
+                grant = store.confirm(session, request["token"], human_confirmed=True)
+                if grant["kind"] == "once":
+                    result = execute_tool("run_command", grant["spec"], build_tool_registry(home), home=home, session=session)
+                    return {"type": "tool_result", "tool": "run_command", "result": result}
+                return {"type": "text", "content": f"Scoped access active for {choice['seconds']} seconds. Say 'revoke access' to stop. " + SCOPE}
+            store.revoke(session)
+            return {"type": "text", "content": "Access grant denied."}
+        return {"type": "text", "content": "Access request is pending. Confirm it in the native Conversation panel for this session. No access was granted yet."}
     registry = registry if registry is not None else build_tool_registry(home)
     revision = ConversationMemory(home).revision() if load_config(home).memory_enabled else None
     expression = conversation_expression(user_text)
@@ -257,7 +298,7 @@ def handle_user_text(
         tool_call = parse_tool_call(model_text)
         if tool_call:
             publish_state("working", tool_call["tool"], home=home)
-            result = execute_tool(tool_call["tool"], tool_call["arguments"], registry)
+            result = execute_tool(tool_call["tool"], tool_call["arguments"], registry, home=home, session=session)
             failed = (
                 result.get("ok") is False
                 if isinstance(result, dict)

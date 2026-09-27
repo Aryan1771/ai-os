@@ -8,6 +8,35 @@ but that alone did not deploy or validate their features.
 
 ## 2026-09-28 command, companion and appearance checkpoint
 
+### Access-grant follow-up
+
+**173 tests passed in 2.25s**, with correctness lint passing. Tests cover duration
+parsing, default-deny local confirmation, exact command/session binding, concurrent
+single-use claims, expiry/reboot/clock rollback, revocation, mode changes, invalid
+deadlines, symlink escape, model denial, and native confirmation through a real
+Qt child process. Synthetic tests use temporary runtime data. No real runtime grant,
+microphone capture or continuous listening was activated. No sudo or system policy
+was changed. See [COMMAND_ACCESS](COMMAND_ACCESS.md) for the restricted timed scope
+and the same-account trust boundary; this is not a complete OS sandbox.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests
+~/.ai_os/venv/bin/python scripts/verify_native_runtime.py
+git diff --check
+```
+
+Real speech recognition of the new grant phrases and long-duration/manual UI
+acceptance remain pending. Unit coverage of transcript parsing does not establish
+microphone accuracy or speaker identity.
+
+Real native smoke passed after the suite: `ok=true`, nine pages, `xcb` platform,
+visible companion and completed synthetic local Ollama chat. This used temporary
+settings/memory and did not activate a real user's access grant. Automated native
+grant-dialog coverage is offscreen; manual grant-dialog acceptance remains pending.
+
+### Earlier command and appearance validation
+
 **135 tests passed**, correctness lint and `git diff --check` passed. Coverage
 includes model approval rejection, restricted-mode rejection, explicit native
 approval/denial with a real child process and temporary file, prohibited disk

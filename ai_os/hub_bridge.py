@@ -105,6 +105,18 @@ def schema() -> list[dict]:
 def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     action = request.get("action")
     config = load_raw_config(home)
+    if action == "confirm_access_grant":
+        from ai_os.security.access_grants import GrantStore, SCOPE
+        from ai_os.ai_os_core import execute_tool, build_tool_registry, json_default
+        if config["command_access"] != "supervised" or request.get("confirmed") is not True:
+            raise PermissionError("Local confirmation and full command access are required")
+        session = request.get("session", "default")
+        grant = GrantStore(home).confirm(session, request.get("token"), human_confirmed=True)
+        if grant["kind"] == "once":
+            result = execute_tool("run_command", grant["spec"], build_tool_registry(home), home=home, session=session)
+            return {"response": {"type": "tool_result", "tool": "run_command",
+                                 "result": json.loads(json.dumps(result, default=json_default))}}
+        return {"response": {"type": "text", "content": "Scoped timed access is active. Say 'revoke access' or use Revoke access to stop. " + SCOPE}}
     if action == "approved_command":
         from ai_os.ai_os_core import build_tool_registry, execute_tool, json_default
         from ai_os.security.consent_broker import ConsentDecision
@@ -116,6 +128,8 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
         arguments = request.get("arguments")
         if not isinstance(arguments, dict) or set(arguments) - {"command", "cwd", "timeout_sec"}:
             raise ValueError("Invalid command proposal")
+        from ai_os.security.access_grants import GrantStore
+        GrantStore(home).clear_pending(request.get("session", "default"))
         result = execute_tool("run_command", arguments, build_tool_registry(),
                               consent=lambda _: ConsentDecision.APPROVED)
         return {"response": {"type": "tool_result", "tool": "run_command",
