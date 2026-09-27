@@ -85,6 +85,7 @@ Qt Multimedia was added only to the existing venv, matching Essentials:
 ```bash
 ~/.ai_os/venv/bin/python -m pip install 'PySide6-Addons==6.11.2'
 ~/.ai_os/venv/bin/python -m pip install --no-deps --no-build-isolation -e .
+~/.ai_os/venv/bin/python -c 'from setuptools import setup; setup(script_args=["egg_info"])'
 QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q
 ~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests scripts/verify_screen_runtime.py
 QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python scripts/verify_screen_runtime.py
@@ -95,6 +96,9 @@ git diff --check
 ```
 
 `--status` prints only availability and character count, never the captured text.
+The checkout had stale ignored `.egg-info` metadata shadowing the correct installed
+`.dist-info`; the `egg_info` command refreshed that generated metadata. Both native
+launchers and the new `screen` extra are present; no system Python changes were made.
 Synthetic OCR draws a known test image in memory and checks the real Tesseract
 binary. It does not capture the desktop. Fresh text availability proves the capture
 and recognition path is producing output, not semantic accuracy or user attribution.
