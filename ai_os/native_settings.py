@@ -207,6 +207,13 @@ class SettingsWindow(QMainWindow):
         note = QLabel("Screen texture uses a temporary local screen image when moving. Nothing is saved or sent to a model. It estimates visual clutter, not whether text is important; some Wayland sessions deny capture. Drag RE to position it manually.")
         note.setWordWrap(True)
         form.addRow(note)
+        self.check(form, "screen_context_enabled", "Let RE read my shared screen locally")
+        self.check(form, "screen_commentary_enabled", "Offer comments when my screen changes")
+        self.check(form, "screen_commentary_speech", "Speak screen comments (also requires Speak replies)")
+        self.slider(form, "screen_commentary_minutes", "Minimum screen comment interval (minutes)", 1, 120)
+        screen_note = QLabel("Choose a screen in the desktop sharing dialog. RE reads visible English text locally; images and video are not understood. A separate screen indicator has Pause and Ask RE buttons. Screen observations expire, are not saved in memory, and never authorize actions. Locking pauses sharing; Resume opens the selector again. Remote AI providers receive no screen context.")
+        screen_note.setWordWrap(True)
+        form.addRow(screen_note)
         self.check(form, "avatar_animation_enabled", "Animate pixels")
         self.check(form, "avatar_topic_morphing", "Morph with topics and tasks")
         self.choice(

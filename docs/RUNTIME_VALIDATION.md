@@ -10,6 +10,15 @@ but that alone did not deploy or validate their features.
 
 ### Companion automation follow-up
 
+Continuous screen reading is a subsequent feature, documented separately in
+[SCREEN_AWARENESS](SCREEN_AWARENESS.md). Earlier references to screen capture being
+off refer to the corner-texture checkpoint, not the later user-authorized OCR work.
+This follow-up passes **225 tests**, correctness lint, real synthetic OCR/Ollama and
+native UI checks. A GNOME portal stream produced 2574 fresh OCR characters. Sharing
+then switched off; the subsequent live-model request correctly refused absent
+context. It remains paused; sustained automatic/spoken comments and lock/unlock
+acceptance are pending. No captured text, screenshot or recording was saved.
+
 **209 tests passed**, correctness lint and diff checks pass. Native smoke
 passed with nine pages, xcb, visible companion and completed local Ollama request.
 New automation validation, commands and limits are recorded in

@@ -16,6 +16,9 @@ from ai_os.cursor_theme import apply_preferences
 
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
 PROTECTED_KEYS = {
+    "screen_context_enabled",
+    "screen_commentary_enabled",
+    "screen_commentary_speech",
     "avatar_screen_awareness",
     "browser_enabled",
     "proactive_speech_enabled",
@@ -48,6 +51,7 @@ CHOICES = {
     "avatar_idle_shape": set(SHAPE_NAMES),
 }
 BOUNDS = {
+    "screen_commentary_minutes": (1, 120),
     "proactive_interval_minutes": (5, 120),
     "avatar_scale": (60, 160),
     "avatar_motion": (0, 100),

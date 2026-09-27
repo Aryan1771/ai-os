@@ -3,6 +3,10 @@
 2026-09-28. These are incremental REgenOS prototype features, not unrestricted
 control of every application or OS operation.
 
+Subsequent continuous screen OCR/context and comments are documented in
+[SCREEN_AWARENESS](SCREEN_AWARENESS.md). The texture heuristic below remains a
+separate placement feature.
+
 ## Debug displays and interaction
 
 Emotion bars and the mood/activity label now have independent toggles in

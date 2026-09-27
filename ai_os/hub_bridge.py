@@ -109,6 +109,39 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
         from ai_os.reviewed_actions import execute
         result = execute(request.get("tool"), request.get("arguments"), home, confirmed=request.get("confirmed") is True)
         return {"response": {"type": "tool_result", "tool": request.get("tool"), "result": result}}
+    if action in {"screen_comment", "screen_describe"}:
+        from ai_os.ai_os_core import ask_screen, parse_visual_reply
+        from ai_os.screen_context import read_observation, same_scene
+        from ai_os.companion_state import read_state, publish_state
+        from ai_os.speech_queue import SpeechQueue
+        automatic = action == "screen_comment"
+        observation = read_observation(home)
+        if not observation or (automatic and not config["screen_commentary_enabled"]):
+            return {"comment": ""}
+        if read_state(home)["phase"] not in {"idle", "armed", "reply"}:
+            return {"comment": ""}
+        prompt = ("Offer one useful, calm comment about the visible work, at most 25 words. "
+                  "If there is nothing useful to add, reply with an empty string. "
+                  "Never read private details, identifiers or secrets aloud. Do not assume the user caused a change.") if automatic else "Briefly describe what is on my screen and offer relevant help. Do not expose secrets or private identifiers."
+        answer = ask_screen(prompt, home)
+        latest = load_raw_config(home)
+        current = read_observation(home)
+        if (not current or not same_scene(current["text"], observation["text"])
+                or (automatic and not latest["screen_commentary_enabled"])
+                or read_state(home)["phase"] not in {"idle", "armed", "reply"}):
+            return {"comment": ""}
+        text, avatar = parse_visual_reply(answer)
+        text = text.strip().strip('"')[:400]
+        if text and automatic and latest["screen_commentary_speech"] and latest["speech_enabled"]:
+            voice = load_config(home)
+            publish_state("speaking", home=home, avatar=avatar)
+            try:
+                SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
+                            length_scale=voice.piper_length_scale,
+                            emotion_enabled=latest["speech_emotion_enabled"]).speak_text(text, avatar=avatar)
+            finally:
+                publish_state("idle", home=home)
+        return {"comment": text}
     if action == "proactive_speech":
         from ai_os.ai_os_core import ask_ollama, parse_visual_reply, parse_tool_call
         from ai_os.companion_state import publish_state, read_state

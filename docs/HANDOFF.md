@@ -8,6 +8,19 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- 2026-09-28 continuous screen follow-up: native Qt Multimedia portal capture,
+  local English OCR, expiring in-memory context, read-only screen questions and
+  optional screen comments implemented. GNOME lock checks fail closed; screen
+  data never enters tools, conversation memory or remote providers. New settings
+  enabled for this user after explicit request and backup `pre-migration-7cf28wkw`;
+  speech/microphone settings preserved. Approved Tesseract/English packages and
+  matching venv Qt Addons installed. See [SCREEN_AWARENESS](SCREEN_AWARENESS.md)
+  for controls, limits and current validation. No general image/video understanding.
+  **225 tests passed**, correctness lint/native smoke and synthetic OCR → Ollama
+  passed. Live GNOME capture produced 2574 fresh text characters without logging
+  content; sharing subsequently switched off and was left paused. Live commentary,
+  spoken comments and manual lock/login continuity remain pending. Restart preserves
+  permission; manually closing the reader disables it. Current screen reading is off.
 - 2026-09-28 companion automation: independent debug emotion/mood toggles (hidden
   in current runtime); microphone/grant/speaking indicators stay visible. Dragging,
   pointer avoidance and optional local screen-texture corner selection implemented.

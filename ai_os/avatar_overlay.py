@@ -49,6 +49,13 @@ class AvatarOverlay(QWidget):
         self.auto_corner = None
         self.next_proactive = time.monotonic() + 300
         self.speech_cancelled = False
+        self.screen_reader = QProcess(self)
+        self.screen_requested = False
+        screen_environment = QProcessEnvironment.systemEnvironment()
+        screen_environment.insert("AI_OS_HOME", str(home))
+        self.screen_reader.setProcessEnvironment(screen_environment)
+        self.screen_reader.readyReadStandardOutput.connect(self.screen_reader.readAllStandardOutput)
+        self.screen_reader.readyReadStandardError.connect(self.screen_reader.readAllStandardError)
         self.motion = QPropertyAnimation(self, b"pos", self)
         self.motion.setDuration(250)
         self.speaker = QProcess(self)
@@ -98,6 +105,12 @@ class AvatarOverlay(QWidget):
         except (OSError, ValueError, TypeError):
             return
         if config != self.last_config:
+            if config["screen_context_enabled"] and not self.screen_requested:
+                self.screen_requested = True
+                self.screen_reader.start(sys.executable, ["-m", "ai_os.screen_observer"])
+            elif not config["screen_context_enabled"] and self.screen_requested:
+                self.screen_requested = False
+                self.stop_screen_reader()
             if not self.last_config or any(config[key] != self.last_config[key] for key in ("proactive_speech_enabled", "proactive_interval_minutes")):
                 self.next_proactive = time.monotonic() + config["proactive_interval_minutes"] * 60
             if not self.last_config or config["avatar_corner"] != self.last_config["avatar_corner"]:
@@ -282,13 +295,22 @@ class AvatarOverlay(QWidget):
             action.setChecked(self.last_config[key])
             action.toggled.connect(lambda value, key=key: save_settings({key: value}, self.home))
         menu.addAction("Stop proactive speech", lambda: (save_settings({"proactive_speech_enabled": False}, self.home, human_confirmed=True), self.stop_speech()))
+        menu.addAction("Stop screen awareness", lambda: (save_settings({"screen_context_enabled": False}, self.home, human_confirmed=True), self.stop_screen_reader()))
         menu.addAction("Revoke all access grants", lambda: revoke_all(self.home))
         menu.addAction(
             "Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home)
         )
         menu.exec(event.globalPos())
 
+    def stop_screen_reader(self):
+        if self.screen_reader.state() != QProcess.ProcessState.NotRunning:
+            self.screen_reader.terminate()
+            if not self.screen_reader.waitForFinished(2000):
+                self.screen_reader.kill()
+                self.screen_reader.waitForFinished(1000)
+
     def closeEvent(self, event):
+        self.stop_screen_reader()
         self.stop_speech()
         self.timer.stop()
         super().closeEvent(event)
@@ -299,6 +321,8 @@ def main() -> int:
     if sys.platform == "linux" and os.environ.get("WAYLAND_DISPLAY") and os.environ.get("DISPLAY"):
         os.environ["QT_QPA_PLATFORM"] = "xcb"
     app = QApplication(["regenos-companion"])
+    signal.signal(signal.SIGTERM, lambda *_: app.quit())
+    signal.signal(signal.SIGINT, lambda *_: app.quit())
     app.setStyle("Fusion")
     app.setApplicationName("regenos-companion")
     app.setDesktopFileName("regenos-companion")
@@ -308,6 +332,7 @@ def main() -> int:
         return 0
     overlay = AvatarOverlay()
     app.aboutToQuit.connect(overlay.timer.stop)
+    app.aboutToQuit.connect(overlay.stop_screen_reader)
     return app.exec()
 
 

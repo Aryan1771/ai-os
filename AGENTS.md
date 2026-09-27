@@ -37,3 +37,6 @@
   exact native approval; never reuse personal browser profiles or bypass site checks.
 - This host uses GNOME; preserve it while integrating installed Hyprland 0.56 Lua
   configuration. Biometric enrollment/PAM and boot changes require separate review.
+- Screen OCR is ephemeral, local-only and read-only: never pass observations to
+  tool planning, saved memory or remote providers. Preserve the sharing indicator,
+  pause control, lock checks and portal selection. See docs/SCREEN_AWARENESS.md.
