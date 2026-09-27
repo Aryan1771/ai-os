@@ -8,6 +8,14 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- Latest user-requested live English check completed microphone → Whisper →
+  local Ollama → Piper/PipeWire reply with temporary memory disabled and no tools.
+  Eight-second capture; STT 0.88s, model 4.47s, synthesis/playback 6.58s. Recording
+  was deleted; continuous listening stayed off. User confirmed earlier synthetic
+  English/Hindi playback was audible; this latest reply awaits user confirmation.
+  `pw-record --sample-count 128000` returned 1 with empty stderr despite a complete
+  128000-frame WAV. First attempt stopped on that code; retry validated audio and
+  completed. Signal reached full scale; input gain/clipping requires follow-up.
 - Latest voice audit: all packages listed in PREINSTALL's immediate/optional
   commands and win2xcur are installed. **122 tests passed, none skipped**.
   Multilingual Whisper base, English Lessac and Hindi Pratham model SHA256 values

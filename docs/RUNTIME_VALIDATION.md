@@ -10,6 +10,26 @@ but that alone did not deploy or validate their features.
 
 ### Voice audit after user installation
 
+Follow-up explicitly requested by the user: a bounded live English voice test
+passed after **122 automated tests passed**. An audible cue preceded eight seconds
+of recording. Capture command was `pw-record --rate 16000 --channels 1 --format
+s16 --sample-count 128000 <temporary.wav>` with a 12-second subprocess timeout.
+The installed recorder returned 1, empty stderr, but wrote a valid mono WAV with
+exactly 128000 frames. First attempt failed on strict exit-code handling; a second
+attempt checked the complete WAV before continuing. This is an observed CLI
+behavior, not an assertion that arbitrary recorder failures are safe to ignore.
+
+Second capture peak magnitude was 32768 and RMS 7565.34 (16-bit sample units),
+indicating full-scale input and possible clipping. Whisper English transcription
+took 0.88s; `handle_user_text` with an empty tool registry, local Ollama and
+temporary memory-disabled runtime took 4.47s; `SpeechQueue.speak_text` completed
+reply synthesis and playback in 6.58s. No transcript or response text was logged.
+Temporary recording/runtime were deleted and capture stopped. The user confirmed
+the previous synthetic English/Hindi samples were audible; human confirmation of
+this live reply is pending. Real wake-word gating, Hindi microphone recognition,
+long sessions and daemon voice activation are still unverified. Continuous
+listening was not enabled and no microphone gain setting was changed.
+
 All requested immediate/optional packages and win2xcur are installed. The suite
 now passes **122 tests**, including real cursor conversion. Whisper base and both
 Piper ONNX SHA256 hashes match Hugging Face publisher API metadata. No model
