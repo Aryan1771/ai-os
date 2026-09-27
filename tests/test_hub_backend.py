@@ -205,7 +205,7 @@ def test_speech_worker_reports_failure_without_dying(monkeypatch):
     events = []
     speech = SpeechQueue(on_activity=lambda *event: events.append(event))
 
-    def fail(_text):
+    def fail(_text, *, avatar=None):
         speech.stop()
         raise RuntimeError("Playback unavailable")
 

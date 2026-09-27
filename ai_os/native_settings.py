@@ -200,7 +200,13 @@ class SettingsWindow(QMainWindow):
         layout.addWidget(self.activity)
         form = self.form(layout)
         self.check(form, "avatar_enabled", "Show corner companion")
-        self.check(form, "avatar_show_emotion_bars", "Show emotion bars in corner")
+        self.check(form, "avatar_show_emotion_bars", "Debug: show emotion bars")
+        self.check(form, "avatar_show_status", "Debug: show mood/activity label")
+        self.check(form, "avatar_auto_move", "Move away after pointer overlap")
+        self.check(form, "avatar_screen_awareness", "Use local screen texture to choose a quieter corner")
+        note = QLabel("Screen texture uses a temporary local screen image when moving. Nothing is saved or sent to a model. It estimates visual clutter, not whether text is important; some Wayland sessions deny capture. Drag RE to position it manually.")
+        note.setWordWrap(True)
+        form.addRow(note)
         self.check(form, "avatar_animation_enabled", "Animate pixels")
         self.check(form, "avatar_topic_morphing", "Morph with topics and tasks")
         self.choice(
@@ -308,6 +314,9 @@ class SettingsWindow(QMainWindow):
         note.setWordWrap(True)
         layout.addWidget(note)
         self.check(form, "speech_enabled", "Speak replies")
+        self.check(form, "speech_emotion_enabled", "Adapt speaking pace to simulated emotion")
+        self.check(form, "proactive_speech_enabled", "Allow occasional proactive speech (local model only)")
+        self.slider(form, "proactive_interval_minutes", "Minimum proactive interval (minutes)", 5, 120)
         threshold = QDoubleSpinBox()
         threshold.setRange(0, 1)
         threshold.setSingleStep(0.05)
@@ -399,6 +408,7 @@ class SettingsWindow(QMainWindow):
         layout = self.page("Permissions", QStyle.StandardPixmap.SP_MessageBoxWarning)
         form = self.form(layout)
         self.check(form, "sandbox_lock_settings", "Confirm protected setting changes")
+        self.check(form, "browser_enabled", "Allow reviewed browser research and ChatGPT prompts")
         self.choice(form, "command_access", "Command access", [
             ("restricted", "Restricted: diagnostics and application launch"),
             ("supervised", "Full command access — approve each change"),

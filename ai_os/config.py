@@ -54,6 +54,7 @@ class AiOsConfig:
 
 DEFAULT_CONFIG = {
     "command_access": "restricted",
+    "browser_enabled": False,
     "ollama_url": "http://127.0.0.1:11434/api/chat",
     "ollama_model": "qwen2.5:7b-instruct-q4_K_M",
     "ai_provider": "ollama",
@@ -84,7 +85,13 @@ DEFAULT_CONFIG = {
     "avatar_accent": "#4de3a7",
     "avatar_motion": 65,
     "avatar_reactivity": 75,
-    "avatar_show_emotion_bars": True,
+    "avatar_show_emotion_bars": False,
+    "avatar_show_status": False,
+    "avatar_auto_move": True,
+    "avatar_screen_awareness": False,
+    "proactive_speech_enabled": False,
+    "proactive_interval_minutes": 30,
+    "speech_emotion_enabled": True,
     "avatar_topic_morphing": True,
     "avatar_idle_shape": "core",
     "avatar_emotions": {
@@ -108,7 +115,7 @@ DEFAULT_CONFIG = {
     "hardware_fallback_models": ["qwen2.5:3b-instruct-q4_K_M", "qwen2.5:1.5b-instruct-q4_K_M"],
     "branding": {
         "brand_name": "REgenOS",
-        "assistant_name": "Companion",
+        "assistant_name": "RE",
         "logo_path": "/usr/share/regenos/branding/regenos-mark.svg",
         "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",
         "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png",

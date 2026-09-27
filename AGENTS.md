@@ -32,5 +32,8 @@
   limits before enabling listening. Never claim expressive behavior is sentience.
 - The assistant is RE, pronounced as the letters R E. Wake detection is not
   identity verification; never use it to approve actions or unlock a session.
+- Debug labels may hide, but microphone and access-grant indicators must remain
+  visible. Screen capture/proactive speech are opt-in. Browser submissions need
+  exact native approval; never reuse personal browser profiles or bypass site checks.
 - This host uses GNOME; preserve it while integrating installed Hyprland 0.56 Lua
   configuration. Biometric enrollment/PAM and boot changes require separate review.

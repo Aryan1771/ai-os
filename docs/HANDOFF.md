@@ -8,6 +8,19 @@ the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
 ## Actual installation versus source
 
+- 2026-09-28 companion automation: independent debug emotion/mood toggles (hidden
+  in current runtime); microphone/grant/speaking indicators stay visible. Dragging,
+  pointer avoidance and optional local screen-texture corner selection implemented.
+  Screen capture remains off and unverified live. Optional local proactive check-ins
+  and emotion-dependent speech pace added; proactive speech remains off.
+- Reviewed Bash draft/syntax tools and separate-profile browser research/ChatGPT
+  actions added. Browser tools remain off until enabled in native Permissions;
+  exact prompts/URLs require individual native review. Playwright 1.63.0 installed
+  in existing venv; existing sandboxed Brave used. GNU manual returned HTTP 429;
+  Arch Bash manual read succeeded (20000 chars). No authenticated ChatGPT send or
+  personal-profile access. **209 tests passed**, correctness lint/native smoke pass.
+  Core and companion restarted; private runtime backup `pre-migration-5cx07bl6`.
+  See [COMPANION_AUTOMATION](COMPANION_AUTOMATION.md) for controls and limits.
 - 2026-09-28 RE/session checkpoint: assistant named RE (spoken R E); user login
   startup installed for core and companion with graphical environment import.
   Core active/enabled, one companion process. GNOME kept as requested; original

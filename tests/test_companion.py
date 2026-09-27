@@ -158,7 +158,8 @@ def test_speech_activity_keeps_model_form_and_clears_on_finish(monkeypatch):
     speech = SpeechQueue(on_activity=lambda *event: events.append(event))
     spoken = []
 
-    def speak(text):
+    def speak(text, *, avatar=None):
+        assert avatar == {"shape": "heart"}
         assert speech.is_speaking()
         spoken.append(text)
         speech.stop()

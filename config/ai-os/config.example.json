@@ -28,7 +28,7 @@
   "avatar_accent": "#4de3a7",
   "avatar_motion": 65,
   "avatar_reactivity": 75,
-  "avatar_show_emotion_bars": true,
+  "avatar_show_emotion_bars": false,
   "avatar_topic_morphing": true,
   "avatar_idle_shape": "core",
   "avatar_emotions": {
@@ -54,7 +54,7 @@
   ],
   "branding": {
     "brand_name": "REgenOS",
-    "assistant_name": "Companion",
+    "assistant_name": "RE",
     "logo_path": "/usr/share/regenos/branding/regenos-mark.svg",
     "wallpaper_path": "/usr/share/regenos/wallpapers/default.png",
     "lockscreen_path": "/usr/share/regenos/wallpapers/lockscreen.png",
@@ -64,5 +64,12 @@
   },
   "memory_allow_remote": false,
   "whisper_language": "auto",
-  "piper_hindi_model": ""
+  "piper_hindi_model": "",
+  "avatar_show_status": false,
+  "avatar_auto_move": true,
+  "avatar_screen_awareness": false,
+  "proactive_speech_enabled": false,
+  "proactive_interval_minutes": 30,
+  "speech_emotion_enabled": true,
+  "browser_enabled": false
 }

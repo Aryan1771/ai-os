@@ -197,3 +197,60 @@ def test_native_grant_confirmation_countdown_and_revoke(app, tmp_path, monkeypat
     assert "No temporary" in widget.access_status.text()
     widget.grant_timer.stop()
     widget.cancel()
+
+
+def test_debug_labels_hide_but_microphone_status_stays_visible(app,tmp_path):
+    from ai_os.companion_state import publish_state
+    save_settings({'avatar_enabled':True,'avatar_show_status':False,'avatar_show_emotion_bars':False},tmp_path)
+    overlay = AvatarOverlay(tmp_path)
+    overlay.refresh()
+    app.processEvents()
+    assert not overlay.status.isVisible() and not overlay.bars.isVisible()
+    quiet_height = overlay.height()
+    publish_state('armed',home=tmp_path)
+    overlay.refresh()
+    assert overlay.status.isVisible() and overlay.height()>quiet_height
+    publish_state('idle',home=tmp_path)
+    save_settings({'always_listening_enabled':True,'wake_word_enabled':True},tmp_path,human_confirmed=True)
+    overlay.refresh()
+    assert overlay.status.isVisible() and 'Wake listening enabled' in overlay.status.text()
+    save_settings({'always_listening_enabled':False},tmp_path,human_confirmed=True)
+    save_settings({'avatar_show_status':True,'avatar_show_emotion_bars':True},tmp_path)
+    overlay.refresh()
+    assert overlay.status.isVisible() and overlay.bars.isVisible()
+    assert '·' in overlay.status.text()
+    overlay.close()
+
+
+def test_screen_texture_prefers_flat_region():
+    from PySide6.QtGui import QImage,QColor
+    from ai_os.avatar_overlay import texture_score
+    plain = QImage(48,48,QImage.Format.Format_RGB32)
+    plain.fill(QColor('white'))
+    busy = plain.copy()
+    for x in range(48):
+        for y in range(48):
+            if (x+y)%2:
+                busy.setPixelColor(x,y,QColor('black'))
+    assert texture_score(plain)<texture_score(busy)
+
+
+def test_native_reviewed_script_denial_and_exact_save(app,tmp_path,monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from PySide6.QtCore import QProcess
+    from ai_os.conversation_widget import ConversationWidget
+    widget = ConversationWidget(tmp_path)
+    proposal = {'tool':'write_bash','arguments':{'name':'example.sh','source':'echo hello\n'}}
+    monkeypatch.setattr(QMessageBox,'exec',lambda _:QMessageBox.StandardButton.No)
+    assert not widget.approve_action(proposal)
+    path = tmp_path/'data/private/drafts/example.sh'
+    assert not path.exists()
+    monkeypatch.setattr(QMessageBox,'exec',lambda _:QMessageBox.StandardButton.Yes)
+    assert widget.approve_action(proposal)
+    for _ in range(100):
+        QTest.qWait(50)
+        if widget.process.state() == QProcess.ProcessState.NotRunning:
+            break
+    assert path.read_text() == 'echo hello\n'
+    widget.cancel()
+    widget.grant_timer.stop()

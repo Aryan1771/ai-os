@@ -105,6 +105,36 @@ def schema() -> list[dict]:
 def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     action = request.get("action")
     config = load_raw_config(home)
+    if action == "reviewed_action":
+        from ai_os.reviewed_actions import execute
+        result = execute(request.get("tool"), request.get("arguments"), home, confirmed=request.get("confirmed") is True)
+        return {"response": {"type": "tool_result", "tool": request.get("tool"), "result": result}}
+    if action == "proactive_speech":
+        from ai_os.ai_os_core import ask_ollama, parse_visual_reply, parse_tool_call
+        from ai_os.companion_state import publish_state, read_state
+        from ai_os.speech_queue import SpeechQueue
+        if not config["speech_enabled"] or not config["proactive_speech_enabled"]:
+            raise PermissionError("Proactive speech is disabled")
+        if config["ai_provider"] != "ollama" or read_state(home)["phase"] not in {"idle", "armed"}:
+            raise PermissionError("Proactive speech requires idle state and local Ollama")
+        # Text-only generation: no tool execution or autonomous actions.
+        answer = ask_ollama("Offer one brief optional check-in, at most 25 words, relevant to our context. Do not read private details, code, commands or saved secrets aloud. Avoid interrupting with urgent claims. You cannot use tools for this check-in.", set(), home)
+        if parse_tool_call(answer):
+            raise ValueError("Proactive tool requests are not allowed")
+        text, avatar = parse_visual_reply(answer)
+        latest = load_raw_config(home)
+        if not latest["proactive_speech_enabled"] or not latest["speech_enabled"] or read_state(home)["phase"] not in {"idle", "armed"}:
+            return {"message": "Check-in cancelled"}
+        text = text[:300]
+        voice = load_config(home)
+        publish_state("speaking", home=home, avatar=avatar)
+        try:
+            SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
+                        length_scale=voice.piper_length_scale,
+                        emotion_enabled=latest["speech_emotion_enabled"]).speak_text(text, avatar=avatar)
+        finally:
+            publish_state("idle", home=home)
+        return {"message": "Proactive check-in completed"}
     if action == "confirm_access_grant":
         from ai_os.security.access_grants import GrantStore, SCOPE
         from ai_os.ai_os_core import execute_tool, build_tool_registry, json_default
@@ -195,7 +225,7 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
             raise ValueError("Speech text must contain 1-8000 characters.")
         publish_state("speaking", home=home)
         try:
-            SpeechQueue(voice.piper_model, length_scale=voice.piper_length_scale, hindi_model=voice.piper_hindi_model).speak_text(text)
+            SpeechQueue(voice.piper_model, length_scale=voice.piper_length_scale, hindi_model=voice.piper_hindi_model, emotion_enabled=config["speech_emotion_enabled"]).speak_text(text, avatar=request.get("avatar"))
         except Exception:
             publish_state("error", home=home)
             raise

@@ -8,6 +8,16 @@ but that alone did not deploy or validate their features.
 
 ## 2026-09-28 command, companion and appearance checkpoint
 
+### Companion automation follow-up
+
+**209 tests passed**, correctness lint and diff checks pass. Native smoke
+passed with nine pages, xcb, visible companion and completed local Ollama request.
+New automation validation, commands and limits are recorded in
+[COMPANION_AUTOMATION](COMPANION_AUTOMATION.md). Browser manual extraction succeeded
+against Arch; GNU returned HTTP 429 and was not retried. Authenticated ChatGPT,
+live screen-texture placement and proactive/emotional audio acceptance remain
+pending. No private browser data or microphone/camera capture was used.
+
 ### RE name, session startup and Hyprland follow-up
 
 **193 tests passed in 2.34s**; correctness lint and diff checks pass. New coverage

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import sys
 import shlex
+import os
+import signal
 from pathlib import Path
 
 from PySide6.QtCore import QProcess, QProcessEnvironment, QTimer, Qt
@@ -17,6 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QVBoxLayout,
     QWidget,
+    QInputDialog,
 )
 
 from ai_os.conversation_memory import ConversationMemory
@@ -31,6 +34,8 @@ class ConversationWidget(QWidget):
         super().__init__(parent)
         self.home = home
         self.process = QProcess(self)
+        if sys.platform == "linux":
+            self.process.setUnixProcessParameters(QProcess.UnixProcessFlag.CreateNewSession)
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.setInterval(150_000)
@@ -57,6 +62,13 @@ class ConversationWidget(QWidget):
         self.revoke_grant_button.clicked.connect(self.revoke_grant)
         grant_actions.addWidget(self.revoke_grant_button)
         layout.addLayout(grant_actions)
+        browser_actions = QHBoxLayout()
+        for label, callback in (("ChatGPT sign-in", lambda: self.approve_action({"tool": "chatgpt_login", "arguments": {}})),
+                                ("Ask ChatGPT", self.ask_browser_ai), ("Research page", self.research_page)):
+            button = QPushButton(label)
+            button.clicked.connect(callback)
+            browser_actions.addWidget(button)
+        layout.addLayout(browser_actions)
         self.grant_timer = QTimer(self)
         self.grant_timer.setInterval(1000)
         self.grant_timer.timeout.connect(self.refresh_grant)
@@ -136,6 +148,9 @@ class ConversationWidget(QWidget):
                 return
             reply = result["response"]
             proposal = reply.get("result", {}).get("approval_required") if reply.get("type") == "tool_result" else None
+            if proposal and proposal.get("tool") in {"write_bash", "research_page", "ask_chatgpt"}:
+                self.approve_action(proposal)
+                return
             if proposal and load_raw_config(self.home)["command_access"] == "supervised":
                 self.approve_command(proposal)
                 return
@@ -181,6 +196,56 @@ class ConversationWidget(QWidget):
         self.session.setEnabled(False)
         self.load_button.setEnabled(False)
         self.status.setText("Running approved command…")
+        self.process.start(sys.executable, ["-m", "ai_os.hub_bridge"])
+        self.process.write(payload.encode())
+        self.process.closeWriteChannel()
+        self.timer.start()
+        return True
+
+    def ask_browser_ai(self):
+        self.approve_action({"tool": "ask_chatgpt", "arguments": {"prompt": self.input.toPlainText()}})
+
+    def research_page(self):
+        url, accepted = QInputDialog.getText(self, "Research a public page", "HTTPS URL")
+        if accepted:
+            self.approve_action({"tool": "research_page", "arguments": {"url": url}})
+
+    def approve_action(self, proposal):
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            return False
+        from ai_os.reviewed_actions import validate
+        tool, arguments = proposal.get("tool"), proposal.get("arguments")
+        try:
+            if tool != "chatgpt_login":
+                validate(tool, arguments)
+            elif arguments != {}:
+                raise ValueError("Login does not accept arguments")
+            if tool != "write_bash" and not load_raw_config(self.home)["browser_enabled"]:
+                raise ValueError("Enable reviewed browser tools in Permissions first")
+        except (ValueError, TypeError):
+            self.status.setText("Invalid action or browser tools disabled. Check Permissions and the exact input.")
+            return False
+        description = {
+            "write_bash": "Save this exact Bash source as a new private draft. It will be syntax-checked, not executed.",
+            "research_page": "Load this exact public HTTPS URL in a separate browser and extract page text. The URL is sent online; no personal browser profile is used.",
+            "ask_chatgpt": "Send this exact prompt to ChatGPT through its website, using the separate RE browser profile. This shares the text with an external provider. Submission is not automatically retried.",
+            "chatgpt_login": "Open a separate Brave profile at chatgpt.com for up to 110 seconds. Sign in directly in that browser, then close it. Cookies stay in RE's private runtime; your usual browser profile is not imported.",
+        }[tool]
+        box = QMessageBox(self)
+        box.setWindowTitle("Review exact action")
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        box.setText(description + "\n\n" + json.dumps(arguments, ensure_ascii=True, indent=2))
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            self.status.setText("Action denied.")
+            return False
+        self.cancelled = False
+        self.send_button.setEnabled(False)
+        self.session.setEnabled(False)
+        self.load_button.setEnabled(False)
+        self.status.setText("Running reviewed action…")
+        payload = json.dumps({"action": "reviewed_action", "tool": tool, "arguments": arguments, "confirmed": True})
         self.process.start(sys.executable, ["-m", "ai_os.hub_bridge"])
         self.process.write(payload.encode())
         self.process.closeWriteChannel()
@@ -252,6 +317,12 @@ class ConversationWidget(QWidget):
         self.cancelled = True
         self.timer.stop()
         if self.process.state() != QProcess.ProcessState.NotRunning:
+            pid = self.process.processId()
+            if sys.platform == "linux" and pid > 0:
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
             self.process.kill()
             self.process.waitForFinished(2000)
         self.status.setText("Request cancelled. Completed memory writes, if any, are retained.")

@@ -13,6 +13,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+def emotional_pace(base: float, avatar: dict | None) -> float:
+    from ai_os.companion_state import visual_metadata
+    levels = visual_metadata(avatar).get("emotions", {})
+    # Small duration changes; Piper's fixed voice is not an expressive emotion model.
+    adjustment = 0.12 * levels.get("concern", 0) / 100 - 0.08 * levels.get("energy", 50) / 100
+    return max(0.5, min(2.0, base * (1 + adjustment)))
+
+
 @dataclass(frozen=True)
 class SpeechItem:
     text: str
@@ -28,9 +36,11 @@ class SpeechQueue:
         on_activity: Callable[[str, str, dict | None], None] | None = None,
         length_scale: float = 1.0,
         hindi_model: Path | None = None,
+        emotion_enabled: bool = True,
     ) -> None:
         self.piper_model = piper_model
         self.hindi_model = hindi_model
+        self.emotion_enabled = emotion_enabled
         self.length_scale = max(0.5, min(2.0, float(length_scale)))
         self._counter_lock = threading.Lock()
         self.last_error: str | None = None
@@ -61,7 +71,7 @@ class SpeechQueue:
             if chunk:
                 yield chunk
 
-    def speak_text(self, text: str) -> None:
+    def speak_text(self, text: str, *, avatar: dict | None = None) -> None:
         model = self.hindi_model if re.search(r"[\u0900-\u097f]", text) else self.piper_model
         if not model or not model.is_file():
             raise RuntimeError("Piper voice model for the requested language is missing.")
@@ -86,7 +96,7 @@ class SpeechQueue:
                     "--output_file",
                     str(output),
                     "--length_scale",
-                    str(self.length_scale),
+                    str(emotional_pace(self.length_scale, avatar) if self.emotion_enabled and avatar else self.length_scale),
                 ],
                 input=re.sub(r"\bRE\b", "R E", text).encode("utf-8"),
                 stdout=subprocess.DEVNULL,
@@ -122,7 +132,7 @@ class SpeechQueue:
                     if self._stop.is_set():
                         break
                     self.on_activity("speaking", sentence, item.avatar)
-                    self.speak_text(sentence)
+                    self.speak_text(sentence, avatar=item.avatar)
             except (
                 OSError,
                 ValueError,
