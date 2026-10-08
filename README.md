@@ -12,8 +12,8 @@ pixel Companion. `regenos-settings` launches the Python settings window; no brow
 HTML/JavaScript frontend, Electron or WebEngine is used. Earlier C++ hub sources
 remain in the repository as historical work, outside the supported runtime path.
 The Python window now includes conversation, named sessions, explicit local memory
-controls, hardware policy and Hindi/English voice configuration. Voice models and
-real bilingual speech validation remain pending.
+controls, hardware policy and Hindi/English voice configuration. The development handoff records installed voice assets and limited English/synthetic
+speech checks; real Hindi recognition and wake-word reliability remain pending.
 
 See [the current Arch validation handoff](docs/HANDOFF.md) for measured results and
 blockers. REgenOS is a prototype, not a finished distribution.
@@ -64,8 +64,11 @@ ai_os/services/
   local Whisper.cpp adapter, optional wake-word adapter, allowlisted external API broker,
   ClamAV scanner, and cooperative background job registry
 
-native/hub/ and ai_os/hub_bridge.py
-  C++ Qt Widgets hub and private JSON child-process bridge to validated Python services
+ai_os/native_settings.py and ai_os/hub_bridge.py
+  supported Python/PySide6 Settings and private JSON child-process bridge
+
+native/hub/
+  historical C++ Qt Widgets implementation; not the supported launcher
 
 ai_os/conversation_memory.py
   bounded persistent conversation history and explicit context notebook in local SQLite
@@ -78,17 +81,14 @@ ai_os/avatar_overlay.py, ai_os/pixel_engine.py, ai_os/companion_state.py
 
 Start with the Arch installation and native desktop guides:
 
-```bash
-docs/INSTALL_ON_ARCH.md
-docs/ARCH_HANDOFF.md
-docs/NATIVE_DESKTOP.md
-docs/CPP_HUB.md
-docs/HARDWARE_PORTABILITY.md
-docs/IMPLEMENTATION_HANDOFF.md
-docs/VOICE_AND_COMPANION.md
-docs/PHASE_5_DESKTOP.md
-docs/BRANDING_AND_ARCHISO.md
-```
+- [Arch installation](docs/INSTALL_ON_ARCH.md)
+- [Current validation handoff](docs/HANDOFF.md)
+- [Native desktop](docs/NATIVE_DESKTOP.md)
+- [Hardware portability](docs/HARDWARE_PORTABILITY.md)
+- [Voice and companion](docs/VOICE_AND_COMPANION.md)
+- [Screen awareness](docs/SCREEN_AWARENESS.md)
+- [Branding and Archiso](docs/BRANDING_AND_ARCHISO.md)
+- [Historical C++ hub](docs/CPP_HUB.md)
 
 See [the detailed feature checklist](docs/FEATURE_STATUS.md) for implemented features, integration gaps and target-hardware verification still required.
 

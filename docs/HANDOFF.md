@@ -6,6 +6,13 @@ and Arch runtime prototype, not a finished distribution. Start with
 and limitations, and [IMPLEMENTATION_CHECKLIST](IMPLEMENTATION_CHECKLIST.md) for
 the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
 
+## Documentation review — 2026-10-08
+
+The root README now links directly to setup and feature guides, identifies the
+Python Settings path as supported, and aligns its voice-status summary with this
+handoff. Documentation checks do not constitute new hardware, audio, or runtime
+validation. Historical commands and measurements below are preserved.
+
 ## Actual installation versus source
 
 - 2026-09-28 continuous screen follow-up: native Qt Multimedia portal capture,
