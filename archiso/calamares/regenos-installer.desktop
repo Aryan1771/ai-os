@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Install REgenOS
+Comment=Install REgenOS on this computer
+Exec=pkexec calamares
+Icon=regenos-mark
+Terminal=false
+Categories=System;
+StartupNotify=true

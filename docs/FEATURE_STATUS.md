@@ -133,7 +133,7 @@ Updated 2026-09-26. Checked items mean implemented in this repository, not certi
 - [x] Calamares integration plan and references.
 - [x] Automated Python/Qt checks plus C++ widget and real-backend load/save checks; offscreen hub screenshots at desktop and compact sizes. Local result: 84 Python tests passed, one cursor conversion test skipped without ImageMagick; C++ test suite passed. Hardware policy tests use synthetic device inventories, not Arch hardware.
 - [x] Linux CI workflow for Python, real cursor conversion, C++ compilation and offscreen bridge tests. CI is not Arch hardware certification.
-- [ ] Finished graphical disk installer, complete Calamares modules/branding/launcher and reproducible signed package source.
+- [ ] Finished graphical disk installer and ISO integration. Initial Calamares flow/branding/launcher sources are in `archiso/calamares/`; package source, clean target root image, version validation and disposable-VM acceptance remain.
 - [ ] Reproducible release ISO, verified installed target system, Secure Boot policy, upgrades, rollback and recovery media.
 - [ ] Partitioning/encryption/bootloader failure-path testing in disposable VMs and spare drives.
 - [ ] End-to-end production readiness. Do not interpret implemented components as a fully validated autonomous OS.
