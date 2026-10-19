@@ -2,7 +2,6 @@
 from contextlib import contextmanager
 import json
 import math
-import os
 from pathlib import Path
 import re
 import secrets
@@ -17,6 +16,13 @@ MAX_SECONDS = 86400
 SCOPE = ("Timed scope: reviewed diagnostics and new-file mkdir/touch/cp operations in "
          "Documents, Downloads or /tmp. No overwrites, deletion, sudo, shells, scripts, "
          "package/service changes or protected disk access. Other commands require individual approval.")
+USER_SCOPE = ("Broad user session: ordinary commands run without per-command prompts as your Linux user. "
+              "Programs can read/change your files and use accounts already authorized to those programs. "
+              "They run in an unprivileged bubblewrap namespace with a read-only system tree, private /dev, "
+              "private temporary directory and no session/system D-Bus. Sudo/privilege helpers and physical "
+              "disk or mount operations remain blocked. "
+              "This is NOT isolation from your private files or a grant of every website account. "
+              "Only enable for requests and local programs you trust.")
 NUMBERS = dict(zip(
     "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split(), range(20)))
 NUMBERS.update(dict(zip("twenty thirty forty fifty sixty".split(), range(20, 61, 10))))
@@ -69,10 +75,10 @@ def command_spec(arguments):
     assessment = assess_command(arguments.get("command", []))
     if assessment.risk == RiskLevel.PROHIBITED:
         raise ValueError("Prohibited commands cannot receive grants")
-    cwd = arguments.get("cwd") or os.getcwd()
+    cwd = arguments.get("cwd") or str(Path.home())
     if not isinstance(cwd, str) or not cwd.isprintable():
         raise ValueError("Invalid working directory")
-    return {"command": assessment.command, "cwd": str(Path(cwd).resolve()),
+    return {"command": assessment.command, "cwd": str(Path(cwd).expanduser().resolve()),
             "timeout_sec": max(1, min(60, int(arguments.get("timeout_sec", 15))))}
 
 
@@ -137,7 +143,7 @@ class GrantStore:
                 if (not valid or item.get("boot") != boot or now >= item.get("deadline", 0)
                         or item["deadline"] > now + MAX_SECONDS + 120
                         or time.time() >= item.get("wall_deadline", 0)
-                        or (key in {"request", "grant"} and item.get("kind") not in {"once", "timed"})):
+                        or (key in {"request", "grant"} and item.get("kind") not in {"once", "timed", "user"})):
                     del state[key]
             yield state
             db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?)", (session, json.dumps(state)))
@@ -157,7 +163,7 @@ class GrantStore:
             state.pop("request", None)
 
     def request(self, session, choice):
-        if choice.get("kind") not in {"once", "timed"} or type(choice.get("seconds")) is not int or not 1 <= choice["seconds"] <= MAX_SECONDS:
+        if choice.get("kind") not in {"once", "timed", "user"} or type(choice.get("seconds")) is not int or not 1 <= choice["seconds"] <= MAX_SECONDS:
             raise ValueError("Invalid access grant")
         with self.transaction(session) as state:
             spec = None
@@ -208,6 +214,20 @@ class GrantStore:
                 if grant["spec"] != spec:
                     return None
                 del state["grant"]  # Atomic one-use claim before execution, including failures.
+            elif grant["kind"] == "user":
+                assessment = assess_command(spec["command"])
+                argv = spec["command"]
+                name = Path(argv[0]).name
+                # This grant covers ordinary account-level effects. Keep hard
+                # barriers for privilege brokers and physical disk operations.
+                if (assessment.risk == RiskLevel.PROHIBITED or name in {
+                        "sudo", "su", "doas", "pkexec", "runuser", "mount", "umount",
+                        "udisksctl", "cryptsetup", "fdisk", "parted", "sgdisk",
+                        "mkfs", "wipefs", "dd",
+                }):
+                    return None
+                spec["user_sandbox"] = True
+                spec["timeout_sec"] = min(spec["timeout_sec"], max(1, int(grant["deadline"]-time.monotonic())))
             elif not timed_allowed(spec, self.home):
                 return None
             else:

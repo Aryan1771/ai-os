@@ -1,5 +1,357 @@
 # REgenOS handoff — 2026-09-27
 
+## Native interaction and voice identity — 2026-10-19
+
+Latest evidence supersedes older executor restrictions below: **540 tests pass**,
+correctness Ruff passes. The private PTY helper now establishes its terminal in a fresh process, avoiding
+forkpty in the Qt-threaded test runner. See [research/chat/cleanup](RESEARCH_AND_CLEANUP.md)
+and [voice identity/voice choices](VOICE_IDENTITY_AND_VOICES.md) for controls/limits.
+
+- Added reviewed interactive terminal jobs (1–900s), ordinary command cancellation
+  cleanup, public per-request activity, compact chat with Enter/Shift+Enter/Ctrl+Enter
+  and stale callback guards. Disk/boot/shell/script/OS restrictions remain.
+- Native speaker wizard records four explicitly requested styles plus a fresh fifth
+  check, saves only a private embedding, and requires a separate filtering opt-in.
+  Per-utterance matching has a ten-second worker bound. Backend/model/profile are
+  absent; physical recognition is pending. No audio samples/models were captured/downloaded.
+- Added current-utterance en/hi metadata routing. Saved match mode after private
+  backup `~/.ai_os/backups/pre-migration-pxk4b770`, preserving English fallback,
+  listening off, speaker filter off and the already-supervised command mode. No grant
+  was created. User explicitly approved restarting **only ai-os.service** to load code.
+  Restart returned active; listening stayed off. No other service was changed.
+- Added cited Wikipedia/Crossref topic briefs, private Markdown, saved-report reader,
+  paragraph narration and local tool-free explanation. Full papers are not read;
+  tests use synthetic API/audio. Live online/audible walkthrough remains pending.
+- Added recoverable regular-file Trash previews, explicitly remembered directory/
+  pattern/inode rules (30 days/20 uses) and revoke UI. No user files were trashed.
+- Added speaking mouth cadence, shared native styling, collapsible chat options,
+  unsaved/save feedback and bounded mood-to-tone guidance. Real local model answered
+  the display question in first person without the canned disclaimer; when explicitly
+  asked about consciousness it described feelings as simulated. Not evidence of
+  consciousness, consistently better reasoning, or phoneme lip sync.
+- Readiness now reaches PipeWire (unmuted), active core and Ollama. Synthetic
+  Piper→Whisper English passed/en; Hindi detected hi but emitted Urdu-script errors.
+  Combined synthesis/STT samples took 3.14/3.17s. Two synthetic model turns followed
+  en/hi, with uneven Hindi fluency. Personal voice, real latency and hotplug pending.
+- Editable metadata refreshed offline without dependencies; Chat/Research desktop
+  launchers installed. GNOME cursor **64** now passes readback. Human visual size
+  confirmation remains pending. No privileged packages, drivers or disk changes.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q --tb=short
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests
+git diff --check
+bash -n scripts/install_native_desktop.sh
+desktop-file-validate config/desktop/regenos-chat.desktop config/desktop/regenos-research.desktop
+~/.ai_os/venv/bin/python -m ai_os.runtime_health
+~/.ai_os/venv/bin/python -m pip install --dry-run --no-cache-dir 'sherpa-onnx>=1.12,<2'
+~/.ai_os/venv/bin/python -m pip install --no-index --no-deps --no-build-isolation -e .
+~/.ai_os/venv/bin/python -m ai_os.cursor_size --size 64
+systemctl --user restart ai-os.service
+systemctl --user is-active ai-os.service
+```
+
+The sherpa dry run resolved compatible 1.13.8/core wheels; it did not install them.
+`pip check` still reports the pre-existing openwakeword→tflite-runtime dependency
+gap; the selected RE/Whisper path is separate. Do not claim the venv is dependency-clean.
+New bridge requests import current source. Reopen Settings/corner companion for
+new controls/animation; neither app was silently closed. Preserve `:memory:.ses`.
+GitHub has two newer commits, including the Calamares skeleton: merge their source
+without resetting or claiming installer validation. No ISO, VM install, physical
+disk operation, release publication or signing was performed.
+
+## Voice, reinforcement and device speech checkpoint — 2026-10-19
+
+Resumed interrupted work and reviewed the resulting source before integration.
+See [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md) for current behavior/limits.
+User language was saved as Hindi; saved English, ending silence 5 seconds,
+maximum utterance 120 seconds and desired cursor 64 after private backup
+`~/.ai_os/backups/pre-migration-7ju7empq`. Listening remains off, command access
+remains restricted, existing memory/device-speech opt-ins preserved. No model
+download, package change, service restart, or physical disk operation.
+
+Implemented distinct initial-wait/silence/utterance budgets, rejection of partial
+requests at the hard maximum, trimming trailing silence before Whisper, post-reply
+feedback suppression, and native voice-request timeout including the recording
+budget. Saved language/current-turn guidance overrides old-history language;
+synthetic resident and one-shot tests follow current transcript to its own reply.
+Queued legacy speech now counts as busy before it plays and is discarded on stop.
+Participating resident/native/device/proactive outputs share a nonblocking flock
+lease. Five-second silence is intentional waiting; speculative inference while
+speaking, real latency and acoustic echo cancellation remain unverified/pending.
+
+Hardware monitoring now delegates to `hardware_reactions.py`: baseline before
+hotplug, periodic DRM retries, up to 8 queued reactions with 60-second expiry,
+fresh opt-in/language checks and no overwriting newer activity on cleanup.
+Localized USB categories and new/familiar/4K monitor capability reactions are
+fixed factual presentation, not model commands. Memory expiry is purged before
+reinforcement; old hits cannot revive after a 180-day gap. Preferences/notes remain
+explicit durable important facts; semantic paraphrase consolidation is pending.
+
+Commands/results:
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q \
+  tests/test_voice_endpointing.py tests/test_voice_reply_grounding.py tests/test_voice_settings.py \
+  tests/test_memory_decay.py tests/test_hardware_reactions.py tests/test_speech_lease.py \
+  tests/test_personal_interaction.py tests/test_listener.py tests/test_voice_languages.py \
+  tests/test_settings_recovery.py tests/test_access_grants.py tests/test_desktop_context.py
+# 134 passed; all audio, monitor and conversational evidence synthetic
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q --tb=line
+# 350 passed, 1 failed, 7 errors: existing denied QLocalServer/screen sockets
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests
+git diff --check
+~/.ai_os/venv/bin/python -m ai_os.runtime_health
+~/.ai_os/venv/bin/python -m ai_os.cursor_size --size 64
+```
+
+Readiness finds recorder/Whisper/Piper/assets, but PipeWire, Ollama and user-service
+bus are inaccessible from this executor; nvidia-smi cannot access the driver.
+This does not establish that host services/drivers are broken. No live microphone,
+playback or model request was run. Cursor application failed verified readback:
+live GNOME remains 48, desired preference 64. Native GNOME application and full
+host suite must run outside this restricted executor. Current hardware watcher
+source needs the resident core to reload; service restart requires approval per
+user handoff. No new commit/push/publication; prior staged changes/private data
+and unrelated `:memory:.ses` preserved. No ISO/VM work attempted.
+
+## Visible full access and avatar recovery controls — 2026-10-17
+
+Found a layout defect: adding buttons to the page after creating a form places
+them after the *entire* form, even when the addWidget call appears near its first
+field. The unhide/quit controls were below the long Companion preferences.
+**Unhide avatar** now stays in the dashboard header; **Unhide / start avatar**
+and Quit are at the top of Companion. Command mode, Enable/Revoke full access and
+status are at the top of Permissions. Rendered and inspected both pages offscreen
+at the minimum 780×570 size using temporary default settings.
+
+Fixed PySide6 startDetached tuple handling (a `(False, pid)` tuple is truthy),
+and propagate the selected `AI_OS_HOME` into companion startup. Existing-resident
+activation now reveals/repositions the overlay if its persistent preference is
+enabled; no-flag startup continues to honor hidden preferences. Full-access
+duration/consent cancellation preserves settings and unsaved edits. Persisting
+the mode precedes request creation because saving it revokes old pending grants.
+Native confirmation remains mandatory; database/confirmation/revocation errors
+are reported, and grant status refreshes every second. No live user grant enabled.
+
+Validation (all test state temporary):
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_settings_recovery.py tests/test_access_grants.py
+# 57 passed, including 10 new recovery checks
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_native_ui.py tests/test_avatar_displays.py -k 'not single_instance'
+# 13 passed, 1 deselected; actual local-socket operation remains restricted here
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os/native_settings.py ai_os/avatar_overlay.py tests/test_settings_recovery.py
+git diff --check
+```
+
+The existing venv resolves both modules to this checkout. Actual saved avatar
+visibility is true. A bounded installed `python -m ai_os.avatar_overlay --show`
+attempt exited -6: Qt cannot connect to the graphical display in this executor.
+Physical avatar visibility and GNOME window activation are therefore pending.
+No service was changed/restarted. A running old dashboard retains old code:
+fully close it (handle unsaved edits), then launch `~/.ai_os/venv/bin/regenos-settings`.
+The app-menu Companion entry or `~/.ai_os/venv/bin/python -m ai_os.avatar_overlay --show`
+is the recovery command from the real desktop terminal. Source/docs changes and
+the new test file are uncommitted; prior staging and unrelated files preserved.
+
+## Recovery controls and Permissions full access — 2026-10-17
+
+Native Settings now has an explicit **Show / start companion now** action, which
+sets saved avatar visibility and starts the companion with `--show`; saved
+visibility can still be toggled separately. The application-menu Companion
+launcher also passes `--show`. The user's REgenOS Dashboard and REgenOS Companion
+desktop entries exist in `~/.local/share/applications`; `gio` previously
+reported them registered and visible to the app registry, but actual GNOME
+Show Apps search/display is not observable from this restricted session. Direct
+recovery command: `~/.ai_os/venv/bin/python -m ai_os.avatar_overlay --show`.
+
+Permissions now labels **Full access mode — time-limited ordinary user commands**
+and exposes **Enable full access mode…**, a duration and scope confirmation, a
+live status label and **Revoke full access**. Mode selection alone does not grant
+access; an explicit native human confirmation is still required. The grant is
+for the default/voice session and ordinary account-level commands under the
+existing Bubblewrap boundary. It does not grant root, and privilege, physical
+disk, mount, boot and security operations remain separately blocked/reviewed.
+Enabling without Bubblewrap fails closed. Added a check that the saved mode is
+actually enabled before granting; unsaved dropdown changes cannot silently arm
+the mode. Updated `docs/NATIVE_DESKTOP.md` and `docs/COMMAND_ACCESS.md` to match.
+
+Ruff correctness checks (`~/.ai_os/venv/bin/python -m ruff check --select
+E4,E7,E9,F ai_os/native_settings.py`) and `git diff --check` pass after these
+changes. Native graphical display is unavailable in this execution session
+(`DISPLAY=:0` cannot connect and Wayland display access is denied), so the
+actual dashboard, app-grid search and avatar visibility on the physical desktop
+remain unverified. The resident process must reload the updated source to show
+the new button; reopen the dashboard from Show Apps, or use the recovery command
+above from a desktop terminal. Existing unrelated staged changes and untracked
+`:memory:.ses` were preserved; no privileged operations, commit or push were
+performed for this UI follow-up.
+
+## Explicit website and app launch — 2026-10-17
+
+Found the old path opened Brave deterministically but sent website requests such
+as “Open YouTube” only to the model; the model had to select `open_website`
+correctly. Added bounded direct intent parsing for common open/visit/go-to
+phrases, known sites and explicit hostnames. “Open YouTube on Brave” routes to
+the named installed browser. Browser discovery checks system, user-local and
+Flatpak desktop entries from a fixed allowlist. General app discovery now scans
+those standard app directories and launch still requires an exact discovered
+desktop ID or a built-in alias. Native chat now renders tool result messages
+instead of dumping JSON.
+
+Focused `tests/test_desktop_access.py` and `tests/test_interaction_harness.py`
+cover intent routing, URL safety, browser selection, app scanning and native tool
+flow; 40 focused tests pass. Commands:
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_desktop_access.py tests/test_interaction_harness.py
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q --tb=line
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests/test_desktop_access.py tests/test_interaction_harness.py
+git diff --check
+```
+
+The actual environment's
+`gio mime x-scheme-handler/https` selects Brave, and the installed desktop entry
+and `/usr/bin/brave` exist. A requested Gio YouTube launch returned success, but
+no Brave process was visible afterward. Direct `/usr/bin/brave URL` exited with
+code -5 and the sanitized diagnostic `crashpad setsockopt: Operation not
+permitted`, consistent with this executor's GUI/process restrictions. Therefore
+the physical browser window/page remains **not hardware-verified**; Gio's success
+is only acceptance of the launch request. The full suite reports 284 passed, 1
+failed and 7 errors: the existing local-socket limitation (`QLocalServer` and
+screen-context socket unavailable). No service or system settings changed.
+
+## Hidden avatar and Show Apps — 2026-10-17
+
+Confirmed saved `avatar_enabled=false`; backed up private runtime/launchers to
+`~/.ai_os/backups/pre-migration-nkb1_0m1` and changed only avatar visibility to true.
+A running companion should refresh that flag without restarting. No desktop
+visibility is claimed from the sandbox. The existing settings launcher was valid;
+its app-grid absence was not reproduced. Updated its searchable name to
+**REgenOS Dashboard**, added AI/assistant/dashboard keywords and refreshed the
+user desktop database. Gio registration reports both REgenOS launchers present
+and `should_show=true`; real GNOME search/grid remains physically unverified.
+
+The companion application-menu entry now passes `--show`; that flag restores
+visibility before the single-instance check, including an older hidden resident.
+Ordinary no-flag session startup preserves the saved hidden preference. Native
+installer retains `--show` when writing the absolute Exec path. Only the two user
+application launchers were updated; no session installer, packages, services,
+autostart configuration or boot settings were changed. Launcher originals were
+preserved in the private backup. Full suite: 275 passed, 1 failed, 7 errors (same
+socket restrictions); lint, desktop-file validation and shell syntax pass.
+
+## Companion close control — 2026-10-17
+
+Added Quit companion to the dashboard and avatar menu; application exit now also
+cleans up overlay speech. Standalone human CLI:
+`~/.ai_os/venv/bin/python -m ai_os.companion_control` gracefully terminates only
+same-user companion module/script entry points and waits up to three seconds.
+No forced kill or core/microphone termination. This is not registered as a model
+tool. The actual stop attempt found no companion visible in the sandbox's isolated
+process namespace, so **the host companion was not closed**. Run the command from
+the desktop terminal to close the old process without needing a GUI connection.
+22 focused control/overlay/backend tests pass; lint/diff checks pass. New dashboard
+controls require the settings process to reload; the CLI works independently of Qt.
+
+## Avatar transfer repair — 2026-10-17
+
+Dragging was clamped to `self.screen().availableGeometry()`, trapping the avatar
+on its original monitor. Dragging now uses Qt's screen under the global pointer,
+clamps to that destination's available rectangle and saves `avatar_display` by
+Qt screen name on release. Negative monitor origins work in synthetic tests.
+Right-click **Move to display** enumerates current displays; native Companion
+settings also have a Display selector. Geometry/hotplug callbacks include newly
+added displays; an unavailable saved target falls back to an available display
+and can be restored when reconnected. No screen content is captured for placement.
+
+New tests cover cross-boundary drag, release persistence, menu selection,
+disconnection and reconnection with synthetic displays. Full suite: 274 passed,
+1 failed, 7 errors (same denied local sockets); correctness lint and diff checks
+pass. The actual two-monitor desktop is **not hardware-verified** and no running
+companion/service was restarted. Resident Python code must be reloaded before
+these controls are available. Existing GNOME XWayland placement path is retained;
+this is not a native Wayland compositor-control implementation. Git author/network
+blockers remain; changes are staged, not committed or pushed.
+
+## Publication and cursor follow-up — 2026-10-17
+
+User requested commit/push and comparison with a newly added startup skeleton.
+`gh auth status`, `gh repo view Aryan1771/ai-os --json defaultBranchRef,nameWithOwner`
+and `gh api repos/Aryan1771/ai-os/commits` could not reach GitHub. Auth status also
+reported invalid authentication, but token validity cannot be established while
+API connectivity fails. Do not log out, replace credentials or infer remote state.
+Local Git author name/email remain unset; the intended repository-local identity
+has been requested. No commit/push or remote merge occurred. Cached main remains
+82de882; the only tracked startup artwork found locally is the existing Plymouth
+theme plus Archiso/Calamares documentation. New remote skeleton is **not verified**.
+No boot, initramfs or installer activation was performed.
+
+DRM capabilities show two 1920x1080 displays (not proof of active mode or DPI).
+The saved 48-pixel preference is a reasonable initial target, adjustable natively.
+New `python -m ai_os.cursor_size --size 48` changes only GNOME pointer size,
+backs up its original value, verifies readback and saves the preference only on
+success. Native Appearance has the corresponding cursor-only button. The actual
+attempt was rejected by session restrictions: verified readback remains **32**.
+Use that command in the real desktop terminal; original-size rollback is 32.
+
+33 focused cursor/backend/memory tests pass. Full suite: 272 passed, 1 failed,
+7 errors, all unsuccessful checks requiring denied local sockets. Correctness
+lint and whitespace checks pass. Changes remain staged, unrelated :memory:.ses
+is untouched, and no private runtime files were staged.
+
+## Command traversal and voice diagnostics — 2026-10-17
+
+See [COMMAND_ACCESS](COMMAND_ACCESS.md#2026-10-17-command-and-voice-error-repair).
+New bounded directory metadata, home/cwd normalization, read-only system-directory
+cwd for broad grants, bounded-output/group-cleanup runner, and sanitized stage-specific
+voice errors are source-tested. 108 focused tests pass; full suite 270 passed,
+1 failed, 7 errors (local socket restrictions). Harmless Bubblewrap `pwd` from
+`/usr` succeeded. No command mode/grant was enabled and no service restarted.
+User's exact post-transcription error is still requested; status was armed with
+no recorded error when inspected. Do not call that reported failure fixed.
+
+## Personal interaction follow-up — 2026-10-16
+
+See [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md) for the latest source changes,
+exact tests, saved preferences, rollback and unresolved live acceptance. Language
+selection now controls STT and reply prompt; one-shot capture ends on silence and
+shows recognized text; voice synthesis works sentence by sentence. Optional bounded
+reinforcement memory and spoken monitor/USB reactions are implemented. Cursor
+preferences default to 48 with a native size control. **Live GNOME remains 32**:
+dconf rejected the set attempt; do not claim the cursor is visibly changed.
+
+The user-requested English/48-pixel/reinforcement/hardware-speech preferences were
+saved after private backup; listening, provider and access policy were preserved.
+No service was restarted, so source changes may not be loaded in resident workers.
+104 focused regressions and correctness lint pass. Full host/native/audio/hotplug
+acceptance remains pending. Commit identity and remote access blockers remain.
+
+## Latest interaction checkpoint
+
+The interrupted October runtime work has been continued without resetting local
+edits. See [INTERACTION_HARNESS](INTERACTION_HARNESS.md) and the current
+[ARCH_ACCEPTANCE](ARCH_ACCEPTANCE.md) before relying on the historical results below.
+New source provides native tool schemas/discovery, at most three tool steps with
+result-grounded follow-up and duplicate prevention, personality controls, optional
+GNOME AT-SPI text context, and separate opt-in app-name/time memory. Voice workers
+reload settings, bound stalled reads, report invalid activation choices, and own
+their temporary audio. Website opening, installed-app discovery and hardware
+notifications are connected. No model was replaced/downloaded and no runtime
+settings, packages, services, boot or physical disks were changed in this checkpoint.
+New privacy features and broad command grants remain off until explicitly enabled.
+
+Source/docs/tests are staged on `main` above baseline `82de882`. Commit failed
+because Git author name/email are unset; the user has been asked for the intended
+repository-local identity. Remote access failed DNS resolution, so nothing was
+pushed or published. Leave unrelated untracked `:memory:.ses` untouched.
+
+This execution environment cannot reach host Ollama, bind local sockets or control
+the desktop service bus. Full-suite IPC failures therefore remain unresolved host
+acceptance checks, not passes. Git network access is also unavailable. Finish the
+host-side full suite and approved native/voice checks before ISO work.
+
 Preserve exact **REgenOS** capitalization. This is an offline-first native desktop
 and Arch runtime prototype, not a finished distribution. Start with
 [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md) for commands, measurements, rollback

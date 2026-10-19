@@ -2,7 +2,7 @@
 Type=Application
 Name=REgenOS Companion
 Comment=Pixel companion
-Exec=regenos-companion
+Exec=regenos-companion --show
 Icon=regenos
 Terminal=false
 Categories=Utility;

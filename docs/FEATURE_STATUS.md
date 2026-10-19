@@ -1,5 +1,29 @@
 # REgenOS Feature Checklist
 
+Latest 2026-10-19: **540 tests pass**, correctness lint passes. [Compact chat, reports, cleanup rules, activity and mouth animation](RESEARCH_AND_CLEANUP.md)
+and [speaker enrollment/reply language](VOICE_IDENTITY_AND_VOICES.md) are source-tested.
+Speaker backend/model and physical recognition remain unprovisioned; Hindi base
+transcription quality remains problematic. Cursor readback is now 64. Older counts
+below are historical; no ISO/hardware acceptance checkbox is closed by these tests.
+
+2026-10-19 voice/hardware checkpoint: configurable five-second silence and separate
+utterance limit, selected-language/current-turn guidance, coordinated speech,
+queued hardware reactions and reinforcement-expiry repair are source-tested.
+134 focused tests pass; full suite: 350 passed, 1 failed, 7 errors (local socket restrictions).
+Actual audio, model quality/latency and hotplug remain pending; cursor 64 desired,
+live 48. See [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md).
+
+Avatar monitor transfer: cross-display drag, explicit display menu/selector and saved target implemented; synthetic regression tests pass, physical desktop acceptance pending. See [NATIVE_DESKTOP](NATIVE_DESKTOP.md#move-the-companion-between-displays).
+
+Latest command/voice repair: [directory traversal, bounded runner and error diagnostics](COMMAND_ACCESS.md#2026-10-17-command-and-voice-error-repair). Live error reproduction remains pending.
+
+Latest personal interaction follow-up: [language, reinforced memory, spoken hardware and cursor controls](PERSONAL_INTERACTION.md). Source-tested; live acceptance pending.
+
+Interaction follow-up: [INTERACTION_HARNESS](INTERACTION_HARNESS.md) documents native
+function schemas, tool discovery, a bounded result-follow-up loop, opt-in AT-SPI
+context and app usage memory. Automated coverage is source evidence; live voice,
+desktop behavior and model quality still require the host acceptance checks.
+
 2026-09-28 update: [native command access](COMMAND_ACCESS.md) adds application
 launching, per-command native review, local manual help and an explicit official
 documentation cache. Emotion metadata and social greetings are connected. The

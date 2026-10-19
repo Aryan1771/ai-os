@@ -6,6 +6,7 @@ import re
 import shlex
 import signal
 import subprocess
+import sys
 import time
 from dataclasses import asdict, dataclass
 from enum import Enum
@@ -13,6 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import psutil
+
+from ai_os.command_runner import run_bounded
 
 
 class RiskLevel(str, Enum):
@@ -63,6 +66,16 @@ DESTRUCTIVE_COMMANDS = {
     "paru",
 }
 
+# The user's working Arch/Windows disks are never installer test targets. Keep
+# common device/mount/boot operations outside conversational command approval,
+# including UUID/all-filesystem forms that do not contain a /dev path.
+DISK_BOOT_COMMANDS = {
+    "dd", "fdisk", "cfdisk", "sfdisk", "parted", "gparted", "sgdisk", "gdisk",
+    "wipefs", "blkdiscard", "fstrim", "mount", "umount", "udisksctl", "losetup",
+    "cryptsetup", "mkswap", "swapon", "swapoff", "grub-install", "bootctl",
+    "efibootmgr", "mkinitcpio", "dracut", "resize2fs", "tune2fs", "partprobe",
+}
+
 PROHIBITED_PATTERNS = [
     r":\(\)\s*\{\s*:\|:&\s*\};:",
     r"\bdd\s+.*\bof=/dev/",
@@ -93,6 +106,12 @@ def assess_command(command: str | list[str]) -> CommandAssessment:
 
     raw = " ".join(shlex.quote(part) for part in argv)
     executable = Path(argv[0]).name
+
+    candidates = [executable]
+    if executable in {"sudo", "su", "doas", "pkexec"}:
+        candidates.extend(Path(token).name for token in argv[1:])
+    if any(name in DISK_BOOT_COMMANDS or name.startswith(("mkfs", "fsck")) for name in candidates):
+        return CommandAssessment(argv, RiskLevel.PROHIBITED, "Disk, mount and boot operations require a separate manual workflow.", True)
 
     if any(re.match(r"/dev/(?:sd[a-z]|nvme\d|vd[a-z]|disk/)", arg) for arg in argv):
         return CommandAssessment(argv, RiskLevel.PROHIBITED, "Direct disk device access is blocked.", True)
@@ -158,9 +177,11 @@ def run_command(
     timeout_sec: int = 15,
     cwd: str | None = None,
     approve: bool = False,
+    user_sandbox: bool = False,
 ) -> CommandResult:
     if cwd is not None and (not isinstance(cwd, str) or not cwd.isprintable() or len(cwd) > 4096):
         raise ValueError("Working directory must be a printable path")
+    cwd = str(Path(cwd).expanduser().resolve()) if cwd else str(Path.home())
     assessment = assess_command(command)
     start = time.monotonic()
     timeout_sec = max(1, min(60, int(timeout_sec)))
@@ -190,16 +211,9 @@ def run_command(
         if assessment.risk == RiskLevel.SAFE and os.name == "posix":
             # Do not let a user-writable PATH entry impersonate an approved diagnostic.
             argv[0] = "/usr/bin/" + Path(argv[0]).name
-        proc = subprocess.run(
-            argv,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            timeout=timeout_sec,
-            check=False,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-        )
+        if user_sandbox:
+            argv = [sys.executable, "-m", "ai_os.unprivileged_command", *argv]
+        proc = run_bounded(argv, cwd=cwd, timeout=timeout_sec)
         return CommandResult(
             ok=proc.returncode == 0,
             assessment=assessment,
@@ -209,7 +223,7 @@ def run_command(
                     if Path(argv[0]).name == "sudo" and proc.returncode else proc.stderr.strip()),
             duration_sec=round(time.monotonic() - start, 3),
         )
-    except FileNotFoundError as exc:
+    except OSError as exc:
         return CommandResult(False, assessment, None, "", str(exc), round(time.monotonic() - start, 3))
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout.strip() if isinstance(exc.stdout, str) else ""

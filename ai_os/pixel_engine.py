@@ -163,7 +163,16 @@ FORMS = {
 }
 
 
-def target_pixels(shape: str, levels: dict[str, float], custom: list[str] | None = None):
+def speech_mouth_frame(elapsed: float) -> int:
+    """Bounded visual speech cadence, not audio amplitude or phoneme lip sync."""
+    if not math.isfinite(elapsed) or elapsed < 0:
+        return 0
+    cadence = (0, 1, 2, 1, 0, 0, 1, 2, 2, 1, 0, 0)
+    return cadence[int(elapsed / 0.12) % len(cadence)]
+
+
+def target_pixels(shape: str, levels: dict[str, float], custom: list[str] | None = None,
+                  *, mouth_open: int | None = None):
     rows = validate_pixels(custom) or FORMS.get(shape, FORMS["core"]).strip().splitlines()
     grid = [list(row) for row in rows]
     if shape == "core" and not custom:
@@ -182,6 +191,10 @@ def target_pixels(shape: str, levels: dict[str, float], custom: list[str] | None
         elif levels.get("curiosity", 0) > 65:
             grid[6][8:14] = list("o+++oo")
             grid[9][9:13] = list("+oo+")
+        if mouth_open is not None:
+            openness = max(0, min(2, int(mouth_open)))
+            grid[9][9:13] = list("+oo+" if openness == 0 else "oooo")
+            grid[10][9:13] = list("+oo+" if openness == 2 else "++++")
     width, height = max(map(len, grid)), len(grid)
     return [
         (x - (width - 1) / 2, y - (height - 1) / 2, cell)
@@ -211,13 +224,25 @@ class PixelEngine:
         self.pixels: list[Pixel] = []
         self.elapsed = 0.0
         self.signature = None
+        self._geometry = None
+        self._target_particles: list[Pixel] = []
 
-    def set_form(self, shape: str, levels: dict[str, float], custom=None) -> None:
-        targets = target_pixels(shape, levels, custom)
+    def set_form(self, shape: str, levels: dict[str, float], custom=None,
+                 *, mouth_open: int | None = None) -> None:
+        targets = target_pixels(shape, levels, custom, mouth_open=mouth_open)
         signature = tuple(targets)
         if signature == self.signature:
             return
         self.signature = signature
+        geometry = tuple((x, y) for x, y, _material in targets)
+        if geometry == self._geometry:
+            # Speech changes face colors, not geometry: keep the particle map
+            # instead of doing a quadratic nearest-neighbor morph per syllable.
+            for pixel, (_x, _y, material) in zip(self._target_particles, targets):
+                pixel.material = material
+            return
+        self._geometry = geometry
+        self._target_particles = []
         available = set(range(len(self.pixels)))
         for x, y, material in targets:
             if available:
@@ -229,7 +254,9 @@ class PixelEngine:
                 pixel = self.pixels[index]
                 pixel.tx, pixel.ty, pixel.material, pixel.active = x, y, material, True
             else:
-                self.pixels.append(Pixel(0, 0, x, y, material, opacity=0))
+                pixel = Pixel(0, 0, x, y, material, opacity=0)
+                self.pixels.append(pixel)
+            self._target_particles.append(pixel)
         for index in available:
             pixel = self.pixels[index]
             pixel.active = False

@@ -7,6 +7,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import signal
 from pathlib import Path
 
 from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, load_config, load_raw_config
@@ -18,6 +19,17 @@ from ai_os.settings_store import (
     apply_user_appearance,
     save_settings,
 )
+
+
+@contextlib.contextmanager
+def _voice_turn(home: Path):
+    """Avoid delayed/interleaved speech from independent native child requests."""
+    from ai_os.speech_lease import speech_lease
+    from ai_os.services.voice_errors import VoicePipelineError
+    with speech_lease(home) as acquired:
+        if not acquired:
+            raise VoicePipelineError("voice_busy", "Another voice interaction is active. Please try again after it finishes.")
+        yield
 
 
 def revision(config: dict) -> str:
@@ -50,7 +62,9 @@ def schema() -> list[dict]:
         "theme": "Window theme",
         "sandbox_lock_settings": "Confirm protected settings changes",
         "whisper_cli": "Whisper executable",
-        "voice_command_seconds": "Recording duration (seconds)",
+        "voice_command_seconds": "Wait for speech to start (seconds)",
+        "voice_silence_seconds": "Finish after silence (seconds)",
+        "voice_max_utterance_seconds": "Maximum utterance (seconds)",
     }
     for key, default in DEFAULT_CONFIG.items():
         page = "AI connection"
@@ -58,14 +72,15 @@ def schema() -> list[dict]:
             page = "Hardware"
         elif key.startswith("avatar_"):
             page = "Companion"
-        elif key.startswith(("wake_", "whisper", "piper", "voice_")) or key in {
+        elif key.startswith(("wake_", "whisper", "piper", "voice_", "speaker_")) or key in {
             "speech_enabled",
             "always_listening_enabled",
+            "reply_language_mode",
         }:
             page = "Voice & listening"
-        elif key in {"theme", "branding"}:
+        elif key in {"theme", "branding", "cursor_size"}:
             page = "Appearance"
-        elif key.startswith("memory_"):
+        elif key.startswith("memory_") or key == "reinforced_memory_enabled":
             page = "Memory preferences"
         elif key in {"sandbox_lock_settings", "hyprland_enabled", "command_access"}:
             page = "Permissions"
@@ -94,7 +109,7 @@ def schema() -> list[dict]:
                 )
             if key == "avatar_accent":
                 field["type"] = "color"
-            if key in {"whisper_cli", "whisper_model", "piper_model", "wake_word_model"} or (
+            if key in {"whisper_cli", "whisper_model", "piper_model", "wake_word_model", "speaker_model"} or (
                 name and name.endswith("_path")
             ):
                 field["type"] = "file"
@@ -105,6 +120,17 @@ def schema() -> list[dict]:
 def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     action = request.get("action")
     config = load_raw_config(home)
+    if action == "approved_cleanup":
+        from ai_os.file_cleanup import execute_cleanup
+        result = execute_cleanup(request.get("token"), home=home,
+                                 human_confirmed=request.get("confirmed") is True,
+                                 remember=request.get("remember") is True)
+        return {"response": {"type": "tool_result", "tool": "cleanup_files", "result": result}}
+    if action == "approved_research":
+        from ai_os.research_reports import run_research
+        result = run_research(request.get("topic"), home=home,
+                              human_confirmed=request.get("confirmed") is True)
+        return {"response": {"type": "tool_result", "tool": "research_topic", "result": result}}
     if action == "reviewed_action":
         from ai_os.reviewed_actions import execute
         result = execute(request.get("tool"), request.get("arguments"), home, confirmed=request.get("confirmed") is True)
@@ -134,13 +160,18 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
         text = text.strip().strip('"')[:400]
         if text and automatic and latest["screen_commentary_speech"] and latest["speech_enabled"]:
             voice = load_config(home)
-            publish_state("speaking", home=home, avatar=avatar)
-            try:
-                SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
-                            length_scale=voice.piper_length_scale,
-                            emotion_enabled=latest["speech_emotion_enabled"]).speak_text(text, avatar=avatar)
-            finally:
-                publish_state("idle", home=home)
+            from ai_os.speech_lease import speech_lease
+            with speech_lease(home) as acquired:
+                # Commentary is optional: discard it when a user turn wins.
+                if not acquired or read_state(home)["phase"] not in {"idle", "armed", "reply"}:
+                    return {"comment": ""}
+                publish_state("speaking", home=home, avatar=avatar)
+                try:
+                    SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
+                                length_scale=voice.piper_length_scale,
+                                emotion_enabled=latest["speech_emotion_enabled"]).speak_text(text, avatar=avatar)
+                finally:
+                    publish_state("idle", home=home)
         return {"comment": text}
     if action == "proactive_speech":
         from ai_os.ai_os_core import ask_ollama, parse_visual_reply, parse_tool_call
@@ -160,16 +191,20 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
             return {"message": "Check-in cancelled"}
         text = text[:300]
         voice = load_config(home)
-        publish_state("speaking", home=home, avatar=avatar)
-        try:
-            SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
-                        length_scale=voice.piper_length_scale,
-                        emotion_enabled=latest["speech_emotion_enabled"]).speak_text(text, avatar=avatar)
-        finally:
-            publish_state("idle", home=home)
+        from ai_os.speech_lease import speech_lease
+        with speech_lease(home) as acquired:
+            if not acquired or read_state(home)["phase"] not in {"idle", "armed"}:
+                return {"message": "Check-in cancelled"}
+            publish_state("speaking", home=home, avatar=avatar)
+            try:
+                SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
+                            length_scale=voice.piper_length_scale,
+                            emotion_enabled=latest["speech_emotion_enabled"]).speak_text(text, avatar=avatar)
+            finally:
+                publish_state("idle", home=home)
         return {"message": "Proactive check-in completed"}
     if action == "confirm_access_grant":
-        from ai_os.security.access_grants import GrantStore, SCOPE
+        from ai_os.security.access_grants import GrantStore, SCOPE, USER_SCOPE
         from ai_os.ai_os_core import execute_tool, build_tool_registry, json_default
         if config["command_access"] != "supervised" or request.get("confirmed") is not True:
             raise PermissionError("Local confirmation and full command access are required")
@@ -179,7 +214,13 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
             result = execute_tool("run_command", grant["spec"], build_tool_registry(home), home=home, session=session)
             return {"response": {"type": "tool_result", "tool": "run_command",
                                  "result": json.loads(json.dumps(result, default=json_default))}}
-        return {"response": {"type": "text", "content": "Scoped timed access is active. Say 'revoke access' or use Revoke access to stop. " + SCOPE}}
+        return {"response": {"type": "text", "content": "Temporary access is active. Say 'revoke access' or use Revoke access to stop. " + (USER_SCOPE if grant["kind"] == "user" else SCOPE)}}
+    if action == "approved_terminal_command":
+        from ai_os.terminal_tasks import launch_terminal_command
+        if config["command_access"] != "supervised" or request.get("confirmed") is not True:
+            raise PermissionError("Enable full command access and review this exact command locally.")
+        result = launch_terminal_command(request.get("arguments"), home=home, human_confirmed=True)
+        return {"response": {"type": "tool_result", "tool": "run_terminal_command", "result": result}}
     if action == "approved_command":
         from ai_os.ai_os_core import build_tool_registry, execute_tool, json_default
         from ai_os.security.consent_broker import ConsentDecision
@@ -239,6 +280,39 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
         if result.returncode and command != "is-active":
             raise RuntimeError(result.stderr.strip() or "Service action failed")
         return {"message": result.stdout.strip() or f"Service {command} complete"}
+    if action == "voice_once":
+        from ai_os.services.voice_input import capture_once
+        from ai_os.ai_os_core import handle_user_text, json_default, spoken_response
+        from ai_os.companion_state import publish_state
+        from ai_os.speech_queue import SpeechQueue
+        if request.get("confirmed") is not True:
+            raise PermissionError("Click Speak once to authorize a bounded microphone capture")
+        if config["always_listening_enabled"]:
+            raise PermissionError("Disable continuous listening before using Speak once to avoid duplicate requests")
+        voice = load_config(home)
+        with _voice_turn(home):
+            try:
+                language_options = {}
+                if getattr(voice, "reply_language_mode", "selected") == "match":
+                    recognized = capture_once(voice, return_result=True)
+                    text = recognized.text
+                    language_options["reply_language"] = recognized.detected_language or "unknown"
+                else:
+                    text = capture_once(voice)
+                response = handle_user_text(text, home=home, session=request.get("session", "default"),
+                                            **language_options)
+                # Respect speech-off changes made while recognition/model work ran.
+                current = load_raw_config(home)
+                if current["speech_enabled"]:
+                    publish_state("speaking", home=home, avatar=response.get("avatar"))
+                    speech = SpeechQueue(voice.piper_model, hindi_model=voice.piper_hindi_model,
+                                         length_scale=voice.piper_length_scale,
+                                         emotion_enabled=current["speech_emotion_enabled"])
+                    for sentence in speech.sentence_chunks(spoken_response(response, **language_options)):
+                        speech.speak_text(sentence, avatar=response.get("avatar"))
+                return {"recognized_text": text, "response": json.loads(json.dumps(response, default=json_default))}
+            finally:
+                publish_state("idle", home=home)
     if action == "chat":
         from ai_os.ai_os_core import handle_user_text, json_default
 
@@ -256,13 +330,14 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
             raise PermissionError("Spoken replies are disabled.")
         if not isinstance(text, str) or not text.strip() or len(text) > 8000:
             raise ValueError("Speech text must contain 1-8000 characters.")
-        publish_state("speaking", home=home)
-        try:
-            SpeechQueue(voice.piper_model, length_scale=voice.piper_length_scale, hindi_model=voice.piper_hindi_model, emotion_enabled=config["speech_emotion_enabled"]).speak_text(text, avatar=request.get("avatar"))
-        except Exception:
-            publish_state("error", home=home)
-            raise
-        publish_state("idle", home=home)
+        with _voice_turn(home):
+            publish_state("speaking", home=home)
+            try:
+                SpeechQueue(voice.piper_model, length_scale=voice.piper_length_scale, hindi_model=voice.piper_hindi_model, emotion_enabled=config["speech_emotion_enabled"]).speak_text(text, avatar=request.get("avatar"))
+            except Exception:
+                publish_state("error", home=home)
+                raise
+            publish_state("idle", home=home)
         return {"message": "Voice playback completed"}
     if action in {"notes", "put_note", "delete_note", "clear_history", "history", "import_notes"}:
         memory = ConversationMemory(home)
@@ -306,6 +381,12 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
 
 
 def main() -> int:
+    # A native Stop/Steer must unwind bounded tool cleanup, including subprocesses
+    # that use a separate process group. SIGKILL alone cannot run their finally.
+    def interrupted(_signum, _frame):
+        raise SystemExit(130)
+    if sys.platform == "linux":
+        signal.signal(signal.SIGTERM, interrupted)
     try:
         raw = sys.stdin.buffer.read(16 * 1024 * 1024 + 1)
         if len(raw) > 16 * 1024 * 1024:

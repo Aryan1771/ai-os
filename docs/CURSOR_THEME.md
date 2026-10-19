@@ -111,3 +111,27 @@ the future installer transfers both the theme and defaults to the target OS.
 Defaults apply to new users; existing users keep their own preferences. Test
 the live session and a newly installed account in a VM before distribution.
 The repository still does not ship a finished ISO/graphical installer.
+
+
+## Apply cursor size without reinstalling artwork
+
+The native Appearance page offers **Apply cursor size now (GNOME)**. This changes
+only pointer size; it does not run installers or alter wallpaper/boot settings.
+For this host, two advertised 1920x1080 displays suggest starting with 48; actual
+DPI/active mode and visual fit must be checked by the user. The size slider allows
+24–96. From the existing venv, in the real desktop terminal:
+
+```bash
+cd ~/src/ai-os
+~/.ai_os/venv/bin/python -m ai_os.cursor_size --size 48
+```
+
+The helper preserves the original GNOME value in private
+`~/.ai_os/backups/cursor-size.json`, verifies the setting after writing and saves
+the REgenOS preference only on success. GNOME/dconf may return exit zero while
+rejecting a write; the helper detects a readback mismatch. It cannot verify visual
+artwork/compositor scaling. Roll back to this host's observed original setting:
+`gsettings set org.gnome.desktop.interface cursor-size 32`.
+
+2026-10-17 sandbox attempt failed readback (still 32). The cursor is not verified
+enlarged. No sudo, package installation, logout or service restart was performed.

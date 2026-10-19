@@ -1,5 +1,14 @@
 # Native REgenOS Desktop
 
+New native launchers: **REgenOS Chat** (`regenos-chat`) has a compact live-avatar
+composer (Enter send, Shift+Enter newline, Ctrl+Enter stop/steer) and expandable
+operational activity. **REgenOS Research** (`regenos-research`) stores cited briefs
+with a source reader and paused paragraph narration. Open either from Conversation.
+See [controls and limits](RESEARCH_AND_CLEANUP.md). Shared styling and explicit
+unsaved/save feedback are source-tested; this is not a claim that every OS control
+or physical desktop interaction is verified. Reopen old application instances to
+load new Python UI code.
+
 The native installer also installs and applies the original `REgenOS-Cool`
 cursor theme. See [cursor setup](CURSOR_THEME.md) for session-specific activation,
 backups, and rollback. Appearance applies cursor preferences to GTK 3/4 and
@@ -31,7 +40,21 @@ The native stage adds PySide6 to the existing venv for both applications. It doe
 
 ## Companion Controls
 
-In **Companion**, save **Show corner companion** to enable or hide the resident overlay. Opening Settings starts the companion process when it is enabled. The overlay reloads its preferences about three times a second, including corner, size, accent, animation, fluid-motion strength, resting form, topic morphing, and emotion-bar visibility. Closing Settings leaves the companion running. Clicking the companion reopens Settings; its context menu can hide it.
+The dashboard header's **Unhide avatar** button is available on every page. It
+restores saved visibility and starts the companion with `--show`. **Companion**
+also has **Unhide / start avatar** and **Quit companion** at the top, above the
+preview and long preferences form. **Show corner companion** controls the saved
+visibility preference. The overlay reloads preferences about three times a
+second; activating an existing enabled resident also reveals and repositions
+its window. Closing Settings leaves the companion running. Clicking the avatar
+reopens Settings; its context menu can hide it. The **REgenOS Companion** app-menu
+entry passes `--show` as an independent recovery path.
+
+After updating source, close the dashboard fully with its window close button,
+handling any unsaved-changes prompt, then run `~/.ai_os/venv/bin/regenos-settings`.
+Launching again while an old dashboard is running raises that existing window;
+it cannot load new controls into already-imported Python code. No core service
+restart is required just to load updated dashboard controls.
 
 Emotion baseline sliders control joy, curiosity, focus, calm, concern, and energy. **Emotional response** controls how strongly AI activity changes those values. These are simulated character values, not evidence of conscious feelings. The activity label exposes states such as armed, listening, transcribing, thinking, working, speaking, reply, and error. It does not display hidden model reasoning.
 
@@ -79,9 +102,9 @@ The service template assumes `~/src/ai-os` and `~/.ai_os`. For a custom installa
 ## Model, Voice And Appearance
 
 - **AI connection:** select Ollama or an OpenAI-compatible server, endpoint and model. A loopback OpenAI-compatible server works offline. Remote endpoints require HTTPS, an approved hostname and online opt-in. API secrets remain in an environment variable, not the settings JSON.
-- **Voice & listening:** select local Whisper/Piper files, wake threshold and capture duration. Start, restart and stop buttons control `ai-os.service`. Save and restart for microphone/model-path changes. Both wake-word and listening switches are required to start capture. See [voice setup](VOICE_AND_COMPANION.md).
+- **Voice & listening:** select local Whisper/Piper files, conversation language, wake threshold, initial speech wait, ending silence and maximum utterance. The updated daemon reloads saved voice preferences. Loading source changes into an older resident process requires a reviewed restart; Start/Restart/Stop buttons control `ai-os.service`. Enable microphone listening and choose either wake-word gating or explicit conversation listening. See [voice setup](VOICE_AND_COMPANION.md).
 - **Appearance:** choose a native window theme and branding paths. Saving records preferences. **Apply desktop appearance** explicitly writes user GTK icon/cursor/font settings and Hyprpaper/Hyprlock files, preserving a first `.regenos-backup` beside each existing file. Existing GTK keys are retained. Reload affected applications to see changes.
-- **Permissions:** protected preference changes open a native confirmation dialog. Disabling that confirmation is itself protected. This is a local UI guard; it does not isolate the daemon from every process running under the same Linux user. Privileged action approvals remain terminal-based and are denied by background workers without an interactive terminal.
+- **Permissions:** **Command access mode**, **Enable full access mode…**, **Revoke full access**, and status are at the top. The enable button selects the mode after you choose a duration and confirm the native scope dialog (default No); cancellation preserves saved settings and unsaved edits. Status refreshes once a second. It applies to the default session, including voice, until expiry or revocation. It runs ordinary commands as the logged-in user without repeated prompts; that exposes the user's files and credentials to those programs. Privilege helpers, physical disks, mounts, boot and security operations remain separately blocked/reviewed; this is neither root access nor a guarantee of account isolation. Bubblewrap is required and there is no unsandboxed fallback. Protected preference changes also open a native confirmation dialog. Disabling that confirmation is itself protected.
 
 The window themes style the REgenOS programs. System-wide Qt/GTK themes, bootloader settings, firmware, partitions and the complete desktop settings stack are not controlled by this panel. Boot branding remains documented in [branding and ISO setup](BRANDING_AND_ARCHISO.md).
 
@@ -97,3 +120,32 @@ regenos-settings
 Manually verify: toggle visibility; move through all corners; resize the companion; change a baseline bar; disable animation; save/reopen Settings; then use voice and a harmless hardware query while observing the activity and forms. Observe `nvidia-smi` while Ollama, Whisper and Piper run together. Windows offscreen checks do not establish PipeWire behavior, compositor positioning, startup ordering or the 8 GB VRAM budget on the laptop.
 
 References: [Qt Widgets](https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QWidget.html), [QPainter](https://doc.qt.io/qtforpython-6/PySide6/QtGui/QPainter.html), [Hyprland window rules](https://wiki.hypr.land/0.53.0/Configuring/Window-Rules/).
+
+
+## Move the companion between displays
+
+Drag the avatar onto another display, or right-click it and select **Move to
+display → display name**. Native Companion settings also provide a Display
+selector. The selected Qt display name is saved in `avatar_display`; corner
+settings apply on that display. Dragging uses global logical coordinates and
+clamps to the destination display's usable area. Removing the display falls back
+to an available display, while retaining the preference for reconnection.
+Identical/changed Qt screen names are not guaranteed stable hardware identity.
+
+Qt APIs: [screenAt](https://doc.qt.io/qt-6/qguiapplication.html#screenAt) and
+[availableGeometry](https://doc.qt.io/qt-6/qscreen.html#availableGeometry-prop).
+The existing companion launcher prefers XWayland on GNOME when X11 is available;
+pure native Wayland placement remains compositor-dependent and unverified.
+
+2026-10-17: synthetic transfer/reconnect tests pass. No physical monitor transfer
+was performed in this restricted execution environment. The existing companion
+must reload updated Python code before these new controls appear; restarting
+only the core service does not necessarily restart the separate companion.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_avatar_displays.py
+```
+
+To close the companion independently of the core, use dashboard Companion → **Quit companion** or the avatar menu → **Quit companion**. For an already-running older version without that menu, run `~/.ai_os/venv/bin/python -m ai_os.companion_control` from the desktop terminal. This sends graceful termination only to the current user’s exact companion entry points. No forced kill is sent.
+
+The application-menu settings entry is searchable as **REgenOS Dashboard** (AI, assistant, settings and companion keywords). **REgenOS Companion** passes `--show` to reveal an avatar saved as hidden, including when a resident already exists. Startup without that flag preserves the saved visibility preference. The 2026-10-17 user-launcher repair passed desktop-file validation and Gio `should_show=true`; GNOME visual search remains unverified from the restricted session.

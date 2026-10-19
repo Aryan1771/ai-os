@@ -12,11 +12,24 @@ pixel Companion. `regenos-settings` launches the Python settings window; no brow
 HTML/JavaScript frontend, Electron or WebEngine is used. Earlier C++ hub sources
 remain in the repository as historical work, outside the supported runtime path.
 The Python window now includes conversation, named sessions, explicit local memory
-controls, hardware policy and Hindi/English voice configuration. Voice models and
-real bilingual speech validation remain pending.
+controls, hardware policy and Hindi/English voice configuration. Voice assets
+require per-machine provisioning, and real bilingual speech acceptance remains pending.
+
+The [interaction harness](docs/INTERACTION_HARNESS.md) adds native tool definitions,
+bounded tool-result follow-ups, application/website tools, voice readiness checks,
+conversation styles and optional accessibility context/app-usage memory. These
+features need the host acceptance checks documented there before deployment claims.
 
 See [the current Arch validation handoff](docs/HANDOFF.md) for measured results and
 blockers. REgenOS is a prototype, not a finished distribution.
+
+Current native additions include **REgenOS Chat** (`regenos-chat`), a compact
+keyboard/voice client with operational activity and steering, and **REgenOS
+Research** (`regenos-research`), a cited source-brief reader with paused narration.
+See [research, recoverable cleanup and interaction controls](docs/RESEARCH_AND_CLEANUP.md)
+and [speaker setup/language matching/voice choices](docs/VOICE_IDENTITY_AND_VOICES.md).
+These features have automated coverage; personal voice recognition, broad hardware
+acceptance and an installable ISO remain pending.
 
 Native chat can open supported applications such as Brave, inspect installed
 command manuals and request per-command approval through the optional full

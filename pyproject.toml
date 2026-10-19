@@ -19,6 +19,7 @@ desktop = ["PySide6-Essentials>=6.8,<7"]
 screen = ["PySide6-Addons>=6.8,<7"]
 memory = ["chromadb>=0.5.0"]
 voice = ["openwakeword>=0.6.0", "piper-tts>=1.2.0"]
+speaker = ["sherpa-onnx>=1.12,<2"]
 vision = ["opencv-python>=4.9.0"]
 udev = ["pyudev>=0.24.0"]
 dev = ["pytest>=8.0.0", "ruff>=0.5.0"]
@@ -29,6 +30,8 @@ packages = ["ai_os", "ai_os.tools", "ai_os.security", "ai_os.services"]
 [project.gui-scripts]
 regenos-settings = "ai_os.hub_launcher:main"
 regenos-companion = "ai_os.avatar_overlay:main"
+regenos-chat = "ai_os.quick_chat:main"
+regenos-research = "ai_os.research_widget:main"
 
 [tool.ruff]
 line-length = 100

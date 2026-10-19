@@ -15,7 +15,16 @@ from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, atomic_json, load_raw_confi
 from ai_os.cursor_theme import apply_preferences
 
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
+ALWAYS_CONFIRM_KEYS = {"command_access", "speaker_recognition_enabled", "speaker_model", "speaker_threshold"}
 PROTECTED_KEYS = {
+    "speaker_recognition_enabled",
+    "speaker_model",
+    "speaker_threshold",
+    "reinforced_memory_enabled",
+    "hardware_speech_enabled",
+    "desktop_context_enabled",
+    "activity_memory_enabled",
+    "conversation_listening_enabled",
     "screen_context_enabled",
     "screen_commentary_enabled",
     "screen_commentary_speech",
@@ -41,9 +50,11 @@ PROTECTED_KEYS = {
     "memory_allow_remote",
 }
 CHOICES = {
+    "companion_personality": {"warm", "calm", "playful", "focused"},
     "wake_backend": {"openwakeword", "re_whisper"},
     "command_access": {"restricted", "supervised"},
     "whisper_language": {"auto", "en", "hi"},
+    "reply_language_mode": {"selected", "match"},
     "hardware_backend": {"auto", "cpu"},
     "ai_provider": {"ollama", "openai_compatible"},
     "avatar_corner": {"top-left", "top-right", "bottom-left", "bottom-right"},
@@ -51,12 +62,17 @@ CHOICES = {
     "avatar_idle_shape": set(SHAPE_NAMES),
 }
 BOUNDS = {
+    "cursor_size": (24, 96),
+    "speaker_threshold": (0.4, 0.95),
+    "activity_retention_days": (1, 30),
     "screen_commentary_minutes": (1, 120),
     "proactive_interval_minutes": (5, 120),
     "avatar_scale": (60, 160),
     "avatar_motion": (0, 100),
     "avatar_reactivity": (0, 100),
     "voice_command_seconds": (2, 30),
+    "voice_silence_seconds": (1, 10),
+    "voice_max_utterance_seconds": (10, 120),
     "wake_word_threshold": (0, 1),
     "piper_length_scale": (0.5, 2.0),
     "memory_retention_days": (1, 365),
@@ -160,7 +176,7 @@ def save_settings(
     current = load_raw_config(home)
     validated = {key: validate_setting(key, value) for key, value in changes.items()}
     protected = protected_changes(current, validated)
-    if (current["sandbox_lock_settings"] or "command_access" in protected) and protected and not human_confirmed:
+    if (current["sandbox_lock_settings"] or protected & ALWAYS_CONFIRM_KEYS) and protected and not human_confirmed:
         raise PermissionError("Local confirmation required: " + ", ".join(sorted(protected)))
     result = current | validated
     validate_model_endpoint(result)
@@ -213,4 +229,4 @@ def apply_user_appearance(config: dict[str, Any], config_root: Path | None = Non
         if config_root is None
         else None
     )
-    apply_preferences(root, data_root, branding["cursor_theme"])
+    apply_preferences(root, data_root, branding["cursor_theme"], size=int(config["cursor_size"]))

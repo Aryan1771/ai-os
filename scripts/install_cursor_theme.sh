@@ -52,7 +52,7 @@ if [[ "${1:-}" == --apply ]]; then
   if command -v gsettings >/dev/null && gsettings list-schemas | grep -qx org.gnome.desktop.interface; then
     echo "Previous GNOME cursor: $(gsettings get org.gnome.desktop.interface cursor-theme)"
     gsettings set org.gnome.desktop.interface cursor-theme REgenOS-Cool
-    gsettings set org.gnome.desktop.interface cursor-size 32
+    gsettings set org.gnome.desktop.interface cursor-size 48
   fi
   echo "Log out and back in. See docs/CURSOR_THEME.md for X11/Hyprland session setup."
 fi

@@ -24,7 +24,7 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     backup = Path(tempfile.mkdtemp(prefix="appearance-backup-", dir=root))
     keys = [("org.gnome.desktop.interface", "cursor-theme", THEME),
-            ("org.gnome.desktop.interface", "cursor-size", "32"),
+            ("org.gnome.desktop.interface", "cursor-size", "48"),
             ("org.gnome.desktop.background", "picture-uri", (root/"wallpaper.png").as_uri()),
             ("org.gnome.desktop.background", "picture-uri-dark", (root/"wallpaper.png").as_uri())]
     previous = [{"schema": s, "key": k, "value": run("gsettings", "get", s, k)} for s,k,_ in keys]

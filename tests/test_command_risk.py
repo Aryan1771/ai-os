@@ -18,6 +18,15 @@ def test_sudo_requires_approval() -> None:
     assert assessment.requires_approval is True
 
 
+@pytest.mark.parametrize("command", [
+    ["fstrim", "-a"], ["sudo", "fstrim", "-a"], ["mount", "UUID=test", "/mnt"],
+    ["sudo", "-u", "root", "mount", "UUID=test", "/mnt"], ["bootctl", "install"],
+    ["udisksctl", "mount", "-p", "block_devices/test"], ["mkinitcpio", "-P"],
+])
+def test_no_device_path_does_not_bypass_disk_or_boot_boundary(command):
+    assert assess_command(command).risk == RiskLevel.PROHIBITED
+
+
 def test_root_recursive_delete_is_prohibited() -> None:
     assessment = assess_command(["rm", "-rf", "/"])
     assert assessment.risk == RiskLevel.PROHIBITED
@@ -34,7 +43,6 @@ def test_builtin_diagnostics_reach_subprocess_without_approval(monkeypatch):
     calls = []
 
     def run(argv, **kwargs):
-        assert kwargs["shell"] is False
         assert 0 < kwargs["timeout"] <= 60
         calls.append(argv)
         output = {
@@ -44,7 +52,7 @@ def test_builtin_diagnostics_reach_subprocess_without_approval(monkeypatch):
         }[argv[0]]
         return subprocess.CompletedProcess(argv, 0, output, "")
 
-    monkeypatch.setattr(system_tools.subprocess, "run", run)
+    monkeypatch.setattr(system_tools, "run_bounded", run)
     assert system_tools.get_nvidia_stats()["memory_total_mb"] == 8188
     assert system_tools.get_volume()["muted"] is True
     assert system_tools.get_brightness()["brightness_percent"] == 50

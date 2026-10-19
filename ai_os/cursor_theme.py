@@ -146,7 +146,9 @@ def write_backed_up(path: Path, contents: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def apply_preferences(config_root: Path, data_root: Path | None, theme: str = THEME) -> None:
+def apply_preferences(config_root: Path, data_root: Path | None, theme: str = THEME, *, size: int = 48) -> None:
+    if type(size) is not int or not 24 <= size <= 96:
+        raise ValueError("Cursor size must be 24-96 pixels")
     if not theme or any(
         c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- ." for c in theme
     ):
@@ -159,7 +161,7 @@ def apply_preferences(config_root: Path, data_root: Path | None, theme: str = TH
         if not parser.has_section("Settings"):
             parser.add_section("Settings")
         parser.set("Settings", "gtk-cursor-theme-name", theme)
-        parser.set("Settings", "gtk-cursor-theme-size", "32")
+        parser.set("Settings", "gtk-cursor-theme-size", str(size))
         buffer = StringIO()
         parser.write(buffer)
         write_backed_up(path, buffer.getvalue())
@@ -169,15 +171,15 @@ def apply_preferences(config_root: Path, data_root: Path | None, theme: str = TH
         )
     write_backed_up(
         config_root / "environment.d/60-regenos-cursor.conf",
-        f'XCURSOR_THEME="{theme}"\nXCURSOR_SIZE=32\n',
+        f'XCURSOR_THEME="{theme}"\nXCURSOR_SIZE={size}\n',
     )
     write_backed_up(
         config_root / "hypr/regenos-cursor.conf",
-        f"env = XCURSOR_THEME,{theme}\nenv = XCURSOR_SIZE,32\n"
+        f"env = XCURSOR_THEME,{theme}\nenv = XCURSOR_SIZE,{size}\n"
         "cursor {\n    enable_hyprcursor = false\n}\n",
     )
     write_backed_up(
-        config_root / "regenos/cursor.Xresources", f"Xcursor.theme: {theme}\nXcursor.size: 32\n"
+        config_root / "regenos/cursor.Xresources", f"Xcursor.theme: {theme}\nXcursor.size: {size}\n"
     )
 
 

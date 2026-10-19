@@ -49,7 +49,9 @@ class MemoryWidget(QWidget):
             ("Save context note", self.note),
             ("Forget matching text", self.forget),
             ("Clear selected session", self.clear_session),
-            ("Clear all active memory", self.clear_all),
+            ("Clear conversations, notes and preferences", self.clear_all),
+            ("Inspect app usage", self.inspect_activity),
+            ("Clear app usage", self.clear_activity),
         ]:
             button = QPushButton(label)
             button.clicked.connect(lambda _checked=False, fn=action: self.perform(fn))
@@ -80,6 +82,7 @@ class MemoryWidget(QWidget):
                     "history": memory.history(current),
                     "notes": memory.notes(),
                     "preferences": memory.preferences(),
+                    "reinforced": memory.reinforced(current),
                 },
                 indent=2,
                 ensure_ascii=False,
@@ -89,6 +92,16 @@ class MemoryWidget(QWidget):
     def remember(self):
         self.store().remember(self.key.text(), self.value.toPlainText())
         self.output.setPlainText("Preference saved locally.")
+
+    def inspect_activity(self):
+        from ai_os.activity_memory import ActivityMemory
+        self.output.setPlainText(json.dumps(ActivityMemory(self.home).summary(), indent=2))
+
+    def clear_activity(self):
+        from ai_os.activity_memory import ActivityMemory
+        if self.confirmed("Delete recorded app usage? Disable app usage memory to stop future collection."):
+            ActivityMemory(self.home).clear()
+            self.output.setPlainText("Recorded app usage cleared.")
 
     def note(self):
         self.store().put(self.key.text(), self.value.toPlainText())
@@ -126,7 +139,7 @@ class MemoryWidget(QWidget):
 
     def clear_all(self):
         if self.confirmed(
-            "Delete ALL active conversation history, notes and preferences? Backups and legacy stores are retained."
+            "Delete all conversation history, notes and preferences? App usage has its own Clear button; backups and legacy stores are retained."
         ):
             self.store().clear_all()
             self.output.setPlainText("Active memory deleted.")

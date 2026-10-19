@@ -1,5 +1,21 @@
 # REgenOS: installed runtime, latency and continuity
 
+2026-10-19 latest: **540 passed**, correctness lint clean. Current executor reaches
+PipeWire/Ollama/user bus; older denied-socket counts below are historical.
+See [HANDOFF](HANDOFF.md), [research/chat/cleanup](RESEARCH_AND_CLEANUP.md) and
+[voice identity/voices](VOICE_IDENTITY_AND_VOICES.md) for commands and pending
+acceptance. No microphone samples, user-file deletion, new voice models or ISO
+acceptance were performed. GNOME cursor 64 now passes readback.
+
+Latest source checkpoint (2026-10-19): [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md),
+[INTERACTION_HARNESS](INTERACTION_HARNESS.md) and
+[ARCH_ACCEPTANCE](ARCH_ACCEPTANCE.md). The current sandbox run reports **350 passed,
+1 failed, 7 errors**; all eight unsuccessful checks require local Unix sockets,
+which this execution environment denies with `EPERM`. This is not a clean full-suite
+pass. Source-focused regressions and correctness lint pass. Host Ollama/audio/
+desktop checks could not be completed here; historical measurements below must
+not be presented as verification of the new harness. No host service was restarted.
+
 2026-09-27. Source baseline `640183c`; prior uncommitted repair work was preserved.
 The user confirmed Phase 1 meant using **Ollama CLI**, not a fully connected
 REgenOS daemon or voice pipeline. Ollama CLI bypasses this project's memory,

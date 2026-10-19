@@ -20,6 +20,45 @@ def test_direct_brave_request_uses_launcher_without_inference(tmp_path, monkeypa
     assert desktop_tools.launch_intent("open brave && rm /tmp/file") is None
 
 
+@pytest.mark.parametrize(("text", "url", "browser"), [
+    ("Open YouTube", "https://www.youtube.com", ""),
+    ("Please open youtube on Brave browser", "https://www.youtube.com", "brave"),
+    ("Hey RE, could you please open YouTube for me?", "https://www.youtube.com", ""),
+    ("go to example.org", "https://example.org", ""),
+    ("Visit https://example.org/watch?id=1", "https://example.org/watch?id=1", ""),
+])
+def test_direct_website_intent(text, url, browser):
+    assert desktop_tools.website_intent(text) == {"url": url, "browser": browser}
+
+
+def test_direct_youtube_request_uses_website_tool_without_model(tmp_path, monkeypatch):
+    monkeypatch.setattr(core, "ask_ollama", lambda *a, **k: pytest.fail("Simple site launch must not depend on model tool choice"))
+    opened = []
+    response = core.handle_user_text("Open YouTube", {
+        "open_website": lambda **kwargs: opened.append(kwargs) or {"ok": True, "message": "Opened in Brave."},
+    }, home=tmp_path)
+    assert opened == [{"url": "https://www.youtube.com", "browser": ""}]
+    assert response["result"]["message"] == "Opened in Brave."
+    assert core.spoken_response(response) == "Opened in Brave."
+
+
+def test_browser_finder_scans_user_and_flatpak_roots(tmp_path, monkeypatch):
+    entry = tmp_path / "com.brave.Browser.desktop"
+    entry.write_text("[Desktop Entry]\nType=Application\nName=Brave Browser\nExec=brave %U\n")
+    monkeypatch.setattr(desktop_tools, "BROWSER_ROOTS", (tmp_path,))
+    assert desktop_tools._browser_entry("brave") == (entry, "com.brave.Browser.desktop")
+
+
+def test_application_discovery_includes_user_desktop_entries(tmp_path, monkeypatch):
+    (tmp_path / "org.mozilla.firefox.desktop").write_text(
+        "[Desktop Entry]\nType=Application\nName=Firefox\nExec=firefox %U\n"
+    )
+    monkeypatch.setattr(desktop_tools, "APPLICATION_ROOTS", (tmp_path,))
+    assert desktop_tools.list_applications("firefox")["applications"] == [
+        {"application": "org.mozilla.firefox.desktop", "name": "Firefox"}
+    ]
+
+
 def test_launch_does_not_accept_arbitrary_files_or_options(monkeypatch):
     monkeypatch.setattr(desktop_tools.subprocess, "run", lambda *a, **k: pytest.fail("Must not run"))
     for name in ("/tmp/evil.desktop", "brave --no-sandbox", "https://example.com"):
@@ -34,6 +73,7 @@ def test_man_help_rejects_options_and_paths():
 
 def test_launcher_does_not_wait_on_browser_inherited_pipes(monkeypatch):
     monkeypatch.setenv("DISPLAY", ":test")
+    monkeypatch.setattr(desktop_tools, "APPLICATION_ROOTS", (desktop_tools.APPLICATION_ROOT,))
     monkeypatch.setattr(desktop_tools.Path, "is_file", lambda _: True)
     def run(argv, **kwargs):
         assert kwargs["stdout"] == subprocess.DEVNULL
@@ -42,6 +82,46 @@ def test_launcher_does_not_wait_on_browser_inherited_pipes(monkeypatch):
         return subprocess.CompletedProcess(argv, 0)
     monkeypatch.setattr(desktop_tools.subprocess, "run", run)
     assert desktop_tools.launch_application("brave")["ok"]
+
+
+def test_open_website_accepts_http_links_and_never_shells(monkeypatch):
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs))
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(desktop_tools.subprocess, "run", run)
+    assert desktop_tools.open_website("youtube.com/watch?v=abc")["ok"]
+    argv, kwargs = calls[0]
+    assert argv == ["/usr/bin/gio", "open", "https://youtube.com/watch?v=abc"]
+    assert kwargs["shell"] is False and kwargs["timeout"] <= 10
+
+
+def test_named_browser_receives_validated_url_via_gio(monkeypatch, tmp_path):
+    monkeypatch.setenv("DISPLAY", ":test")
+    entry = tmp_path / "brave-browser.desktop"
+    entry.touch()
+    monkeypatch.setattr(desktop_tools, "BROWSER_ROOTS", (tmp_path,))
+    calls = []
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs))
+        return subprocess.CompletedProcess(argv, 0)
+    monkeypatch.setattr(desktop_tools.subprocess, "run", run)
+    result = desktop_tools.open_website("youtube.com", "brave")
+    assert result["ok"] and result["browser"] == "brave-browser.desktop"
+    assert calls[0][0] == ["/usr/bin/gio", "launch", str(entry), "https://youtube.com"]
+    assert calls[0][1]["shell"] is False
+
+
+@pytest.mark.parametrize("url", [
+    "javascript:alert(1)", "file:///etc/passwd", "https://user:pass@example.com",
+    "https://example.com\nreboot", "https://localhost", "https://example.com:bad/",
+])
+def test_open_website_rejects_non_web_and_credential_urls(url):
+    with pytest.raises(ValueError):
+        desktop_tools.open_website(url)
 
 
 def test_native_execution_requires_mode_and_explicit_confirmation(tmp_path, monkeypatch):
@@ -74,10 +154,10 @@ def test_model_approval_is_stripped_and_background_returns_proposal():
 
 def test_sudo_is_noninteractive(monkeypatch):
     calls = []
-    monkeypatch.setattr(system_tools.subprocess, "run", lambda argv, **kw: calls.append((argv, kw)) or subprocess.CompletedProcess(argv, 1, "", "password required"))
+    monkeypatch.setattr(system_tools, "run_bounded", lambda argv, **kw: calls.append((argv, kw)) or subprocess.CompletedProcess(argv, 1, "", "password required"))
     result = system_tools.run_command(["sudo", "pacman", "-S", "vim"], approve=True)
     assert calls[0][0][:2] == ["/usr/bin/sudo", "-n"]
-    assert calls[0][1]["stdin"] == subprocess.DEVNULL
+    assert calls[0][1]["timeout"] == 15
     assert "terminal" in result.stderr
 
 

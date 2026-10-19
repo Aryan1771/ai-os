@@ -17,10 +17,12 @@ sudo pacman -S --needed libxkbcommon-x11 xcb-util-cursor libxcb fontconfig noto-
 "${RUNTIME_DIR}/venv/bin/python" -m pip install -e "${REPO_ROOT}[desktop]"
 mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/scalable/apps"
 install -m 0644 "${REPO_ROOT}/branding/regenos-mark.svg" "${HOME}/.local/share/icons/hicolor/scalable/apps/regenos.svg"
-for app in regenos-settings regenos-companion; do
+for app in regenos-settings regenos-companion regenos-chat regenos-research; do
   target="${HOME}/.local/share/applications/${app}.desktop"
   install -m 0644 "${REPO_ROOT}/config/desktop/${app}.desktop" "${target}"
-  desktop-file-edit --set-key=Exec --set-value="\"${RUNTIME_DIR}/venv/bin/${app}\"" "${target}"
+  launcher_exec="\"${RUNTIME_DIR}/venv/bin/${app}\""
+  if [[ "${app}" == regenos-companion ]]; then launcher_exec+=" --show"; fi
+  desktop-file-edit --set-key=Exec --set-value="${launcher_exec}" "${target}"
 done
 update-desktop-database "${HOME}/.local/share/applications"
 bash "${REPO_ROOT}/scripts/install_cursor_theme.sh" --apply

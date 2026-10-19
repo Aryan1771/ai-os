@@ -23,7 +23,7 @@ class ConversationMemory:
         if self.path.exists():
             with closing(sqlite3.connect(self.path.as_uri() + "?mode=ro", uri=True)) as db:
                 migrated = db.execute(
-                    "SELECT 1 FROM sqlite_master WHERE name='memory_state'"
+                    "SELECT 1 FROM sqlite_master WHERE name='reinforced'"
                 ).fetchone()
             if not migrated:
                 from ai_os.runtime_backup import backup_runtime
@@ -33,6 +33,9 @@ class ConversationMemory:
             db.executescript(
                 "CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY, session TEXT NOT NULL, "
                 "user TEXT NOT NULL, assistant TEXT NOT NULL, created REAL NOT NULL);"
+                "CREATE TABLE IF NOT EXISTS reinforced (session TEXT NOT NULL, normalized TEXT NOT NULL, "
+                "text TEXT NOT NULL, hits INTEGER NOT NULL, reinforced REAL NOT NULL, "
+                "PRIMARY KEY(session,normalized));"
                 "CREATE INDEX IF NOT EXISTS turns_session ON turns(session, id);"
                 "CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, title TEXT NOT NULL, "
                 "body TEXT NOT NULL, updated REAL NOT NULL);"
@@ -85,6 +88,28 @@ class ConversationMemory:
                 "INSERT INTO turns(session,user,assistant,created) VALUES(?,?,?,?)",
                 (session[:80], user[:8000], assistant[:12000], time.time()),
             )
+            # Only user statements are candidates; assistant guesses never become facts.
+            # Exact normalized repetition is evidence of recurrence, not truth.
+            if load_raw_config(self.home)["reinforced_memory_enabled"]:
+                now = time.time()
+                # Expired evidence must not regain its old hit count when the
+                # next occurrence arrives before an inspection/retrieval.
+                db.execute("DELETE FROM reinforced WHERE reinforced < ?", (now-180*86400,))
+                normalized = " ".join(user.casefold().split()).strip(".!?। ")
+                if 12 <= len(normalized) <= 500:
+                    previous = db.execute(
+                        "SELECT reinforced FROM reinforced WHERE session=? AND normalized=?",
+                        (session[:80], normalized),
+                    ).fetchone()
+                    # Retries/echoes in the same ten-minute window do not reinforce.
+                    if previous is None or now - previous[0] >= 600:
+                        db.execute(
+                            "INSERT INTO reinforced VALUES(?,?,?,1,?) ON CONFLICT(session,normalized) "
+                            "DO UPDATE SET hits=MIN(100,hits+1),reinforced=excluded.reinforced",
+                            (session[:80], normalized, user[:500], now),
+                        )
+                db.execute("DELETE FROM reinforced WHERE rowid NOT IN "
+                           "(SELECT rowid FROM reinforced ORDER BY reinforced DESC LIMIT 256)")
             db.execute(
                 "DELETE FROM turns WHERE id NOT IN (SELECT id FROM turns ORDER BY id DESC LIMIT 2000)"
             )
@@ -144,8 +169,10 @@ class ConversationMemory:
             db.execute("UPDATE memory_state SET revision=revision+1 WHERE id=1")
             if session is None:
                 db.execute("DELETE FROM turns")
+                db.execute("DELETE FROM reinforced")
             else:
                 db.execute("DELETE FROM turns WHERE session=?", (session,))
+                db.execute("DELETE FROM reinforced WHERE session=?", (session,))
 
     def revision(self) -> int:
         with self.connect() as db:
@@ -186,10 +213,11 @@ class ConversationMemory:
             db.execute("UPDATE memory_state SET revision=revision+1 WHERE id=1")
             for table, key, fields in (
                 ("turns", "id", ("user", "assistant")),
+                ("reinforced", "rowid", ("text",)),
                 ("notes", "id", ("title", "body")),
                 ("preferences", "key", ("key", "value")),
             ):
-                rows = db.execute("SELECT * FROM " + table).fetchall()
+                rows = db.execute("SELECT rowid,* FROM " + table).fetchall()
                 for row in rows:
                     if any(needle in row[field].casefold() for field in fields):
                         db.execute("DELETE FROM " + table + " WHERE " + key + "=?", (row[key],))
@@ -199,8 +227,15 @@ class ConversationMemory:
     def clear_all(self):
         with self.connect() as db:
             db.execute("UPDATE memory_state SET revision=revision+1 WHERE id=1")
-            for table in ("turns", "notes", "preferences"):
+            for table in ("turns", "notes", "preferences", "reinforced"):
                 db.execute("DELETE FROM " + table)
+
+    def reinforced(self, session="default") -> list[dict]:
+        with self.connect() as db:
+            db.execute("DELETE FROM reinforced WHERE reinforced < ?", (time.time()-180*86400,))
+            return [dict(row) for row in db.execute(
+                "SELECT text,hits,reinforced FROM reinforced WHERE session=? AND hits>=3 "
+                "ORDER BY reinforced DESC LIMIT 256", (session[:80],))]
 
     def context(self, query: str, *, session="default", days=None, budget=8000) -> list[dict]:
         budget = max(0, min(8000, int(budget)))
@@ -239,6 +274,10 @@ class ConversationMemory:
             for n in ranked[:3]
             if score(n["title"] + " " + n["body"])
         )
+        if load_raw_config(self.home)["reinforced_memory_enabled"]:
+            repeated = sorted(self.reinforced(session), key=lambda r: score(r["text"]), reverse=True)
+            references.extend({"repeated_user_statement": r["text"], "occurrences": r["hits"]}
+                              for r in repeated[:3] if score(r["text"]))
         history = self.history(session, days=days)
         # Relevant older turns remain within this session and retention window.
         with self.connect() as db:

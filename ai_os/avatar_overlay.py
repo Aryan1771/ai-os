@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import argparse
 import sys
 import time
 import sqlite3
@@ -47,6 +48,7 @@ class AvatarOverlay(QWidget):
         self.drag_origin = None
         self.dragged = False
         self.auto_corner = None
+        self.selected_screen_name = ""
         self.next_proactive = time.monotonic() + 300
         self.speech_cancelled = False
         self.screen_reader = QProcess(self)
@@ -94,10 +96,18 @@ class AvatarOverlay(QWidget):
         self.timer.start()
         self.refresh()
         app = QApplication.instance()
-        app.screenAdded.connect(lambda _screen: self.place())
+        app.screenAdded.connect(self.screen_added)
         app.screenRemoved.connect(lambda _screen: self.place())
         for screen in app.screens():
-            screen.availableGeometryChanged.connect(lambda _rect: self.place())
+            self.watch_screen(screen)
+
+    def reveal_if_enabled(self):
+        """Recover an existing resident window, while honoring hidden startup."""
+        self.refresh()
+        if self.last_config and self.last_config["avatar_enabled"]:
+            self.place()
+            self.show()
+            self.raise_()
 
     def refresh(self) -> None:
         try:
@@ -115,6 +125,7 @@ class AvatarOverlay(QWidget):
                 self.next_proactive = time.monotonic() + config["proactive_interval_minutes"] * 60
             if not self.last_config or config["avatar_corner"] != self.last_config["avatar_corner"]:
                 self.auto_corner = None
+            self.selected_screen_name = config["avatar_display"]
             self.last_config = config
             branding = config["branding"]
             self.setWindowTitle(f"{branding['brand_name']} {branding['assistant_name']}")
@@ -143,10 +154,21 @@ class AvatarOverlay(QWidget):
             except (OSError, ValueError, sqlite3.Error):
                 self.status.setText("Access status unavailable")
         # Debug labels are optional; microphone/permission/speech state is not.
-        wake_enabled = config["always_listening_enabled"] and config["wake_word_enabled"]
+        wake_enabled = config["always_listening_enabled"]
         if wake_enabled and state["phase"] in {"idle", "reply"} and not self.status.text().startswith("Access"):
-            self.status.setText("Wake listening enabled · " + state["phase"].capitalize())
+            label = "Wake listening" if config["wake_word_enabled"] else "Conversation listening" if config["conversation_listening_enabled"] else "Choose listening mode"
+            self.status.setText((label + " enabled" if label != "Choose listening mode" else label)
+                                + " · " + state["phase"].capitalize())
         important = wake_enabled or state["phase"] in {"armed", "listening", "transcribing", "speaking"} or self.status.text().startswith("Access")
+        if config["desktop_context_enabled"]:
+            self.status.setText(self.status.text() + " · Accessibility on")
+            important = True
+        if config["activity_memory_enabled"]:
+            self.status.setText(self.status.text() + " · App usage memory on")
+            important = True
+        if config["speaker_recognition_enabled"]:
+            self.status.setText(self.status.text() + " · Enrolled voice filter on")
+            important = True
         show_status = config["avatar_show_status"] or important
         self.status.setVisible(show_status)
         height = self.canvas.height() + 8 + (27 if show_status else 0) + (129 if config["avatar_show_emotion_bars"] else 0)
@@ -163,8 +185,44 @@ class AvatarOverlay(QWidget):
             self.next_proactive = now + config["proactive_interval_minutes"] * 60
             self.speak_proactively()
 
+    def watch_screen(self, screen):
+        screen.availableGeometryChanged.connect(lambda _rect: self.place())
+        screen.geometryChanged.connect(lambda _rect: self.place())
+
+    def screen_added(self, screen):
+        self.watch_screen(screen)
+        self.place()
+
+    def preferred_screen(self):
+        screens = QApplication.screens()
+        return next((s for s in screens if s.name() == self.selected_screen_name), None) or (
+            self.screen() if self.screen() in screens else QApplication.primaryScreen()
+        )
+
+    def move_to_screen(self, name):
+        if not any(screen.name() == name for screen in QApplication.screens()):
+            return False
+        self.motion.stop()
+        save_settings({"avatar_display": name}, self.home)
+        self.selected_screen_name = name
+        if self.last_config:
+            self.last_config["avatar_display"] = name
+        self.last_move = time.monotonic() + 290
+        self.place()
+        return True
+
+    def drag_to(self, global_pointer):
+        target = QApplication.screenAt(global_pointer) or self.preferred_screen()
+        if target is None:
+            return
+        self.selected_screen_name = target.name()
+        rect = target.availableGeometry()
+        point = global_pointer - self.drag_origin
+        self.move(QPoint(max(rect.left(), min(point.x(), rect.right()-self.width()+1)),
+                         max(rect.top(), min(point.y(), rect.bottom()-self.height()+1))))
+
     def place(self) -> None:
-        screen = self.screen() or QApplication.primaryScreen()
+        screen = self.preferred_screen()
         if not screen or not self.last_config:
             return
         rect = screen.availableGeometry()
@@ -233,12 +291,13 @@ class AvatarOverlay(QWidget):
                 point = event.globalPosition().toPoint() - self.drag_origin
                 self.dragged |= (point-self.pos()).manhattanLength() > 4
                 if self.dragged:
-                    rect = self.screen().availableGeometry()
-                    self.move(QPoint(max(rect.left(), min(point.x(), rect.right()-self.width()+1)),
-                                     max(rect.top(), min(point.y(), rect.bottom()-self.height()+1))))
+                    self.drag_to(event.globalPosition().toPoint())
                 return True
             if event.type() == QEvent.Type.MouseButtonRelease and self.drag_origin is not None:
                 self.drag_origin = None
+                if self.dragged:
+                    save_settings({"avatar_display": self.selected_screen_name}, self.home)
+                    self.last_config["avatar_display"] = self.selected_screen_name
                 self.last_move = time.monotonic() + 290  # Respect manual placement for five minutes.
                 if not self.dragged:
                     self.open_settings()
@@ -289,6 +348,13 @@ class AvatarOverlay(QWidget):
         menu = QMenu(self)
         menu.addAction("Settings", self.open_settings)
         menu.addAction("Move out of the way", self.move_away)
+        displays = menu.addMenu("Move to display")
+        for index, screen in enumerate(QApplication.screens(), 1):
+            name = screen.name()
+            action = displays.addAction(f"{index}: {name.replace(chr(38), chr(38)*2)}")
+            action.setCheckable(True)
+            action.setChecked(screen is self.preferred_screen())
+            action.triggered.connect(lambda _checked=False, name=name: self.move_to_screen(name))
         for key, label in (("avatar_show_emotion_bars", "Debug emotion bars"), ("avatar_show_status", "Debug mood/activity label"), ("avatar_auto_move", "Move away from pointer")):
             action = menu.addAction(label)
             action.setCheckable(True)
@@ -296,10 +362,12 @@ class AvatarOverlay(QWidget):
             action.toggled.connect(lambda value, key=key: save_settings({key: value}, self.home))
         menu.addAction("Stop proactive speech", lambda: (save_settings({"proactive_speech_enabled": False}, self.home, human_confirmed=True), self.stop_speech()))
         menu.addAction("Stop screen awareness", lambda: (save_settings({"screen_context_enabled": False}, self.home, human_confirmed=True), self.stop_screen_reader()))
+        menu.addAction("Stop microphone", lambda: save_settings({"always_listening_enabled": False}, self.home, human_confirmed=True))
         menu.addAction("Revoke all access grants", lambda: revoke_all(self.home))
         menu.addAction(
             "Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home)
         )
+        menu.addAction("Quit companion", QApplication.instance().quit)
         menu.exec(event.globalPos())
 
     def stop_screen_reader(self):
@@ -317,6 +385,11 @@ class AvatarOverlay(QWidget):
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="REgenOS native companion")
+    parser.add_argument("--show", action="store_true", help="Reveal the companion even when saved as hidden")
+    args = parser.parse_args()
+    if args.show:
+        save_settings({"avatar_enabled": True}, AI_OS_HOME)
     # XWayland allows explicit corner positioning; Qt Wayland clients cannot place themselves.
     if sys.platform == "linux" and os.environ.get("WAYLAND_DISPLAY") and os.environ.get("DISPLAY"):
         os.environ["QT_QPA_PLATFORM"] = "xcb"
@@ -327,12 +400,19 @@ def main() -> int:
     app.setApplicationName("regenos-companion")
     app.setDesktopFileName("regenos-companion")
     app.setQuitOnLastWindowClosed(False)
+    overlay = None
+
+    def activate():
+        if overlay is not None:
+            overlay.reveal_if_enabled()
+
     instance = LocalInstance(AI_OS_HOME, "regenos-companion")
-    if not instance.acquire(lambda: None):
+    if not instance.acquire(activate):
         return 0
     overlay = AvatarOverlay()
     app.aboutToQuit.connect(overlay.timer.stop)
     app.aboutToQuit.connect(overlay.stop_screen_reader)
+    app.aboutToQuit.connect(overlay.stop_speech)
     return app.exec()
 
 

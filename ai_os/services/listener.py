@@ -6,6 +6,10 @@ import tempfile
 import threading
 import time
 import wave
+import os
+import selectors
+import math
+from collections import deque
 from collections.abc import Callable
 from pathlib import Path
 
@@ -26,20 +30,30 @@ class AlwaysListeningService:
         on_transcript: Callable[[str], None],
         wake_word_threshold: float = 0.5,
         command_seconds: int = 8,
+        silence_seconds: float = 5.0,
+        max_utterance_seconds: int = 120,
         sample_rate: int = 16_000,
         on_activity: Callable[[str], None] | None = None,
         playback_active: Callable[[], bool] | None = None,
         wake_word_model: str = "",
         wake_backend: str = "openwakeword",
+        require_wake_word: bool = True,
+        speaker_filter: Callable[[Path], tuple[bool, str]] | None = None,
     ) -> None:
         self.run_dir = run_dir
+        self.require_wake_word = require_wake_word
         self.transcriber = transcriber
         self.on_transcript = on_transcript
+        self.speaker_filter = speaker_filter
+        self.last_transcription_language = None
+        self.last_capture_error = None
         if wake_backend not in {"openwakeword", "re_whisper"}:
             raise ValueError("Unsupported wake detector")
         self.wake_word = (ReWhisperWakeWord(transcriber, run_dir) if wake_backend == "re_whisper"
                           else WakeWordService(wake_word_threshold, wake_word_model))
         self.command_seconds = max(2, min(30, int(command_seconds)))
+        self.silence_seconds = max(1.0, min(10.0, float(silence_seconds)))
+        self.max_utterance_seconds = max(10, min(120, int(max_utterance_seconds)))
         self.sample_rate = sample_rate
         self.on_activity = on_activity or (lambda _phase: None)
         self.playback_active = playback_active or (lambda: False)
@@ -52,7 +66,44 @@ class AlwaysListeningService:
         ready, reason = self.transcriber.availability()
         if not ready:
             return False, reason
-        return self.wake_word.start()
+        return self.wake_word.start() if self.require_wake_word else (True, "conversation listening")
+
+    @staticmethod
+    def has_speech(audio: bytes) -> bool:
+        samples = np.frombuffer(audio, dtype=np.int16).astype(np.float32)
+        return bool(samples.size and np.sqrt(np.mean(samples * samples)) >= 450)
+
+    def _read_audio(self, size: int) -> bytes:
+        """Bound stalls and cancellation; pipe reads cannot block indefinitely."""
+        if self._process is None or self._process.stdout is None:
+            return b""
+        data = bytearray()
+        deadline = time.monotonic() + 3
+        with selectors.DefaultSelector() as selector:
+            selector.register(self._process.stdout, selectors.EVENT_READ)
+            while len(data) < size and not self._stop.is_set():
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("Microphone stream stalled; check PipeWire input device")
+                if not selector.select(0.1):
+                    continue
+                part = os.read(self._process.stdout.fileno(), size - len(data))
+                if not part:
+                    if self._stop.is_set():
+                        return b""
+                    raise RuntimeError("PipeWire recorder exited unexpectedly")
+                data.extend(part)
+        return bytes(data)
+
+    def _discard_backlog(self):
+        if self._process is None or self._process.stdout is None:
+            return
+        with selectors.DefaultSelector() as selector:
+            selector.register(self._process.stdout, selectors.EVENT_READ)
+            for _ in range(64):
+                if not selector.select(0):
+                    break
+                if not os.read(self._process.stdout.fileno(), 65536):
+                    break
 
     def stop(self) -> None:
         self._stop.set()
@@ -85,47 +136,103 @@ class AlwaysListeningService:
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            bufsize=0,
+            shell=False,
         )
         if self._process.stdout is None:
             raise RuntimeError("PipeWire recorder did not provide an audio stream.")
 
         self.on_activity("armed")
         last_heartbeat = time.monotonic()
+        preroll = deque(maxlen=5)
+        speech_frames = 0
+        playback_tail_until = 0.0
         try:
             while not self._stop.is_set():
-                audio = self._process.stdout.read(chunk_bytes)
+                audio = self._read_audio(chunk_bytes)
                 if len(audio) != chunk_bytes:
                     if self._process.poll() is not None:
                         raise RuntimeError("PipeWire recorder exited unexpectedly.")
                     continue
                 frame = np.frombuffer(audio, dtype=np.int16)
-                if self.playback_active():
+                playing = self.playback_active()
+                if playing:
+                    playback_tail_until = time.monotonic() + 0.4
+                if playing or time.monotonic() < playback_tail_until:
+                    preroll.clear()
+                    speech_frames = 0
                     if hasattr(self.wake_word, "reset"):
                         self.wake_word.reset()
                     continue
+                preroll.append(audio)
                 if time.monotonic() - last_heartbeat > 30:
-                    self.on_activity("armed")
+                    if not self.playback_active():
+                        self.on_activity("armed")
                     last_heartbeat = time.monotonic()
-                if self.wake_word.detect_frame(frame):
+                speech_frames = speech_frames + 1 if self.has_speech(audio) else 0
+                detected = (self.wake_word.detect_frame(frame) if self.require_wake_word
+                            else speech_frames >= 3)
+                if detected:
                     self.on_activity("listening")
-                    transcript = self._capture_and_transcribe(audio, chunk_bytes)
-                    if transcript:
+                    transcript = self._capture_and_transcribe(b"".join(preroll), chunk_bytes)
+                    if transcript and not self._stop.is_set():
                         self.on_transcript(transcript)
-                    else:
-                        self.on_activity("idle")
+                    self._discard_backlog()
+                    # Reply handling is synchronous; playback can start and
+                    # finish before playback_active is sampled by this loop.
+                    playback_tail_until = time.monotonic() + 0.4
+                    if hasattr(self.wake_word, "reset"):
+                        self.wake_word.reset()
+                    preroll.clear()
+                    speech_frames = 0
+                    if not self.playback_active():
+                        self.on_activity("armed")
         finally:
             self.stop()
 
     def _capture_and_transcribe(self, first_chunk: bytes, chunk_bytes: int) -> str:
+        self.last_transcription_language = None
+        self.last_capture_error = None
         if self._process is None or self._process.stdout is None:
             return ""
+        if self.playback_active():
+            return ""
         chunks = [first_chunk]
-        deadline = time.monotonic() + self.command_seconds
-        while time.monotonic() < deadline and not self._stop.is_set():
-            audio = self._process.stdout.read(chunk_bytes)
+        # The initial speech wait and the spoken utterance have separate bounds.
+        # Count PCM samples for endpointing: recorder scheduling must not turn a
+        # brief human pause into the end of a sentence or extend an utterance.
+        deadline = time.monotonic() + self.max_utterance_seconds
+        max_samples = self.sample_rate * self.max_utterance_seconds
+        captured_samples = len(first_chunk) // 2
+        silence_samples = math.ceil(self.sample_rate * self.silence_seconds)
+        silent_samples = 0
+        endpoint_reached = False
+        while (time.monotonic() < deadline and captured_samples < max_samples
+               and not self._stop.is_set()):
+            audio = self._read_audio(min(chunk_bytes, (max_samples - captured_samples) * 2))
             if not audio:
                 break
+            # A separately requested voice test or announcement can win the
+            # output turn while recording. Never submit its sound as a command.
+            if self.playback_active():
+                return ""
             chunks.append(audio)
+            samples = len(audio) // 2
+            captured_samples += samples
+            silent_samples = 0 if self.has_speech(audio) else silent_samples + samples
+            if silent_samples >= silence_samples:
+                endpoint_reached = True
+                break
+
+        if self._stop.is_set():
+            return ""
+        if not endpoint_reached and (captured_samples >= max_samples or time.monotonic() >= deadline):
+            from ai_os.services.voice_errors import VoicePipelineError
+            raise VoicePipelineError(
+                "utterance_too_long",
+                "Speech exceeded the maximum utterance duration before the ending pause. "
+                "No request was submitted; please repeat in shorter parts.",
+            )
 
         with tempfile.NamedTemporaryFile(dir=self.run_dir, suffix=".wav", delete=False) as handle:
             audio_path = Path(handle.name)
@@ -134,9 +241,29 @@ class AlwaysListeningService:
                 wav_file.setnchannels(1)
                 wav_file.setsampwidth(2)
                 wav_file.setframerate(self.sample_rate)
-                wav_file.writeframes(b"".join(chunks))
+                audio = b"".join(chunks)
+                # Wait for the full chosen pause, then avoid sending several
+                # seconds of trailing silence through Whisper. Keep a short
+                # tail so the final word is not clipped at the energy boundary.
+                trim_samples = max(0, silent_samples - self.sample_rate // 5) if endpoint_reached else 0
+                wav_file.writeframes(audio[:-trim_samples * 2] if trim_samples else audio)
+            if self.speaker_filter is not None:
+                from ai_os.services.voice_errors import VoicePipelineError
+                try:
+                    allowed, reason = self.speaker_filter(audio_path)
+                except Exception:
+                    allowed, reason = False, "Speaker verification unavailable; no request submitted. Check local enrollment."
+                if not allowed:
+                    self.last_capture_error = VoicePipelineError("speaker_rejected", reason)
+                    return ""
             self.on_activity("transcribing")
             result = self.transcriber.transcribe_file(audio_path)
-            return result.text if result.ok else ""
+            if not result.ok:
+                from ai_os.services.voice_errors import VoicePipelineError
+                if result.error == "No speech recognized":
+                    return ""
+                raise VoicePipelineError("transcription_failed", "Transcription failed in Whisper. Check the executable, multilingual model and selected language.")
+            self.last_transcription_language = getattr(result, "detected_language", None)
+            return result.text
         finally:
             audio_path.unlink(missing_ok=True)

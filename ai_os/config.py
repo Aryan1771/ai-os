@@ -31,12 +31,15 @@ class AiOsConfig:
     whisper_cli: str
     whisper_model: Path
     whisper_language: str
+    reply_language_mode: str
     piper_model: Path
     piper_hindi_model: Path | None
     speech_enabled: bool
     always_listening_enabled: bool
     wake_word_threshold: float
     voice_command_seconds: int
+    voice_silence_seconds: int
+    voice_max_utterance_seconds: int
     sandbox_lock_settings: bool
     avatar_enabled: bool
     avatar_corner: str
@@ -70,16 +73,33 @@ DEFAULT_CONFIG = {
     "wake_backend": "re_whisper",
     "whisper_cli": "whisper-cli",
     "whisper_model": "models/ggml-base.en.bin",
-    "whisper_language": "auto",
+    "whisper_language": "en",
+    "reply_language_mode": "selected",
+    "speaker_recognition_enabled": False,
+    "speaker_model": "",
+    "speaker_threshold": 0.75,
     "piper_model": "models/en_US-lessac-medium.onnx",
     "piper_hindi_model": "",
     "speech_enabled": False,
     "always_listening_enabled": False,
+    "conversation_listening_enabled": False,
+    "hardware_notifications_enabled": True,
+    "hardware_speech_enabled": False,
+    "reinforced_memory_enabled": False,
+    "cursor_size": 48,
+    "companion_personality": "warm",
+    "companion_style_notes": "",
+    "desktop_context_enabled": False,
+    "activity_memory_enabled": False,
+    "activity_retention_days": 7,
     "wake_word_threshold": 0.5,
     "voice_command_seconds": 8,
+    "voice_silence_seconds": 5,
+    "voice_max_utterance_seconds": 120,
     "sandbox_lock_settings": True,
     "avatar_enabled": True,
     "avatar_corner": "bottom-right",
+    "avatar_display": "",
     "avatar_scale": 100,
     "avatar_animation_enabled": True,
     "avatar_accent": "#4de3a7",
@@ -199,12 +219,15 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         whisper_cli=str(raw["whisper_cli"]),
         whisper_model=home / str(raw["whisper_model"]),
         whisper_language=str(raw["whisper_language"]),
+        reply_language_mode=str(raw["reply_language_mode"]),
         piper_model=home / str(raw["piper_model"]),
         piper_hindi_model=home / str(raw["piper_hindi_model"]) if raw["piper_hindi_model"] else None,
         speech_enabled=bool(raw["speech_enabled"]),
         always_listening_enabled=bool(raw["always_listening_enabled"]),
         wake_word_threshold=max(0.0, min(1.0, float(raw["wake_word_threshold"]))),
         voice_command_seconds=max(2, min(30, int(raw["voice_command_seconds"]))),
+        voice_silence_seconds=max(1, min(10, int(raw["voice_silence_seconds"]))),
+        voice_max_utterance_seconds=max(10, min(120, int(raw["voice_max_utterance_seconds"]))),
         sandbox_lock_settings=bool(raw["sandbox_lock_settings"]),
         avatar_enabled=bool(raw["avatar_enabled"]),
         avatar_corner=str(raw["avatar_corner"]),

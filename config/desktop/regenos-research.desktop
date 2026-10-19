@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=REgenOS Research
+Comment=Local cited research reports with paragraph narration
+Keywords=REgenOS;RE;Research;Reports;
+Exec=regenos-research
+Icon=regenos
+Terminal=false
+Categories=Education;
+StartupWMClass=regenos-research

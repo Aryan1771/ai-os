@@ -1,5 +1,18 @@
 # REgenOS implementation and Arch verification audit
 
+Latest native checkpoint (2026-10-19): 540 tests pass; new compact chat/steering,
+reviewed interactive jobs, optional speaker setup, language matching, source briefs,
+recoverable cleanup and mood/mouth presentation are source-tested. [HANDOFF](HANDOFF.md)
+distinguishes implementation from acceptance. No model provision, personal speaker
+enrollment, audible research walkthrough, ISO build or VM acceptance was performed.
+Older denied-socket counts below are superseded; installer/Arch acceptance stays open.
+
+2026-10-19 checkpoint: voice silence/utterance separation, language/current-turn
+routing, shared speech ownership, queued device reactions and memory decay repairs
+are source-tested; see [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md). Full suite:
+350 passed, 1 failed, 7 errors (restricted local sockets). No unchecked hardware,
+desktop, model-quality or ISO acceptance item is closed by these source results.
+
 Audit date: 2026-09-27. Scope: every checkbox in FEATURE_STATUS.md, against the
 current source and this session's measurements. This is an inventory and gap
 audit, not independent security certification. Old checkmarks mean source claims,
@@ -94,7 +107,7 @@ Source inspected: `ai_os/ai_os_core.py; tools/system_tools.py; security/consent_
 | A033 (P1) | Command assessment, subprocess timeouts, captured results and `shell=False` execution. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A034 (P1) | Risky command consent and process-termination consent. Model-supplied `approve=true` cannot approve its own request through the router. | T/H — argument/consent regression coverage; independent audit and hostile-input review pending. |
 | A035 (P1) | Background/noninteractive consent requests are denied instead of waiting on nonexistent terminal input. | T/H — argument/consent regression coverage; independent audit and hostile-input review pending. |
-| A036 (P1) | Complete autonomous planning loop with multiple tool steps, result-grounded follow-up answers, retry policies and durable task recovery. | M/I — One tool result per request; no multi-step result-grounded planner or durable recovery. |
+| A036 (P1) | Complete autonomous planning loop with multiple tool steps, result-grounded follow-up answers, retry policies and durable task recovery. | I/H — Native schemas and a tested three-step result-follow-up loop exist, with duplicate and approval stops. Durable recovery and a complete retry policy remain absent; host acceptance is pending. |
 | A037 (P1) | Native C++ conversation window, with recent-history loading and optional spoken replies using the saved Piper voice. | S/I — historical C++ implementation is not supported deployment evidence. Python conversation/memory now added; full page parity pending. |
 | A038 (P1) | Native system-action approval broker. Background risky actions still fail closed; the hub is not a privileged approval channel. | M — CLI consent only; noninteractive requests fail closed. Do not add a model-trusted confirmation flag. |
 | A039 (P1) | Native adapters for every provider's proprietary protocol. Present remote support assumes an OpenAI-compatible chat-completions schema. | M — Only Ollama/OpenAI-compatible protocols implemented. |
@@ -189,3 +202,5 @@ Source inspected: `install; scripts; systemd; archiso; .github/workflows; tests`
 | A098 (P7) | Reproducible release ISO, verified installed target system, Secure Boot policy, upgrades, rollback and recovery media. | M/I/H — No tested reproducible release, signing/rollback/update/recovery design. |
 | A099 (P7) | Partitioning/encryption/bootloader failure-path testing in disposable VMs and spare drives. | H — Requires disposable VM acceptance matrix before any spare drive; never internal Windows disk. |
 | A100 (P7) | End-to-end production readiness. Do not interpret implemented components as a fully validated autonomous OS. | I/H — Blocked by preceding runtime, security and installer work; do not mark complete. |
+
+2026-10-16 follow-up: see [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md). Language/reinforcement/device-speech/cursor source work has focused regression coverage; no hardware or ISO checkboxes promoted.

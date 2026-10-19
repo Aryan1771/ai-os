@@ -20,16 +20,17 @@ def backup_runtime(home: Path) -> Path:
         if source.is_file():
             shutil.copy2(source, target / name)
             (target / name).chmod(0o600)
-    source = home / "data/private/conversations.sqlite3"
-    if source.is_file():
-        destination = target / "conversations.sqlite3"
-        fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        os.close(fd)
-        with (
-            closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src,
-            closing(sqlite3.connect(destination)) as dst,
-        ):
-            src.backup(dst)
+    for database in ("conversations.sqlite3", "activity.sqlite3"):
+        source = home / "data/private" / database
+        if source.is_file():
+            destination = target / database
+            fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(fd)
+            with (
+                closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src,
+                closing(sqlite3.connect(destination)) as dst,
+            ):
+                src.backup(dst)
     return target
 
 

@@ -1,9 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=REgenOS Settings
+Name=REgenOS Dashboard
+GenericName=AI assistant settings
+Keywords=REgenOS;RE;AI;Assistant;Dashboard;Settings;Companion;
 Comment=AI, companion, voice and desktop settings
 Exec=regenos-settings
 Icon=regenos
 Terminal=false
-Categories=Settings;Utility;
+Categories=Utility;
 StartupWMClass=regenos-settings

@@ -14,7 +14,7 @@ moving the external SSD. Simulated tests do not certify drivers, boot or NPU use
 
 | Remaining area | Next implementation and required proof |
 | --- | --- |
-| Agent planning | Bounded tool-result loop, structured tool schemas, retries, durable task recovery and failure tests; risky execution still requires a trusted consent design. |
+| Agent planning | Native schemas/discovery and a bounded three-step tool-result loop now have regressions; host acceptance, durable task recovery and complete retry policies remain pending. See INTERACTION_HARNESS.md. |
 | Approvals | Native request display can be written here; separate service identities, authenticated IPC and privilege enforcement must be validated on Linux. |
 | Memory | Semantic retrieval, summaries, sensitive-data handling and conflict resolution; explicit offline embedding provisioning before semantic tests. |
 | Companion | Screen selection, persistent dragging, avatar packs and pixel editor; real compositor positioning needs Arch. |

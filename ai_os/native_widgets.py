@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QW
 
 from ai_os.companion_state import EMOTIONS, emotion_levels
 from ai_os.config import DEFAULT_CONFIG
-from ai_os.pixel_engine import PixelEngine
+from ai_os.pixel_engine import PixelEngine, speech_mouth_frame
 
 EMOTION_COLORS = {
     "joy": "#e8ba71",
@@ -31,32 +31,66 @@ THEMES = {
 
 def theme_stylesheet(name: str) -> str:
     bg, surface, text, muted, accent = THEMES.get(name, THEMES["graphite"])
+    light = QColor(bg).lightness() > 128
+    border = QColor(surface).darker(118).name() if light else QColor(surface).lighter(145).name()
+    hover = QColor(surface).darker(104).name() if light else QColor(surface).lighter(120).name()
+    success, warning = ("#226c50", "#8a4e18") if light else ("#9ad9b9", "#ecc18c")
     return f"""
     QWidget {{ background: {bg}; color: {text}; font-family: 'Noto Sans', 'Segoe UI'; font-size: 13px; }}
-    QLabel#product {{ font-size: 23px; font-weight: 650; }}
-    QLabel#pageTitle {{ font-size: 21px; font-weight: 600; }}
+    QLabel {{ background: transparent; }}
+    QLabel#product {{ font-size: 23px; font-weight: 600; letter-spacing: 0.3px; }}
+    QLabel#pageTitle {{ font-size: 21px; font-weight: 600; padding-bottom: 5px; }}
     QLabel#muted {{ color: {muted}; }}
-    QListWidget {{ border: none; padding: 6px; background: {surface}; }}
-    QListWidget::item {{ padding: 12px 10px; border-radius: 5px; margin: 2px 0; }}
+    QLabel[status="success"] {{ color: {success}; }}
+    QLabel[status="warning"], QLabel[status="error"] {{ color: {warning}; }}
+    QLabel[status="busy"] {{ color: {accent}; }}
+    QListWidget {{ border: none; padding: 8px 6px; background: {surface}; outline: 0; }}
+    QListWidget::item {{ padding: 10px 10px; border-radius: 6px; margin: 3px 0; }}
+    QListWidget::item:hover {{ background: {hover}; }}
     QListWidget::item:selected {{ background: {accent}; color: {bg}; }}
+    QListWidget::item:focus {{ border: 1px solid {accent}; }}
     QScrollArea, QStackedWidget {{ border: none; }}
-    QLineEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
-        background: {surface}; border: 1px solid {muted}; border-radius: 4px;
-        padding: 7px; selection-background-color: {accent}; min-height: 20px;
+    QLineEdit, QPlainTextEdit, QTextEdit, QTextBrowser, QComboBox, QSpinBox, QDoubleSpinBox {{
+        background: {surface}; border: 1px solid {border}; border-radius: 6px;
+        padding: 7px 9px; selection-background-color: {accent}; selection-color: {bg}; min-height: 20px;
     }}
-    QPushButton, QToolButton {{ background: {surface}; border: 1px solid {muted};
-        border-radius: 4px; padding: 7px 12px; min-height: 20px; }}
-    QPushButton:hover, QToolButton:hover {{ border-color: {accent}; }}
+    QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QComboBox:focus,
+    QSpinBox:focus, QDoubleSpinBox:focus {{ border-color: {accent}; }}
+    QLineEdit:disabled, QPlainTextEdit:disabled, QComboBox:disabled {{ color: {muted}; }}
+    QComboBox::drop-down {{ border: none; width: 22px; }}
+    QAbstractItemView {{ background: {surface}; border: 1px solid {border}; padding: 4px;
+        selection-background-color: {accent}; selection-color: {bg}; }}
+    QPushButton, QToolButton {{ background: {surface}; border: 1px solid {border};
+        border-radius: 6px; padding: 7px 12px; min-height: 20px; }}
+    QPushButton:hover, QToolButton:hover {{ background: {hover}; border-color: {accent}; }}
+    QPushButton:focus, QToolButton:focus {{ border-color: {accent}; }}
+    QPushButton:pressed, QToolButton:pressed {{ background: {accent}; color: {bg}; }}
     QPushButton#primary {{ background: {accent}; color: {bg}; border-color: {accent}; font-weight: 600; }}
-    QPushButton:disabled {{ color: {muted}; }}
+    QPushButton:disabled, QToolButton:disabled {{ background: {surface}; color: {muted}; border-color: {border}; }}
     QCheckBox {{ spacing: 10px; padding: 5px 0; }}
     QCheckBox::indicator {{ width: 18px; height: 18px; }}
-    QSlider::groove:horizontal {{ height: 4px; background: {surface}; }}
+    QCheckBox:focus {{ color: {accent}; }}
+    QSlider::groove:horizontal {{ height: 4px; background: {surface}; border-radius: 2px; }}
+    QSlider::sub-page:horizontal {{ background: {accent}; border-radius: 2px; }}
     QSlider::handle:horizontal {{ width: 14px; margin: -5px 0; background: {accent}; border-radius: 7px; }}
+    QSlider::handle:horizontal:focus {{ border: 1px solid {text}; }}
     QProgressBar {{ border: none; background: {surface}; border-radius: 3px; text-align: center; }}
-    QMenu {{ background: {surface}; border: 1px solid {muted}; }}
+    QProgressBar::chunk {{ background: {accent}; border-radius: 3px; }}
+    QTabWidget::pane {{ border: 1px solid {border}; border-radius: 6px; padding: 8px; }}
+    QTabBar::tab {{ padding: 8px 12px; background: {surface}; border-bottom: 2px solid transparent; }}
+    QTabBar::tab:selected {{ color: {accent}; border-bottom-color: {accent}; }}
+    QTabBar::tab:hover {{ background: {hover}; }}
+    QGroupBox {{ border: 1px solid {border}; border-radius: 7px; margin-top: 12px; padding: 12px; }}
+    QGroupBox::title {{ subcontrol-origin: margin; left: 12px; padding: 0 5px; color: {muted}; }}
+    QScrollBar:vertical {{ background: transparent; width: 9px; margin: 2px; }}
+    QScrollBar::handle:vertical {{ background: {border}; border-radius: 3px; min-height: 28px; }}
+    QScrollBar::handle:vertical:hover {{ background: {muted}; }}
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
+    QMenu {{ background: {surface}; border: 1px solid {border}; padding: 4px; }}
     QMenu::item {{ padding: 8px 16px; }}
     QMenu::item:selected {{ background: {accent}; color: {bg}; }}
+    QToolTip {{ background: {surface}; color: {text}; border: 1px solid {border}; padding: 6px; }}
     """
 
 
@@ -150,6 +184,8 @@ class CompanionCanvas(QWidget):
         self.levels = dict(DEFAULT_CONFIG["avatar_emotions"])
         self.target_levels = self.levels.copy()
         self.last_tick = time.monotonic()
+        self.speech_elapsed = 0.0
+        self.mouth_frame = None
         self.timer = QTimer(self)
         self.timer.setInterval(20)
         self.timer.timeout.connect(self.advance)
@@ -157,19 +193,35 @@ class CompanionCanvas(QWidget):
         self.set_state(self.state, self.config)
 
     def set_state(self, state: dict, config: dict) -> None:
+        if state["phase"] == "speaking" and self.state["phase"] != "speaking":
+            self.speech_elapsed = 0.0
         self.state, self.config = state, config
         self.target_levels = emotion_levels(state, config)
+        self.update_form()
+
+    def update_form(self) -> None:
+        state, config = self.state, self.config
         shape = state["shape"] if state["phase"] != "idle" else config["avatar_idle_shape"]
         custom = state.get("pixels")
         if not config["avatar_topic_morphing"]:
             shape, custom = config["avatar_idle_shape"], None
-        self.engine.set_form(shape, self.target_levels, custom)
+        self.mouth_frame = None
+        if state["phase"] == "speaking":
+            # Use a known face while talking; arbitrary task/custom patterns do
+            # not define mouth coordinates. Restore their form after speech.
+            shape, custom = "core", None
+            self.mouth_frame = (speech_mouth_frame(self.speech_elapsed)
+                                if config["avatar_animation_enabled"] and config["avatar_motion"] > 0 else 0)
+        self.engine.set_form(shape, self.target_levels, custom, mouth_open=self.mouth_frame)
 
     def advance(self) -> None:
         now = time.monotonic()
         dt, self.last_tick = min(0.05, now - self.last_tick), now
         if not self.isVisible():
             return
+        if self.state["phase"] == "speaking":
+            self.speech_elapsed += dt
+            self.update_form()
         for key in self.levels:
             self.levels[key] += (self.target_levels[key] - self.levels[key]) * min(1, dt * 5)
         self.engine.advance(

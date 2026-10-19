@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=REgenOS Chat
+Comment=Compact conversation with RE
+Keywords=REgenOS;RE;AI;Chat;Assistant;
+Exec=regenos-chat
+Icon=regenos
+Terminal=false
+Categories=Utility;
+StartupWMClass=regenos-chat

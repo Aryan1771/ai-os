@@ -1,5 +1,11 @@
 # Voice, Listening, Companion, And Settings
 
+Current additions: [voice enrollment, per-utterance English/Hindi matching and better
+voice options](VOICE_IDENTITY_AND_VOICES.md). Recognition's optional backend/model
+are not installed. Listening/filtering remain off. Base Whisper still produces poor
+Urdu-script Hindi in synthetic tests despite detecting hi. Mood guides conversational
+tone; the speaking mouth uses approximate cadence, not phoneme lip sync.
+
 Current assistant name: **RE**, spoken **R E**. The new experimental local Whisper
 wake option and current installed assets/validation are documented in
 [RE session and identity](RE_SESSION_AND_IDENTITY.md). The older openWakeWord path
@@ -11,7 +17,22 @@ The microphone is disabled by default. When enabled, the pipeline is local:
 PipeWire microphone -> openWakeWord -> temporary WAV -> Whisper.cpp -> Ollama -> Piper -> PipeWire speaker
 ```
 
-The temporary WAV is deleted after transcription. The listener will not start unless both `always_listening_enabled` and `wake_word_enabled` are true.
+The temporary WAV is deleted after transcription. Continuous capture requires
+`always_listening_enabled` plus either `wake_word_enabled` or an explicit
+`conversation_listening_enabled` opt-in. With neither activation choice, the worker
+reports `needs_activation_choice` and leaves the microphone closed. Conversation
+mode uses an energy/silence gate, not speaker verification or proven acoustic VAD.
+The native **Speak once** button authorizes a bounded capture with continuous
+listening off. See [the interaction harness](INTERACTION_HARNESS.md) for diagnostics,
+controls and current validation limits.
+
+Select **Conversation and recognition language** explicitly (English, Hindi, or
+Automatic). The current defaults wait for five seconds of silence after speech
+starts, allow up to 120 seconds per utterance, and reject an incomplete utterance
+at that bound. Both timing controls are native preferences. The final silence is
+trimmed before Whisper; recognition and model inference still follow endpointing.
+See [current interaction validation](PERSONAL_INTERACTION.md) for source tests,
+saved preferences and pending physical voice acceptance.
 
 ## 1. Install Models
 
@@ -59,7 +80,11 @@ Click the companion to reopen Settings. The same pixels travel between robot exp
 
 ## 3. Enable Voice Deliberately
 
-In the native panel, enable **Require wake word**, **Listen for wake word**, and optionally **Speak replies**. With sandbox locking enabled, the panel asks for a native protected-settings confirmation.
+In the native panel, choose **Require wake word** or explicitly opt into
+**Conversation listening without a wake word**, then enable **Enable microphone
+listening** and optionally **Speak replies**. Protected settings require native
+confirmation. The updated resident supervisor reloads these preferences; loading
+changed source into an older core process requires a reviewed service restart.
 
 Restart the daemon after saving:
 

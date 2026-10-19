@@ -40,3 +40,24 @@
 - Screen OCR is ephemeral, local-only and read-only: never pass observations to
   tool planning, saved memory or remote providers. Preserve the sharing indicator,
   pause control, lock checks and portal selection. See docs/SCREEN_AWARENESS.md.
+- Optional AT-SPI context follows the same read-only/local/ephemeral boundary;
+  it requires its own native opt-in and must stop on lock or permission revocation.
+- App usage memory is a separate opt-in: app names/time estimates only, bounded
+  retention and explicit inspect/clear controls. Never add keystroke/clipboard capture.
+- Broad command grants require the Bubblewrap boundary; never silently fall back
+  to ordinary execution. Tool discovery changes available schemas, never permissions.
+
+- Reinforced memory stores only bounded, opt-in repeated user statements as untrusted
+  reference data. Preserve session scope, decay, inspection, forget/clear revision guards
+  and pre-migration private backups; never promote assistant claims into facts.
+- Keep speech wait, ending silence and maximum utterance separate. Incomplete audio
+  must not submit partial commands. Selected mode follows saved language; match mode
+  uses current Whisper metadata, with unknown language failing closed. Share speech leases.
+- Speaker embeddings are private conversation filters, not command/login approval;
+  never record, enable filtering or download assets implicitly. Recognition is not cloning.
+- Public progress exposes tool names/status, never private internal reasoning,
+  arguments, passwords or screen text. Mood affects tone, never facts or consent.
+- Cleanup uses native previews/recoverable Trash; reuse only explicitly approved
+  directory/pattern/inode rules. Never infer broad deletion consent from past actions.
+- Research sends only reviewed topics to fixed public APIs. Keep citations real,
+  distinguish metadata/excerpts from verified findings, and keep explanations local.

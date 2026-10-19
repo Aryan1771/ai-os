@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import os
 import re
 import shutil
 import subprocess
@@ -46,16 +47,23 @@ class SpeechQueue:
         self.last_error: str | None = None
         self._queue: queue.PriorityQueue[tuple[int, int, SpeechItem]] = queue.PriorityQueue()
         self._counter = 0
+        self._pending = 0
         self._stop = threading.Event()
         self._speaking = threading.Event()
         self.on_activity = on_activity or (lambda _phase, _text, _avatar: None)
 
     def is_speaking(self) -> bool:
-        return self._speaking.is_set()
+        # A queued reply already owns the output turn. Otherwise the listener can
+        # reopen between enqueue and the worker starting Piper, capturing its reply.
+        with self._counter_lock:
+            return self._speaking.is_set() or self._pending > 0
 
     def enqueue(self, text: str, priority: int = 10, *, avatar: dict | None = None) -> None:
         with self._counter_lock:
+            if self._stop.is_set():
+                return
             self._counter += 1
+            self._pending += 1
             self._queue.put(
                 (priority, self._counter, SpeechItem(text=text, priority=priority, avatar=avatar))
             )
@@ -65,6 +73,16 @@ class SpeechQueue:
 
     def stop(self) -> None:
         self._stop.set()
+        # Cancel unheard replies instead of leaving a stale backlog available to
+        # a stopped queue. The current bounded playback finishes separately.
+        with self._counter_lock:
+            while True:
+                try:
+                    self._queue.get_nowait()
+                except queue.Empty:
+                    break
+                self._pending -= 1
+                self._queue.task_done()
 
     def sentence_chunks(self, text: str) -> Iterable[str]:
         for chunk in re.split(r"(?<=[.!?।])\s+", text.strip()):
@@ -86,7 +104,7 @@ class SpeechQueue:
         if not text.strip() or len(text) > 8000:
             raise ValueError("Speech text must contain 1-8000 characters.")
         # WAV metadata supplies each voice's real sample rate; no fixed raw PCM rate.
-        with tempfile.TemporaryDirectory(prefix="regenos-speech-") as directory:
+        with tempfile.TemporaryDirectory(prefix="regenos-speech-", dir=os.environ.get("AI_OS_VOICE_TMP")) as directory:
             output = Path(directory) / "speech.wav"
             subprocess.run(
                 [
@@ -145,6 +163,8 @@ class SpeechQueue:
                 self.on_activity("error", "Speech playback failed", None)
             finally:
                 self._speaking.clear()
+                with self._counter_lock:
+                    self._pending -= 1
                 if not failed:
                     self.last_error = None
                     self.on_activity("idle", "", None)

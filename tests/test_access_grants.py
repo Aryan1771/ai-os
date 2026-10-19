@@ -110,6 +110,44 @@ def test_timed_scope_allows_new_file_pins_executable_and_blocks_overwrite(store,
     assert store.consume("default", {"command": ["touch", str(tmp_path/"config.json")]}) is None
 
 
+@pytest.mark.parametrize("argv", [
+    ["ls", "Documents"], ["bash", "-c", "printf ok"], ["rm", "-f", "/tmp/user-file"],
+])
+def test_explicit_user_grant_allows_ordinary_account_commands(store, argv):
+    request = store.request("default", {"kind": "user", "seconds": 60})
+    store.confirm("default", request["token"], human_confirmed=True)
+    result = store.consume("default", {"command": argv})
+    assert result["command"] == argv
+    assert result["user_sandbox"] is True
+
+
+@pytest.mark.parametrize("argv", [
+    ["sudo", "pacman", "-S", "x"], ["pkexec", "id"], ["mount", "/dev/sda1", "/mnt"],
+    ["wipefs", "/dev/nvme0n1"], ["dd", "if=/dev/zero", "of=/dev/sda"],
+    ["rm", "-rf", "/"],
+])
+def test_explicit_user_grant_keeps_elevation_and_disk_barriers(store, argv):
+    request = store.request("default", {"kind": "user", "seconds": 60})
+    store.confirm("default", request["token"], human_confirmed=True)
+    try:
+        result = store.consume("default", {"command": argv})
+    except ValueError:
+        result = None
+    assert result is None
+
+
+def test_broad_command_runner_uses_bubblewrap_and_no_privilege_gain():
+    from pathlib import Path
+    from ai_os.unprivileged_command import bubblewrap_argv
+
+    argv = bubblewrap_argv(["/usr/bin/id"], Path.home(), Path.home())
+    assert argv[0].endswith("bwrap")
+    assert "--unshare-user" in argv and "--unshare-pid" in argv
+    assert argv[argv.index("--dev") + 1] == "/dev"
+    assert argv[argv.index("--ro-bind") + 1:argv.index("--ro-bind") + 3] == ["/", "/"]
+    assert "/run/dbus" in argv and "/run/user" in argv
+
+
 def test_speech_request_is_pending_not_model_granted(store, monkeypatch):
     monkeypatch.setattr(core.sys.stdin, "isatty", lambda: False)
     monkeypatch.setattr(core, "ask_ollama", lambda *a, **k: pytest.fail("Grant parsing must not use model"))
