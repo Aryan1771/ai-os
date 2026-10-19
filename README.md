@@ -33,6 +33,10 @@ and [speaker setup/language matching/voice choices](docs/VOICE_IDENTITY_AND_VOIC
 These features have automated coverage; personal voice recognition, broad hardware
 acceptance and an installable ISO remain pending.
 
+The companion now uses an original blue particle hologram with topic morphing
+and a speech waveform. [GitHub MCP access](docs/GITHUB_MCP.md) provides scoped,
+read-only repository results in native chat, with separate controls in Permissions.
+
 Native chat can open supported applications such as Brave, inspect installed
 command manuals and request per-command approval through the optional full
 command access setting. See [command access, emotions and knowledge refresh](docs/COMMAND_ACCESS.md).

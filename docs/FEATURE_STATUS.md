@@ -1,12 +1,15 @@
 # REgenOS Feature Checklist
 
-Latest 2026-10-19: **540 tests pass**, correctness lint passes. [Compact chat, reports, cleanup rules, activity and mouth animation](RESEARCH_AND_CLEANUP.md)
+Latest 2026-10-19: **603 tests pass**, correctness lint passes. [Compact chat, reports, cleanup rules, activity and mouth animation](RESEARCH_AND_CLEANUP.md)
 and [speaker enrollment/reply language](VOICE_IDENTITY_AND_VOICES.md) are source-tested.
-Speaker backend/model and physical recognition remain unprovisioned; Hindi base
+Approved speaker backend/model are provisioned and synthetic extraction passes;
+the owner completed enrollment after retries. Personal recognition accuracy remains
+unverified. Blue hologram/source morphs and scoped [GitHub MCP reading](GITHUB_MCP.md)
+are implemented; real native greeting and model-to-GitHub read smokes passed. Hindi base
 transcription quality remains problematic. Cursor readback is now 64. Older counts
 below are historical; no ISO/hardware acceptance checkbox is closed by these tests.
 
-2026-10-19 voice/hardware checkpoint: configurable five-second silence and separate
+Earlier 2026-10-19 restricted-executor voice/hardware checkpoint: configurable five-second silence and separate
 utterance limit, selected-language/current-turn guidance, coordinated speech,
 queued hardware reactions and reinforcement-expiry repair are source-tested.
 134 focused tests pass; full suite: 350 passed, 1 failed, 7 errors (local socket restrictions).
@@ -53,10 +56,10 @@ Updated 2026-09-26. Checked items mean implemented in this repository, not certi
 - [x] Save/revert preferences; validate values before an atomic config write; keep existing nested defaults when upgrading older configs.
 - [x] Native transparent corner companion, shown/hidden from Settings; independent lifetime after closing Settings; click to reopen Settings; context-menu hide.
 - [x] Single-instance protection for both applications. Reopening Settings raises the existing window using user-local IPC.
-- [x] Pixel robot rendered in real time with a bounded 2D particle system. Persistent pixels travel between shapes; spring damping and waves create fluid-looking transitions.
-- [x] Twelve built-in forms: core robot, heart, music, code, idea, cloud, gear, shield, folder, chip, search and clock.
+- [x] Original blue holographic core rendered with a bounded persistent 2D particle system, segmented rings and spring/wave transitions. Native Sky/Ice/Electric shades are source-tested; physical desktop acceptance remains pending.
+- [x] Twelve built-in forms: holographic core, heart, music, code, idea, cloud, gear, shield, folder, chip, search and clock.
 - [x] Additional forms can come from model-generated 4-24-cell-wide/high pixel patterns. Only a small fixed character palette is accepted; malformed patterns are ignored.
-- [x] Face changes from emotional state, including happy, concerned, focused, low-energy and curious variants.
+- [x] Simulated mood affects presentation; speaking drives a blue aperture/waveform while preserving the current topic shape. No cartoon face or phoneme lip sync.
 - [x] Six emotion bars: joy, curiosity, focus, calm, concern and energy. Baseline sliders, reactivity control and smoothly changing live values are implemented.
 - [x] Corner, scale, color, fluid-motion intensity, animation enable, resting form, topic morphing and visible-bar preferences update in the running overlay.
 - [x] Activity states connected to wake-word readiness, capture, transcription, model requests, tool execution, response, speech and errors.

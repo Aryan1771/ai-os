@@ -1,10 +1,14 @@
 # REgenOS implementation and Arch verification audit
 
-Latest native checkpoint (2026-10-19): 540 tests pass; new compact chat/steering,
+Latest native checkpoint (2026-10-19): 603 tests pass; new compact chat/steering,
 reviewed interactive jobs, optional speaker setup, language matching, source briefs,
 recoverable cleanup and mood/mouth presentation are source-tested. [HANDOFF](HANDOFF.md)
-distinguishes implementation from acceptance. No model provision, personal speaker
-enrollment, audible research walkthrough, ISO build or VM acceptance was performed.
+distinguishes implementation from acceptance. Approved speaker assets are installed
+and synthetic extraction passes; no agent microphone enrollment, audible research
+walkthrough, ISO build or VM acceptance was performed.
+The owner reports saved voice enrollment after retries; recognition accuracy is
+still unverified. Blue hologram/native shade controls and scoped GitHub MCP reads
+are source-tested; native greeting and live model-to-GitHub reads passed.
 Older denied-socket counts below are superseded; installer/Arch acceptance stays open.
 
 2026-10-19 checkpoint: voice silence/utterance separation, language/current-turn
@@ -88,7 +92,7 @@ Source inspected: `ai_os/native_settings.py; native_widgets.py; avatar_overlay.p
 | A020 (P4) | Unrestricted high-quality conversion of every possible topic into artwork. Custom grids are supported, but model artistry/reliability is not guaranteed. | M/H — Bounded pixel grids exist; unrestricted quality is not a realistic completion guarantee. |
 | A021 (P4) | Physical liquid simulation. The current renderer is a controlled spring/wave animation. | M — Spring/wave renderer exists; physical simulation absent and optional. |
 | A022 (P4) | Pure Wayland layer-shell overlay. Current corner placement uses X11 or XWayland; validate placement and pinning on the installed compositor. | M/H — No layer-shell adapter; XWayland rendering smoke passed, compositor placement pending. |
-| A023 (P4) | Arbitrary multi-monitor selection, drag-to-place persistence, avatar packs, and a visual pixel editor. | M/H — Primary screen placement only; selector, drag persistence and editors absent. |
+| A023 (P4) | Arbitrary multi-monitor selection, drag-to-place persistence, avatar packs, and a visual pixel editor. | S/M/H — Display selector, cross-display drag and persistence now have synthetic coverage; physical acceptance pending. Avatar packs/editor absent. |
 | A024 (P4) | Complete replacement of every Linux desktop environment's settings application. | M — No universal desktop settings adapters; constrain supported scope. |
 ### AI And Tool Execution
 

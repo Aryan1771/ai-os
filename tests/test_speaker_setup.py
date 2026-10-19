@@ -170,3 +170,88 @@ def test_capture_requires_click_and_is_private_and_time_bounded(app, tmp_path, r
     window.reject()
     assert not directory.exists()
     assert not window.capture_timer.isActive()
+
+
+def test_enrollment_waits_for_other_ai_audio_without_recording(app, tmp_path, ready):
+    from ai_os.speech_lease import speech_lease
+    window = setup.SpeakerSetupDialog(tmp_path)
+    window.consent.setChecked(True)
+    with speech_lease(tmp_path) as acquired:
+        assert acquired
+        window.record()
+        assert window.process is None and window.temporary is None
+        assert "using audio" in window.status.text()
+    window.reject()
+    with speech_lease(tmp_path) as acquired:
+        assert acquired
+
+
+@pytest.mark.parametrize("failure", ["directory", "permissions", "start", "failed_signal"])
+def test_record_setup_failure_releases_audio_and_preserves_profile(
+    app, tmp_path, ready, monkeypatch, failure,
+):
+    from pathlib import Path
+    from PySide6.QtCore import QProcess
+    from ai_os.speech_lease import speech_lease
+
+    saved = profile_path(tmp_path)
+    saved.parent.mkdir(parents=True)
+    previous_profile = b"existing synthetic profile: must remain untouched"
+    saved.write_bytes(previous_profile)
+    config_path = tmp_path / "config.json"
+    previous_config = json.loads(config_path.read_text())
+    previous_config["speaker_threshold"] = .82
+    config_path.write_text(json.dumps(previous_config))
+    config_before = config_path.read_bytes()
+
+    window = setup.SpeakerSetupDialog(tmp_path)
+    window.consent.setChecked(True)
+    window.enrollment.add([1.0] + [0.0] * 31)
+    private_error = "private filesystem path or recorder diagnostics"
+    directories = []
+    temporary_directory = setup.tempfile.TemporaryDirectory
+
+    def make_directory(*args, **kwargs):
+        if failure == "directory":
+            raise OSError(private_error)
+        result = temporary_directory(*args, dir=tmp_path, **kwargs)
+        directories.append(Path(result.name))
+        return result
+
+    monkeypatch.setattr(setup.tempfile, "TemporaryDirectory", make_directory)
+    if failure == "permissions":
+        chmod = setup.os.chmod
+
+        def fail_permissions(path, mode, *args, **kwargs):
+            if Path(path).name.startswith("regenos-speaker-"):
+                raise PermissionError(private_error)
+            return chmod(path, mode, *args, **kwargs)
+
+        monkeypatch.setattr(setup.os, "chmod", fail_permissions)
+
+    class FailingProcess(QProcess):
+        def start(self, program, arguments):
+            if failure == "failed_signal":
+                self.errorOccurred.emit(QProcess.ProcessError.FailedToStart)
+            else:
+                raise RuntimeError(private_error)
+
+    monkeypatch.setattr(setup, "QProcess", FailingProcess)
+    window.record()
+
+    assert private_error not in window.status.text()
+    assert "no profile was changed" in window.status.text().lower()
+    assert window.phase == "idle"
+    assert window.process is None and window.temporary is None
+    assert window.audio_path is None and window.speech_guard is None
+    assert not window.raw and not window.output
+    assert not window.capture_timer.isActive()
+    assert not window.kill_timer.isActive() and not window.worker_timer.isActive()
+    assert window.record_button.isEnabled()
+    assert len(window.enrollment.samples) == 1
+    assert saved.read_bytes() == previous_profile
+    assert config_path.read_bytes() == config_before
+    assert not any(path.exists() for path in directories)
+    with speech_lease(tmp_path) as acquired:
+        assert acquired
+    window.reject()

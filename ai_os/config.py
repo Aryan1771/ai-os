@@ -102,7 +102,7 @@ DEFAULT_CONFIG = {
     "avatar_display": "",
     "avatar_scale": 100,
     "avatar_animation_enabled": True,
-    "avatar_accent": "#4de3a7",
+    "avatar_accent": "#4daaff",
     "avatar_motion": 65,
     "avatar_reactivity": 75,
     "avatar_show_emotion_bars": False,

@@ -5,29 +5,41 @@ from dataclasses import dataclass
 
 from ai_os.companion_state import validate_pixels
 
-# Each material remains a discrete pixel while the same particles change targets.
+def _hologram_core() -> str:
+    """Original segmented energy core; geometry is data, never a face or asset."""
+    rows = []
+    for y in range(-11, 12):
+        row = []
+        for x in range(-11, 12):
+            radius = math.hypot(x, y)
+            angle = math.atan2(y, x) % (2 * math.pi)
+            quadrant = angle % (math.pi / 2)
+            third = (angle + .23) % (2 * math.pi / 3)
+            material = "."
+            if 9.5 <= radius <= 10.6 and .12 < quadrant < 1.38:
+                material = "#"
+            elif 7.0 <= radius <= 7.8 and .12 < third < 1.86:
+                material = "+"
+            elif 4.3 <= radius <= 5.2:
+                material = "#" if quadrant < .55 else "+"
+            elif 5.8 < radius < 8.8 and abs(abs(x) - abs(y)) < .25:
+                material = "o"
+            elif radius < 2.4:
+                material = "*" if radius < 1.2 else "+"
+            if (abs(x) == 11 and y == 0) or (abs(y) == 11 and x == 0):
+                material = "+"
+            # A stable central lattice supports the speaking aperture without
+            # spawning new particles or introducing cartoon facial features.
+            if abs(y) <= 1 and abs(x) <= 3:
+                material = "+" if y == 0 else "o"
+            row.append(material)
+        rows.append("".join(row))
+    return "\n".join(rows)
+
+
+# Each material remains a discrete particle while the same particles change targets.
 FORMS = {
-    "core": """
-..........**..........
-..........**..........
-.......########.......
-.....############.....
-....###++++++++###....
-....##++++++++++##....
-..####++oo++oo++####..
-..####++oo++oo++####..
-..####++++++++++####..
-....##++++oo++++##....
-....###++++++++###....
-.....############.....
-........######........
-.....###******###.....
-....####**++**####....
-....####******####....
-.....############.....
-.......###..###.......
-......####..####......
-""",
+    "core": _hologram_core(),
     "heart": """
 ...####...####...
 ..######.######..
@@ -173,28 +185,27 @@ def speech_mouth_frame(elapsed: float) -> int:
 
 def target_pixels(shape: str, levels: dict[str, float], custom: list[str] | None = None,
                   *, mouth_open: int | None = None):
-    rows = validate_pixels(custom) or FORMS.get(shape, FORMS["core"]).strip().splitlines()
+    validated = validate_pixels(custom)
+    rows = validated or FORMS.get(shape, FORMS["core"]).strip().splitlines()
     grid = [list(row) for row in rows]
-    if shape == "core" and not custom:
-        # Face pixels are replaced in the lattice, not overpainted onto the body.
+    if shape == "core" and not validated:
+        # Mood changes the energy distribution, never the number of particles.
         if levels.get("concern", 0) > 55:
-            grid[6][8:14] = list("o++++o")
-            grid[9][9:13] = list("oooo")
+            grid[11][8:15] = list("o++*++o")
         elif levels.get("joy", 0) > 55:
-            grid[6][8:14] = list("oo++oo")
-            grid[7][8:14] = list("++++++")
-            grid[9][9:13] = list("oooo")
+            grid[11][8:15] = list("+*****+")
         elif levels.get("focus", 0) > 75:
-            grid[7][8:14] = list("++++++")
+            grid[11][8:15] = list("++***++")
         elif levels.get("energy", 45) < 25:
-            grid[6][8:14] = list("++++++")
+            grid[11][8:15] = list("ooo+ooo")
         elif levels.get("curiosity", 0) > 65:
-            grid[6][8:14] = list("o+++oo")
-            grid[9][9:13] = list("+oo+")
+            grid[11][8:15] = list("*++*++*")
         if mouth_open is not None:
             openness = max(0, min(2, int(mouth_open)))
-            grid[9][9:13] = list("+oo+" if openness == 0 else "oooo")
-            grid[10][9:13] = list("+oo+" if openness == 2 else "++++")
+            grid[11][8:15] = list(("o++*++o", "+*****+", "*******")[openness])
+            grid[10][8:15] = grid[12][8:15] = list(
+                ("ooooooo", "oo+++oo", "+*+*+*+")[openness]
+            )
     width, height = max(map(len, grid)), len(grid)
     return [
         (x - (width - 1) / 2, y - (height - 1) / 2, cell)
@@ -226,17 +237,20 @@ class PixelEngine:
         self.signature = None
         self._geometry = None
         self._target_particles: list[Pixel] = []
+        self.core_form = True
+        self.orbit_elapsed = 0.0
 
     def set_form(self, shape: str, levels: dict[str, float], custom=None,
                  *, mouth_open: int | None = None) -> None:
         targets = target_pixels(shape, levels, custom, mouth_open=mouth_open)
+        self.core_form = shape == "core" and validate_pixels(custom) is None
         signature = tuple(targets)
         if signature == self.signature:
             return
         self.signature = signature
         geometry = tuple((x, y) for x, y, _material in targets)
         if geometry == self._geometry:
-            # Speech changes face colors, not geometry: keep the particle map
+            # Speech changes aperture energy, not geometry: keep the particle map
             # instead of doing a quadratic nearest-neighbor morph per syllable.
             for pixel, (_x, _y, material) in zip(self._target_particles, targets):
                 pixel.material = material
@@ -265,6 +279,8 @@ class PixelEngine:
     def advance(self, dt: float, motion: float = 0.65, animate: bool = True) -> None:
         dt = max(0, min(0.05, dt))
         self.elapsed += dt
+        if animate and motion > 0:
+            self.orbit_elapsed += dt * max(0, min(1, motion))
         # Substeps keep spring integration stable after a delayed desktop frame.
         count = max(1, math.ceil(dt / 0.012))
         step = dt / count
@@ -277,8 +293,17 @@ class PixelEngine:
                     continue
                 ripple = math.sin(self.elapsed * 2.6 + pixel.ty * 0.3) * motion * 0.16
                 sway = math.cos(self.elapsed * 2.0 + pixel.tx * 0.25) * motion * 0.12
-                pixel.vx += ((pixel.tx + ripple - pixel.x) * 100 - pixel.vx * 14) * step
-                pixel.vy += ((pixel.ty + sway - pixel.y) * 100 - pixel.vy * 14) * step
+                target_x, target_y = pixel.tx, pixel.ty
+                radius = math.hypot(target_x, target_y)
+                if self.core_form and pixel.active and radius > 4.2 and motion > 0:
+                    # Counter-rotating layers maintain the same particle objects.
+                    # A model-provided pattern never enters this geometry path.
+                    speed = .12 if radius > 9 else -.19 if radius > 6 else .25
+                    angle = self.orbit_elapsed * speed
+                    target_x, target_y = (target_x * math.cos(angle) - target_y * math.sin(angle),
+                                          target_x * math.sin(angle) + target_y * math.cos(angle))
+                pixel.vx += ((target_x + ripple - pixel.x) * 100 - pixel.vx * 14) * step
+                pixel.vy += ((target_y + sway - pixel.y) * 100 - pixel.vy * 14) * step
                 pixel.x += pixel.vx * step
                 pixel.y += pixel.vy * step
                 pixel.opacity += (float(pixel.active) - pixel.opacity) * min(1, step * 8)

@@ -1,8 +1,87 @@
-# REgenOS handoff — 2026-09-27
+# REgenOS handoff — 2026-10-19
+
+## Blue hologram and GitHub MCP checkpoint — 2026-10-19
+
+**603 tests passed in 9.44s**; correctness Ruff, whitespace, native installer shell
+syntax and Chat/Research desktop validation passed. Source/remote baseline was
+merged and pushed as `af5b8b4`; this follow-up preserves the unrelated
+`:memory:.ses`. No ISO or VM was built, no release/artifact was published.
+
+- Replaced the cartoon core with original segmented blue particle rings, an
+  animated energy aperture and speech waveform. Persistent particles still morph
+  into built-in/topic/custom shapes. Native Sky/Ice/Electric shade controls work;
+  invalid/non-blue legacy choices render as Sky. Existing blue shade is preserved.
+  Gracefully reloaded only the ordinary companion app with `--show`; process is
+  running, visibility preference true. Physical appearance/monitor acceptance pending.
+- Installed the checksum-verified official GitHub MCP server v2.0.2 outside Git.
+  Following the user's request, enabled reads only for `Aryan1771/ai-os`.
+  Permissions has a separate exact-repository default-No opt-in and Disable button.
+  Branch/README protocol smokes and a real local-model → `github_read` → ephemeral
+  result passed (2.00s). Account content never enters another model turn, saved
+  chat, automatic memory, action planning or automatic spoken content. Existing
+  Codex GitHub connector metadata read passed; no duplicate client configuration.
+  See [provenance, commands and limits](GITHUB_MCP.md).
+- Real native smoke used temporary settings/history, nine pages and XWayland/xcb:
+  greeting completed, companion visible, 5.60s total. Sampled whole-GPU usage
+  peaked at **4707 MiB** across 25 samples (~200ms intervals). RTX 4060 Laptop,
+  driver 615.78.08, 8188 MiB reported total; initial reading 41 MiB. This is one
+  synthetic greeting, not the peak of concurrent voice/STT/TTS or a universal budget.
+- Readiness now reports the saved profile present (0600); its inode/size/mtime
+  were unchanged across companion reload. Listening/filtering stayed off, PipeWire
+  ready/unmuted, core active, local model reachable. No additional service change,
+  privileged install, driver, boot, firewall or disk operation occurred here.
+  `pip check` still reports the pre-existing openWakeWord/tflite-runtime dependency
+  gap; the selected RE/Whisper wake path is separate. The venv is not dependency-clean.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q --tb=short
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests
+git diff --check
+bash -n scripts/install_native_desktop.sh
+desktop-file-validate config/desktop/regenos-chat.desktop config/desktop/regenos-research.desktop
+~/.ai_os/venv/bin/python scripts/verify_native_runtime.py
+nvidia-smi --query-gpu=name,driver_version,memory.total,memory.used --format=csv,noheader,nounits
+~/.ai_os/venv/bin/python -m ai_os.github_mcp --status
+~/.ai_os/venv/bin/python -m ai_os.companion_control
+~/.ai_os/venv/bin/python -m ai_os.avatar_overlay --show
+~/.ai_os/venv/bin/python -m ai_os.runtime_health
+```
+
+The GPU sampler ran `nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits`
+with a two-second subprocess bound every ~200ms around the native smoke. GitHub
+reads withheld returned account text from development output; no token or private
+recording/profile contents were printed. See [acceptance](ARCH_ACCEPTANCE.md) for
+the remaining physical voice/desktop checks. Hindi transcription quality remains
+a known blocker. Do not proceed to ISO release work on this evidence alone.
+
+## Speaker enrollment feedback repair — 2026-10-19
+
+The owner reports that all five samples were accepted after two or three retries
+and the voice profile was saved. This is owner-confirmed enrollment completion,
+not measured recognition accuracy. Preserve the profile and selected threshold;
+no agent recorded, inspected personal samples/embeddings, or lowered the threshold.
+English/Hindi acceptance, false matches, replay resistance and everyday microphone
+performance remain unverified. Speaker filtering still requires its separate opt-in
+and never authorizes commands, sudo or login.
+
+The wizard previously replaced safe voice-difference/model-change errors with a
+generic backend/microphone message. It now keeps accepted samples, shows their
+count and the specific safe retry reason. Extraction workers emit only fixed
+public error codes/messages; raw backend diagnostics and private paths stay hidden.
+Synthetic regressions cover consistent 512-dimensional enrollment, held-out
+nonmatches, changed models and malformed worker output. They do not establish
+personal speaker accuracy. The focused identity/setup/filter/regression run passed:
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q \
+  tests/test_speaker_identity.py tests/test_speaker_setup.py \
+  tests/test_speaker_filter.py tests/test_speaker_verification_regression.py --tb=short
+# 54 passed after recording-setup failure cleanup coverage
+```
 
 ## Native interaction and voice identity — 2026-10-19
 
-Latest evidence supersedes older executor restrictions below: **540 tests pass**,
+Latest evidence supersedes older executor restrictions below: **603 tests pass**,
 correctness Ruff passes. The private PTY helper now establishes its terminal in a fresh process, avoiding
 forkpty in the Qt-threaded test runner. See [research/chat/cleanup](RESEARCH_AND_CLEANUP.md)
 and [voice identity/voice choices](VOICE_IDENTITY_AND_VOICES.md) for controls/limits.
@@ -12,8 +91,11 @@ and [voice identity/voice choices](VOICE_IDENTITY_AND_VOICES.md) for controls/li
   and stale callback guards. Disk/boot/shell/script/OS restrictions remain.
 - Native speaker wizard records four explicitly requested styles plus a fresh fifth
   check, saves only a private embedding, and requires a separate filtering opt-in.
-  Per-utterance matching has a ten-second worker bound. Backend/model/profile are
-  absent; physical recognition is pending. No audio samples/models were captured/downloaded.
+  Per-utterance matching has a ten-second worker bound. After explicit user approval,
+  sherpa-onnx/core 1.13.8 and the 29,596,978-byte CAMPPlus English candidate were
+  provisioned. Synthetic extraction passes (512 dimensions, 0.448s); English/Hindi
+  matching accuracy remains pending. The owner subsequently completed enrollment
+  as recorded above; no agent microphone capture or personal enrollment.
 - Added current-utterance en/hi metadata routing. Saved match mode after private
   backup `~/.ai_os/backups/pre-migration-pxk4b770`, preserving English fallback,
   listening off, speaker filter off and the already-supervised command mode. No grant
@@ -51,7 +133,25 @@ systemctl --user restart ai-os.service
 systemctl --user is-active ai-os.service
 ```
 
-The sherpa dry run resolved compatible 1.13.8/core wheels; it did not install them.
+The initial dry run resolved compatible 1.13.8/core wheels. The user subsequently
+approved installing them and downloading the official speaker model:
+
+```bash
+~/.ai_os/venv/bin/python -m pip install --no-cache-dir sherpa-onnx==1.13.8
+gh release download speaker-recongition-models --repo k2-fsa/sherpa-onnx \
+  --pattern 3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx --dir ~/.ai_os/models
+~/.ai_os/venv/bin/python -m ai_os.speaker_setup
+```
+
+Model SHA256: `357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b`.
+The release had no published asset digest; size/source/local hash were checked,
+not an independent publisher checksum. Model preference saved after private backup
+`~/.ai_os/backups/pre-migration-rctjzwx8`, leaving listening/filtering off. The native
+wizard was opened for explicit consent/Record; the owner later confirmed saving
+the profile after retries. No automatic enrollment or filtering activation.
+Stale ignored source egg-info shadowed newly installed metadata; refreshed it with
+`from setuptools import setup; setup(script_args=['egg_info'])`. All four native
+entry points are visible from the checkout and installed venv.
 `pip check` still reports the pre-existing openwakeword→tflite-runtime dependency
 gap; the selected RE/Whisper path is separate. Do not claim the venv is dependency-clean.
 New bridge requests import current source. Reopen Settings/corner companion for

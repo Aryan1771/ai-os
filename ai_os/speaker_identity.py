@@ -40,6 +40,22 @@ class SpeakerError(ValueError):
     """A safe, user-facing speaker setup error."""
 
 
+EXTRACTION_ERRORS = {
+    "audio_silent": "No clear speech was recorded. Check the microphone and try again.",
+    "audio_clipping": "The microphone is clipping. Lower its level and retry.",
+    "audio_format": "Speaker samples must be 16 kHz mono, 16-bit PCM WAV.",
+    "audio_short": "Record between one and 150 seconds of speech.",
+    "audio_incomplete": "The recording is incomplete.",
+    "audio_unreadable": "The speaker recording could not be read.",
+    "speech_too_short": "The sample did not contain enough speech for speaker matching.",
+    "model_unreadable": "The local speaker model cannot be read.",
+    "model_invalid": "This file is not a supported speaker embedding ONNX model.",
+    "model_load": "The local speaker embedding model could not be loaded.",
+    "backend_missing": "Optional sherpa-onnx and numpy are missing from the venv; nothing was downloaded.",
+    "extraction_failed": "Speaker extraction failed; check the model, backend and microphone sample.",
+}
+
+
 def normalized(values: Iterable[float]) -> list[float]:
     vector = [float(value) for value in values]
     if not 16 <= len(vector) <= MAX_DIMENSION or not all(math.isfinite(v) for v in vector):
@@ -333,8 +349,12 @@ def main() -> int:
         vector = encoder(audio)
         print(json.dumps({"embedding": vector, "model_sha256": encoder.digest}, allow_nan=False))
         return 0
-    except Exception:
-        print(json.dumps({"error": "Speaker extraction failed; check the model, backend and microphone sample."}))
+    except Exception as exc:
+        # Return only a fixed public code/message. Never expose native backend
+        # diagnostics, paths, recordings or a partial embedding on failure.
+        code = next((key for key, message in EXTRACTION_ERRORS.items()
+                     if isinstance(exc, SpeakerError) and str(exc) == message), "extraction_failed")
+        print(json.dumps({"code": code, "error": EXTRACTION_ERRORS[code]}))
         return 1
 
 

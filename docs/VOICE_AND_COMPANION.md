@@ -1,8 +1,9 @@
 # Voice, Listening, Companion, And Settings
 
 Current additions: [voice enrollment, per-utterance English/Hindi matching and better
-voice options](VOICE_IDENTITY_AND_VOICES.md). Recognition's optional backend/model
-are not installed. Listening/filtering remain off. Base Whisper still produces poor
+voice options](VOICE_IDENTITY_AND_VOICES.md). Recognition's approved backend/model
+are installed and synthetic extraction passes; personal matching is pending.
+Listening/filtering remain off. Base Whisper still produces poor
 Urdu-script Hindi in synthetic tests despite detecting hi. Mood guides conversational
 tone; the speaking mouth uses approximate cadence, not phoneme lip sync.
 
@@ -76,7 +77,11 @@ Enable **Show corner companion**, then save. To start its resident process manua
 ~/.ai_os/venv/bin/regenos-companion
 ```
 
-Click the companion to reopen Settings. The same pixels travel between robot expressions, twelve built-in silhouettes and optional model-generated pixel grids. Activity and speech events change its appearance and six simulated emotion channels. The emotion baseline, response strength and motion intensity are editable in Settings.
+Click the companion to reopen Settings. The same blue particles travel between
+the segmented holographic core, twelve built-in forms and optional model-generated
+pixel grids. Speaking drives the core aperture and a waveform without discarding
+the topic form. Activity affects six simulated emotion channels. Baselines,
+response strength, motion and blue shade are editable in Settings.
 
 ## 3. Enable Voice Deliberately
 

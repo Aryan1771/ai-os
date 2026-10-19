@@ -1,5 +1,20 @@
 # Current runtime inspection — 2026-10-16
 
+2026-10-19 follow-up: source/remote history reconciled and pushed; final 603-test
+suite passes. Approved speaker assets are installed (synthetic extraction passed),
+the approved core restart is active with listening off, and cursor readback is 64.
+New Chat/Research launchers are installed. See [HANDOFF](HANDOFF.md) for commands,
+model hash and remaining physical acceptance. No reinstall, ISO build or VM/disk
+operation occurred. The inventory below is historical evidence from October 16;
+its DNS/socket/provisioning limitations are not the current state.
+
+Latest native xcb greeting smoke passed (nine pages, temporary history); sampled
+GPU peak 4707 MiB during that request, driver 615.78.08/8188 MiB total. This is
+not a concurrent audio/GPU budget acceptance. The owner reports saved voice
+enrollment after retries. Blue companion reloaded; official GitHub MCP v2.0.2
+reads are enabled only for ai-os and passed a real local-model route. No new
+service/privileged/boot/disk changes in this follow-up.
+
 Scope: read-only inventory and source repairs, not a reinstall or ISO build.
 Baseline branch `main`, commit `82de882`; existing interrupted edits and unrelated
 untracked `:memory:.ses` were preserved. Cached `origin/main` is also `82de882`.

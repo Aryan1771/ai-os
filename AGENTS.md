@@ -61,3 +61,6 @@
   directory/pattern/inode rules. Never infer broad deletion consent from past actions.
 - Research sends only reviewed topics to fixed public APIs. Keep citations real,
   distinguish metadata/excerpts from verified findings, and keep explanations local.
+- GitHub MCP uses the pinned official binary, read-only tools and a native exact
+  repository opt-in. Keep account results ephemeral and outside model planning,
+  remote providers, automatic memory and speech content. Never expose setup/auth as tools.

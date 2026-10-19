@@ -243,11 +243,10 @@ def test_unsaved_count_save_feedback_and_revert_reflect_real_preferences(window)
 
 
 def test_accent_picker_enables_save_and_revert_restores_saved_color(window, monkeypatch):
-    from PySide6.QtGui import QColor
-    from ai_os.native_settings import QColorDialog
+    from ai_os.native_settings import QInputDialog
     previous = window.accent_value
-    monkeypatch.setattr(QColorDialog, "getColor", lambda *a: QColor("#123456"))
+    monkeypatch.setattr(QInputDialog, "getItem", lambda *a: ("Ice", True))
     window.choose_accent()
-    assert window.accent_value == "#123456" and window.save_button.isEnabled()
+    assert window.accent_value == "#69d8ff" and window.save_button.isEnabled()
     window.restore()
     assert window.accent_value == previous and not window.save_button.isEnabled()

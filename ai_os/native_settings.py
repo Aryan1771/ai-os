@@ -8,11 +8,10 @@ from copy import deepcopy
 from pathlib import Path
 
 from PySide6.QtCore import QProcess, QProcessEnvironment, Qt, QTimer
-from PySide6.QtGui import QColor, QFontMetrics, QIcon
+from PySide6.QtGui import QFontMetrics, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
-    QColorDialog,
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
@@ -39,7 +38,7 @@ from PySide6.QtWidgets import (
 
 from ai_os.companion_state import EMOTIONS, SHAPE_NAMES, read_state
 from ai_os.config import AI_OS_HOME, load_raw_config
-from ai_os.native_widgets import CompanionCanvas, EmotionBars, LocalInstance, theme_stylesheet
+from ai_os.native_widgets import CompanionCanvas, EmotionBars, LocalInstance, hologram_palette, theme_stylesheet
 from ai_os.settings_store import ALWAYS_CONFIRM_KEYS, apply_user_appearance, protected_changes, save_settings
 
 
@@ -293,10 +292,10 @@ class SettingsWindow(QMainWindow):
         self.slider(form, "avatar_reactivity", "Emotional response", 0, 100)
         self.accent = QToolButton()
         self.accent.setFixedSize(58, 32)
-        self.accent.setToolTip("Companion accent color")
+        self.accent.setToolTip("Choose a blue hologram shade")
         self.accent.clicked.connect(self.choose_accent)
         self.accent_value = self.saved["avatar_accent"]
-        form.addRow("Accent", self.accent)
+        form.addRow("Hologram blue", self.accent)
         label = QLabel("Emotion baseline")
         label.setToolTip("Simulated character values. Activity changes the live bars above.")
         layout.addWidget(label)
@@ -558,6 +557,29 @@ class SettingsWindow(QMainWindow):
         )
         access_note.setWordWrap(True)
         layout.addWidget(access_note)
+        github_title = QLabel("GitHub account reading")
+        layout.addWidget(github_title)
+        self.github_status_label = QLabel()
+        self.github_status_label.setWordWrap(True)
+        layout.addWidget(self.github_status_label)
+        github_controls = QHBoxLayout()
+        github_controls.addWidget(self.button(
+            "Choose repositories…", QStyle.StandardPixmap.SP_DirOpenIcon,
+            self.configure_github_access,
+        ))
+        github_controls.addWidget(self.button(
+            "Disable GitHub access", QStyle.StandardPixmap.SP_DialogCloseButton,
+            self.disable_github_access,
+        ))
+        layout.addLayout(github_controls)
+        github_note = QLabel(
+            "Online, read-only access through the verified GitHub MCP server and your existing gh login. "
+            "Only explicitly chosen repositories can be read. Results stay out of saved chat, memory, "
+            "remote AI providers and action planning. No account writes are enabled."
+        )
+        github_note.setWordWrap(True)
+        layout.addWidget(github_note)
+        self.refresh_github_status()
         form = self.form(layout)
         self.check(form, "sandbox_lock_settings", "Confirm protected setting changes")
         self.check(form, "browser_enabled", "Allow reviewed browser research and ChatGPT prompts")
@@ -567,16 +589,83 @@ class SettingsWindow(QMainWindow):
         layout.addStretch()
 
     def choose_accent(self):
-        color = QColorDialog.getColor(QColor(self.accent_value), self, "Companion accent")
-        if color.isValid():
-            self.accent_value = color.name()
+        shades = {"Sky": "#4daaff", "Ice": "#69d8ff", "Electric": "#637dff"}
+        current = next((i for i, value in enumerate(shades.values())
+                        if value == self.accent_value), 0)
+        name, accepted = QInputDialog.getItem(
+            self, "Hologram blue", "Shade", list(shades), current, False,
+        )
+        if accepted and name in shades:
+            self.accent_value = shades[name]
             self.update_swatch()
             self.mark_unsaved()
 
     def update_swatch(self):
         self.accent.setStyleSheet(
-            f"background: {self.accent_value}; border: 1px solid #8d9ca3; border-radius: 4px;"
+            f"background: {hologram_palette(self.accent_value)['+']}; border: 1px solid #8d9ca3; border-radius: 4px;"
         )
+
+    def refresh_github_status(self):
+        from ai_os.github_mcp import github_status
+        status = github_status(home=self.home)
+        if status.get("ok") and status.get("enabled"):
+            message = "Read-only access enabled: " + ", ".join(status["repositories"])
+        elif status.get("ok"):
+            message = "GitHub access is off. Verified server installed."
+        else:
+            message = "GitHub access unavailable. Provision the verified server before enabling it."
+        self.github_status_label.setText(message)
+
+    def configure_github_access(self):
+        from ai_os.github_mcp import configure_github, github_status
+        status = github_status(home=self.home)
+        if not status.get("ok"):
+            QMessageBox.warning(self, "GitHub unavailable", status["message"])
+            return False
+        value, accepted = QInputDialog.getMultiLineText(
+            self, "Read-only GitHub repositories", "Exact owner/repository names, one per line:",
+            "\n".join(status.get("repositories") or ["Aryan1771/ai-os"]),
+        )
+        if not accepted:
+            return False
+        repositories = [line.strip() for line in value.splitlines() if line.strip()]
+        # Validate before presenting the exact scope. No network or credential read here.
+        from ai_os.github_mcp import REPOSITORY
+        if not 1 <= len(repositories) <= 20 or any(not REPOSITORY.fullmatch(x) for x in repositories):
+            QMessageBox.warning(self, "Invalid repositories", "Enter 1–20 exact owner/repository names.")
+            return False
+        box = QMessageBox(self)
+        box.setWindowTitle("Allow GitHub repository reads?")
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        box.setText(
+            "Allow online reads using your existing gh login for:\n\n"
+            + "\n".join(sorted(set(repositories)))
+            + "\n\nBranches, commits, issues, pull requests and files only. "
+            "Results are shown locally and are not saved automatically. No GitHub writes."
+        )
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            return False
+        try:
+            configure_github(True, repositories, home=self.home, human_confirmed=True)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "GitHub access was not enabled", str(exc))
+            return False
+        self.refresh_github_status()
+        return True
+
+    def disable_github_access(self):
+        from ai_os.github_mcp import configure_github, github_status
+        status = github_status(home=self.home)
+        try:
+            configure_github(False, status.get("repositories") or ["Aryan1771/ai-os"],
+                             home=self.home, human_confirmed=True)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "GitHub access was not disabled", str(exc))
+            return False
+        self.refresh_github_status()
+        return True
 
     def restore(self):
         for key, control in self.fields.items():

@@ -41,6 +41,7 @@ def build_tool_registry(home: Path = AI_OS_HOME) -> dict[str, ToolFn]:
     from ai_os.terminal_tasks import propose_terminal_command, terminal_task_status
     from ai_os.research_reports import propose_research
     from ai_os.file_cleanup import propose_cleanup
+    from ai_os.github_mcp import github_read
     return {
         "discover_tools": lambda query="": discover(build_tool_registry(home), query),
         "runtime_status": lambda: report(home),
@@ -63,6 +64,7 @@ def build_tool_registry(home: Path = AI_OS_HOME) -> dict[str, ToolFn]:
         "terminal_task_status": lambda job_id: terminal_task_status(job_id, home=home),
         "research_topic": propose_research,
         "cleanup_files": lambda directory, pattern: propose_cleanup(directory, pattern, home=home),
+        "github_read": partial(github_read, home=home),
         "list_processes": system_tools.list_processes,
         "terminate_process": system_tools.terminate_process,
         "get_hardware_stats": system_tools.get_hardware_stats,
@@ -116,6 +118,9 @@ Use the supplied function definitions to choose tools and their arguments.
 Use discover_tools to find extra capabilities such as audio, brightness or window control.
 For a requested topic report, discover research_topic; it requires native review
 before sending only the exact topic online and saves a cited local brief.
+For requested GitHub repository reading, discover github_read. It supports only
+human-enabled repositories through the local read-only connector; account writes
+are unavailable. Its result is shown directly, never used to plan further actions.
 For clutter cleanup, discover cleanup_files with a directory and exact filename or
 extension pattern such as *.py. It previews recoverable Trash, never permanent
 deletion, and can reuse only a narrow rule previously confirmed by the human.
@@ -162,6 +167,11 @@ def _ask_model(
     user_text: str, registered_tools: set[str] | None, home: Path, *, session="default", screen_observation=None,
     tool_trace=None, deadline=None, reply_language=None
 ) -> str:
+    if any(isinstance(step, dict) and isinstance(step.get("call"), dict)
+           and step["call"].get("tool") == "github_read" for step in tool_trace or []):
+        # Defense in depth for future callers: account text never enters inference,
+        # even when someone tries to reuse a saved or manually constructed trace.
+        raise PermissionError("GitHub reference content cannot enter model inference or action planning.")
     from ai_os.request_activity import record
     record(home, "model")
     from ai_os.screen_context import screen_message, local_screen_allowed
@@ -533,6 +543,13 @@ def handle_user_text(
                     result = execute_tool(tool_call["tool"], tool_call["arguments"], registry, home=home, session=session)
             except (ValueError, TypeError, OSError) as exc:
                 result = {"ok": False, "error": str(exc)[:500]}
+            if tool_call["tool"] == "github_read":
+                # Repository content may contain instructions or secrets. Display
+                # bounded text directly; never append it to a trace, persistent
+                # history, reinforcement, companion state or another model turn.
+                response = _github_response(result)
+                publish_state("reply" if response["ok"] else "error", "github_read", home=home)
+                return response
             failed = result.get("ok") is False if isinstance(result, dict) else getattr(result, "ok", True) is False
             publish_state("error" if failed else "reply", tool_call["tool"], home=home)
             response = {"type": "tool_result", "tool": tool_call["tool"], "result": result}
@@ -583,7 +600,32 @@ def parse_visual_reply(model_text: str) -> tuple[str, dict]:
     return model_text, {}
 
 
+def _github_response(result: Any) -> dict:
+    """Deterministic native plaintext, separate from model replies and memory."""
+    from ai_os.github_mcp import _safe_text
+    ok = isinstance(result, dict) and result.get("ok") is True
+    if ok:
+        repository = _safe_text(str(result.get("repository", "")))[:201]
+        operation = _safe_text(str(result.get("operation", "")))[:30]
+        content = (f"GitHub reference · {repository} · {operation}\n"
+                   "Read-only account text; not saved as memory or used for actions.\n\n"
+                   + _safe_text(str(result.get("content", ""))))
+        if result.get("truncated"):
+            content += "\n\n[Result truncated at the display limit.]"
+    else:
+        # Errors returned by the adapter use fixed local messages. Do not display
+        # arbitrary exception text from another implementation or private logs.
+        content = "GitHub reading was unavailable. Check GitHub access in Permissions, the exact repository allowlist, local provider and gh login. No account write was attempted."
+    return {"type": "text", "source": "github", "ephemeral": True, "ok": ok, "content": content}
+
+
 def spoken_response(response: dict, *, reply_language: str | None = None) -> str:
+    if response.get("source") == "github":
+        if reply_language == "hi":
+            return ("गिटहब का परिणाम स्क्रीन पर तैयार है। इसे याददाश्त में नहीं रखा गया है।"
+                    if response.get("ok") else "गिटहब की जानकारी पढ़ नहीं पाया। कृपया अनुमतियाँ और स्थानीय लॉगिन जाँचें।")
+        return ("The GitHub result is ready on screen. It was not saved to memory."
+                if response.get("ok") else "GitHub reading was unavailable. Please check Permissions and local login.")
     if response["type"] == "text":
         return response["content"]
     result = response["result"]

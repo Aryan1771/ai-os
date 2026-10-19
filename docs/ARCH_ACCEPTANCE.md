@@ -1,20 +1,26 @@
 # Interaction acceptance — current source checkpoint
 
-2026-10-19. Evidence is limited to this sandbox and synthetic temporary runtimes.
-The project remains a preview prototype. Historical live results in HANDOFF and
-RUNTIME_VALIDATION do not certify the modified harness.
+2026-10-19. Current Arch tests can access local sockets/services. Temporary synthetic
+runtimes separate regression evidence from personal/hardware acceptance. The project
+remains a preview prototype; no ISO/VM or production readiness claim follows.
 
 | Check | Actual result | Status |
 | --- | --- | --- |
-| Complete Python/Qt suite | 350 passed, 1 failed, 7 errors; unsuccessful checks cannot bind local sockets | Blocked full acceptance |
+| Complete Python/Qt suite | 603 passed, including previously denied local-socket checks | Automated suite passed |
 | Focused voice/context/memory/hardware/grant regressions | 134 passed; silence endpointing, current-turn/language routing, speech ownership, expiry, busy hotplug delivery and prior permission/context controls covered | Locally tested |
 | Correctness Ruff E4/E7/E9/F | All checks passed | Locally tested |
+| Existing venv dependency audit | pip check still reports openwakeword 0.6.0 requires missing tflite-runtime | Unresolved pre-existing optional-backend gap; selected RE/Whisper wake path separate |
 | Whitespace | git diff --check passed | Locally tested |
 | Harmless namespace diagnostic | no_new_privs true, root read-only, physical NVMe node and D-Bus paths absent | Limited local smoke |
-| Existing source/venv provenance | Editable checkout and installed Qt confirmed | Locally inspected |
-| Model quality, latency and GPU peak | Host Ollama/device access unavailable here | Not tested for this checkpoint |
-| Real microphone/STT/TTS/listening/recovery | Assets found; no capture or playback performed | Not tested |
-| Cursor size 64 | Desired preference saved; live GNOME still 48 after rejected application | Not applied from executor |
+| Existing source/venv provenance | Editable checkout, installed Qt, four native entry points/desktop launchers confirmed | Locally inspected |
+| Native blue hologram | Temporary nine-page xcb UI greeting passed; companion visible. Ordinary resident companion gracefully reloaded with saved blue preference | Limited native smoke; physical appearance/monitor acceptance pending |
+| NVIDIA memory | RTX 4060 Laptop, driver 615.78.08, 8188 MiB total; 4707 MiB max observed in 25 samples during one native greeting | Sampled workload only; concurrent voice/peak budget pending |
+| GitHub MCP | Verified official v2.0.2; exact ai-os repo opt-in. Protocol reads and local model-to-read smoke passed in 2.00s; existing Codex connector metadata read passed | Read-only, ephemeral; write capability not implemented |
+| Model style/language | Local synthetic display reaction follows persona; explicit consciousness question answered honestly; en/hi replies tested | Limited model smoke; broad quality/latency/GPU peak pending |
+| Real microphone/STT/TTS/listening/recovery | Piper→Whisper synthetic en/hi detection passes; Hindi transcript still poor/Urdu-script. No agent microphone capture/audible playback | Personal/hardware acceptance pending |
+| Speaker enrollment | Approved sherpa/core 1.13.8 + CAMPPlus installed; 512-dimension synthetic extraction, 0.448s. Owner reports all five accepted after retries/profile saved; private file present/0600 | Completion owner-confirmed; English/Hindi accuracy not tested; filtering off |
+| Cursor size 64 | GNOME helper verified readback 64 | Applied; human visual confirmation pending |
+| Research/cleanup/compact chat | Native synthetic coverage, cited report provenance, Trash/rule limits, keyboard steering and bounded ordinary tool cancellation | Live online narration/user-file cleanup not exercised |
 | GNOME accessibility text, lock/revoke and browser support | Synthetic protected-field and revocation tests pass; bindings import | Real desktop not tested |
 | App usage accuracy, proactive conversation | Synthetic storage/retention/clear controls; collection defaults off | Real usage not tested |
 | Website launch/app discovery/hardware hotplug | Regression coverage; no real launch or device attach performed | Hardware/user acceptance pending |
@@ -33,17 +39,15 @@ git diff --check
 ~/.ai_os/venv/bin/python -m ai_os.runtime_health
 ```
 
-Do not hide the failed full run. A direct AF_UNIX bind also failed with `EPERM`,
-confirming the current execution restriction. One native single-instance test and
-seven screen-observer tests need a rerun outside this sandbox; their implementation
-and assertions were not disabled to obtain a pass.
+Historical runs reported 350 passed/1 failure/7 errors with AF_UNIX `EPERM`.
+The final 603-pass run includes those socket tests; assertions were not disabled.
+This resolves the executor restriction, not the outstanding physical acceptance.
 
 Host acceptance after approval of any service changes:
 
-1. Run the full suite outside the restricted environment. Stop on a real regression.
-2. Inspect readiness. Approve a one-time `systemctl --user restart ai-os.service`
-   to load the new supervisor. Existing graphical environment/startup must be
-   reviewed if the service lacks display/session access; do not overwrite its unit.
+1. The full suite passes; rerun relevant checks after new changes. Stop on regressions.
+2. User approved `systemctl --user restart ai-os.service`; it is active and listening
+   remains off. No other service/unit was changed. Inspect readiness after future changes.
 3. In native Settings choose either wake gating or explicit conversation listening,
    then test recognition, false activations, speech feedback, disable/re-enable,
    recorder failure and cancellation. Alternatively keep continuous listening off
@@ -60,8 +64,9 @@ Host acceptance after approval of any service changes:
 No ISO path, ISO hash or VM pass exists for this checkpoint. Do not proceed to
 release packaging while critical runtime acceptance remains blocked.
 
-Checkpoint publication is also pending: source changes are staged, but Git could
-not commit without an author identity. GitHub DNS access is unavailable in this
-execution environment. No source push, artifact publication or release occurred.
+Source work was committed/pushed on main using the authenticated GitHub account's
+public noreply identity, merging the two newer GitHub commits without force/reset.
+No artifact publication or release occurred; exact revision is reported in the final handoff.
 
-Personal interaction follow-up: [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md); 104 focused tests pass. Four user-requested preferences were privately backed up/saved; GNOME cursor write was rejected and readback remains 32. Resident services were not restarted.
+Earlier interaction results remain in [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md).
+The latest cursor/service results above supersede earlier denied writes/restarts.

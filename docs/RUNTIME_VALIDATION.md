@@ -1,13 +1,20 @@
 # REgenOS: installed runtime, latency and continuity
 
-2026-10-19 latest: **540 passed**, correctness lint clean. Current executor reaches
+2026-10-19 latest: **603 passed**, correctness lint clean. Current executor reaches
 PipeWire/Ollama/user bus; older denied-socket counts below are historical.
 See [HANDOFF](HANDOFF.md), [research/chat/cleanup](RESEARCH_AND_CLEANUP.md) and
 [voice identity/voices](VOICE_IDENTITY_AND_VOICES.md) for commands and pending
-acceptance. No microphone samples, user-file deletion, new voice models or ISO
-acceptance were performed. GNOME cursor 64 now passes readback.
+acceptance. No personal microphone samples, user-file deletion or ISO acceptance
+were performed. The explicitly approved speaker backend/model pass synthetic
+extraction; personal recognition is pending. GNOME cursor 64 passes readback.
+The owner reports successful enrollment after retries. A real native nine-page
+xcb greeting smoke passed in 5.60s; whole-GPU sampled peak was 4707 MiB across
+25 samples, not the concurrent voice pipeline peak. Driver 615.78.08 reports the
+RTX 4060 Laptop/8188 MiB. A local-model-to-GitHub read passed in 2.00s using an
+isolated temporary history and the approved exact repository; account text was
+withheld. See [GitHub MCP](GITHUB_MCP.md) for provisioning and privacy boundaries.
 
-Latest source checkpoint (2026-10-19): [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md),
+Earlier restricted-executor checkpoint (2026-10-19): [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md),
 [INTERACTION_HARNESS](INTERACTION_HARNESS.md) and
 [ARCH_ACCEPTANCE](ARCH_ACCEPTANCE.md). The current sandbox run reports **350 passed,
 1 failed, 7 errors**; all eight unsuccessful checks require local Unix sockets,
@@ -237,7 +244,7 @@ total VRAM. Inside the sandbox device access failed and the user systemd bus was
 denied; these errors were not treated as host failures. The daemon, PipeWire and
 WirePlumber are active. No service lifecycle changes were made during this resume.
 
-The existing GPU probe completed two synthetic requests (4.601 and 1.609 seconds).
+The existing GPU probe completed two synthetic requests (4.603 and 1.609 seconds).
 Ollama reported `size_vram=0`; 52 samples at approximately 100 ms intervals plus
 query overhead measured device-wide peak usage of **12 MiB**, with no sample
 errors. This confirms CPU inference, not successful GPU offload or an 8 GB cap.

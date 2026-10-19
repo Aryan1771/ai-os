@@ -58,7 +58,18 @@ restart is required just to load updated dashboard controls.
 
 Emotion baseline sliders control joy, curiosity, focus, calm, concern, and energy. **Emotional response** controls how strongly AI activity changes those values. These are simulated character values, not evidence of conscious feelings. The activity label exposes states such as armed, listening, transcribing, thinking, working, speaking, reply, and error. It does not display hidden model reasoning.
 
-The renderer moves persistent colored pixels through damped springs and a wave field. It is a fluid-looking animation, not a physical fluid simulator. The core is a small robot with face changes. Twelve supplied forms cover a heart, music, code, idea, cloud, gear, shield, folder, chip, search, clock, and the core character. The model may additionally return a validated pixel pattern up to 24 by 24 cells. That permits new subject forms, but their visual quality depends on the model; malformed patterns fall back to the built-in behavior. No model-generated program is executed.
+The renderer moves persistent blue particles through damped springs and a wave field.
+The new original holographic core uses segmented, counter-rotating rings and an
+energy aperture. Speaking adds an animated waveform without replacing a topic's
+shape. Companion → **Hologram blue** offers Sky, Ice and Electric shades; old
+non-blue colors render as Sky until explicitly changed. Existing blue preferences
+are retained. Animation and motion controls also stop ring movement.
+
+Twelve supplied forms cover a heart, music, code, idea, cloud, gear, shield, folder,
+chip, search, clock and the holographic core. The same particles travel into these
+forms or a validated model-supplied grid up to 24×24 cells. This is a stylized 2D
+animation with approximate speech cadence; arbitrary topic artwork and phoneme
+lip sync are not guaranteed. No model-generated program is executed.
 
 ## Start At Login
 
@@ -105,6 +116,11 @@ The service template assumes `~/src/ai-os` and `~/.ai_os`. For a custom installa
 - **Voice & listening:** select local Whisper/Piper files, conversation language, wake threshold, initial speech wait, ending silence and maximum utterance. The updated daemon reloads saved voice preferences. Loading source changes into an older resident process requires a reviewed restart; Start/Restart/Stop buttons control `ai-os.service`. Enable microphone listening and choose either wake-word gating or explicit conversation listening. See [voice setup](VOICE_AND_COMPANION.md).
 - **Appearance:** choose a native window theme and branding paths. Saving records preferences. **Apply desktop appearance** explicitly writes user GTK icon/cursor/font settings and Hyprpaper/Hyprlock files, preserving a first `.regenos-backup` beside each existing file. Existing GTK keys are retained. Reload affected applications to see changes.
 - **Permissions:** **Command access mode**, **Enable full access mode…**, **Revoke full access**, and status are at the top. The enable button selects the mode after you choose a duration and confirm the native scope dialog (default No); cancellation preserves saved settings and unsaved edits. Status refreshes once a second. It applies to the default session, including voice, until expiry or revocation. It runs ordinary commands as the logged-in user without repeated prompts; that exposes the user's files and credentials to those programs. Privilege helpers, physical disks, mounts, boot and security operations remain separately blocked/reviewed; this is neither root access nor a guarantee of account isolation. Bubblewrap is required and there is no unsandboxed fallback. Protected preference changes also open a native confirmation dialog. Disabling that confirmation is itself protected.
+- **GitHub account reading:** in Permissions choose exact repositories and approve
+  the separate default-No scope dialog. Disable access with its dedicated button.
+  The official MCP server reads branches, commits, open issues/PRs and files only.
+  Account results appear as ephemeral native plaintext, never automatic memory or
+  action instructions. See [setup, pinned release and boundaries](GITHUB_MCP.md).
 
 The window themes style the REgenOS programs. System-wide Qt/GTK themes, bootloader settings, firmware, partitions and the complete desktop settings stack are not controlled by this panel. Boot branding remains documented in [branding and ISO setup](BRANDING_AND_ARCHISO.md).
 

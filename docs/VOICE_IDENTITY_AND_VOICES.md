@@ -10,10 +10,33 @@ Open **Settings → Voice & listening → Set up / test my voice…**. Select a 
 local speaker embedding ONNX model first. The optional `speaker` dependency uses
 [sherpa-onnx's speaker API](https://k2-fsa.github.io/sherpa/onnx/speaker-identification/).
 It is separate from Whisper transcription and Piper synthesis. No model or backend
-is downloaded by setup. The current venv lacks sherpa-onnx and no speaker model or
-profile has been provisioned; Record is unavailable until those prerequisites exist.
-The pip resolver dry run found compatible CPython 3.14 wheels for sherpa-onnx 1.13.8
-and sherpa-onnx-core 1.13.8. This is dependency resolution, not installed validation.
+is downloaded by setup. Following explicit user approval, sherpa-onnx/core 1.13.8
+were installed in the existing venv and this model was downloaded from
+[sherpa-onnx's official assets](https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models):
+
+- `3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx`, 29,596,978 bytes.
+- SHA256: `357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b`.
+- English-trained candidate; personal/Hindi matching is not verified. The release
+  supplied no asset digest: this is a locally computed pin, not an independent
+  publisher checksum/signature match. No redistribution is implied.
+- Synthetic Piper speech was resampled to 16 kHz and produced a 512-dimensional
+  embedding in a fresh bounded worker (0.448s). No personal audio/profile was used.
+- Setup readiness passes with consent unchecked, no recording subprocess and zero
+  samples. Record is disabled before consent. The native wizard was opened for
+  the user; only explicit Record/Save clicks can enroll. Filtering stays off.
+- The owner subsequently reports that all five were accepted after two or three
+  retries and the profile was saved. The private file is present with mode 0600;
+  no personal samples/embedding contents were inspected. Accuracy remains untested.
+
+The retry UI now shows accepted enrollment count and specific safe reasons for
+voice difference, clipping, insufficient speech or a changed model. Recording
+setup failures release the shared audio lease, remove temporary data and preserve
+already accepted samples. Unknown backend details remain hidden. No threshold
+was lowered and no failed sample is silently accepted.
+
+The selected absolute path was saved after private backup
+`~/.ai_os/backups/pre-migration-rctjzwx8`. Models, embeddings and recordings stay
+outside Git. Per-user verification and real latency remain pending.
 
 The wizard requires explicit recording consent, four seven-second samples with
 different natural styles/languages, a fresh fifth verification, and Save. Record

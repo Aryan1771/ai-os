@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import math
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QLockFile, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtCore import QLineF, QLockFile, QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QPainter, QPen, QRadialGradient
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
@@ -27,6 +28,35 @@ THEMES = {
     "light": ("#f3f5f7", "#ffffff", "#222a30", "#586872", "#147c62"),
     "sunrise": ("#202024", "#2b2b30", "#f5f3f0", "#b0aaaf", "#e6a575"),
 }
+
+DEFAULT_HOLOGRAM_ACCENT = "#4daaff"
+
+
+def is_blue_hologram_accent(value: object) -> bool:
+    """Keep the hologram blue while retaining a meaningful shade preference."""
+    if not isinstance(value, str):
+        return False
+    color = QColor(value)
+    if not color.isValid():
+        return False
+    hue, saturation, _brightness, _alpha = color.getHsvF()
+    return (180 / 360 <= hue <= 235 / 360 and saturation > .15
+            and color.blue() >= max(color.red(), color.green()))
+
+
+def hologram_palette(accent: object = DEFAULT_HOLOGRAM_ACCENT) -> dict[str, str]:
+    """Blue tonal variants also color bounded model-supplied topic patterns."""
+    base = QColor(accent if is_blue_hologram_accent(accent) else DEFAULT_HOLOGRAM_ACCENT)
+    hue, saturation, brightness, _alpha = base.getHsvF()
+    return {
+        "#": QColor.fromHsvF(hue, saturation, max(.25, brightness * .82)).name(),
+        "+": base.name(),
+        "*": QColor.fromHsvF(hue, saturation * .32, 1).name(),
+        "o": QColor.fromHsvF(hue, max(.7, saturation), .38).name(),
+    }
+
+
+HOLOGRAM_COLORS = hologram_palette()
 
 
 def theme_stylesheet(name: str) -> str:
@@ -177,7 +207,7 @@ class CompanionCanvas(QWidget):
         self.setMinimumSize(96, 96)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("CompanionCanvas {background: transparent;}")
-        self.setAccessibleName("REgenOS pixel companion")
+        self.setAccessibleName("REgenOS blue holographic companion")
         self.engine = PixelEngine()
         self.config = DEFAULT_CONFIG.copy()
         self.state = {"phase": "idle", "shape": "core", "emotions": {}, "pixels": None}
@@ -186,6 +216,7 @@ class CompanionCanvas(QWidget):
         self.last_tick = time.monotonic()
         self.speech_elapsed = 0.0
         self.mouth_frame = None
+        self.render_shape = "core"
         self.timer = QTimer(self)
         self.timer.setInterval(20)
         self.timer.timeout.connect(self.advance)
@@ -207,11 +238,11 @@ class CompanionCanvas(QWidget):
             shape, custom = config["avatar_idle_shape"], None
         self.mouth_frame = None
         if state["phase"] == "speaking":
-            # Use a known face while talking; arbitrary task/custom patterns do
-            # not define mouth coordinates. Restore their form after speech.
-            shape, custom = "core", None
+            # Keep the topic visible while speaking. The core has an energy
+            # aperture; other forms have a separate bounded blue vocalizer.
             self.mouth_frame = (speech_mouth_frame(self.speech_elapsed)
                                 if config["avatar_animation_enabled"] and config["avatar_motion"] > 0 else 0)
+        self.render_shape = shape
         self.engine.set_form(shape, self.target_levels, custom, mouth_open=self.mouth_frame)
 
     def advance(self) -> None:
@@ -232,18 +263,62 @@ class CompanionCanvas(QWidget):
 
     def paintEvent(self, _event) -> None:
         painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
         unit = min(self.width(), self.height()) / 27
-        colors = {"#": "#b3c8d1", "+": self.config["avatar_accent"], "*": "#edbd79", "o": "#142126"}
+        center = QPointF(self.width() / 2, self.height() / 2)
+        colors = hologram_palette(self.config.get("avatar_accent"))
+        pulse = (1 + .10 * (self.mouth_frame or 0)) if self.state["phase"] == "speaking" else 1
+        aura = QRadialGradient(center, unit * 12.6)
+        for radius, alpha in ((0, round(32 * pulse)), (.58, 14), (1, 0)):
+            shade = QColor(colors["#"])
+            shade.setAlpha(alpha)
+            aura.setColorAt(radius, shade)
+        painter.setBrush(aura)
+        painter.drawEllipse(center, unit * 12.6, unit * 12.6)
+
+        # Quiet technical scaffolding surrounds every form, so a morph reads as
+        # one being rearranging itself rather than unrelated icons appearing.
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        halo_color = QColor(colors["#"])
+        halo_color.setAlpha(90)
+        painter.setPen(QPen(halo_color, max(.6, unit * .11)))
+        rotation = (self.engine.orbit_elapsed * 12) % 360
+        halo = QRectF(center.x() - unit * 11.8, center.y() - unit * 11.8, unit * 23.6, unit * 23.6)
+        for angle in (18, 138, 258):
+            painter.drawArc(halo, round((angle + rotation) * 16), 64 * 16)
+        for angle in (0, math.pi / 2, math.pi, 3 * math.pi / 2):
+            painter.drawLine(QLineF(
+                center + QPointF(math.cos(angle) * unit * 12, math.sin(angle) * unit * 12),
+                center + QPointF(math.cos(angle) * unit * 12.6, math.sin(angle) * unit * 12.6),
+            ))
+
+        painter.setPen(Qt.PenStyle.NoPen)
         for pixel in self.engine.pixels:
             if pixel.opacity < 0.01:
                 continue
             color = QColor(colors[pixel.material])
-            color.setAlphaF(max(0, min(1, pixel.opacity)))
+            alpha = max(0, min(1, pixel.opacity))
+            x, y = center.x() + pixel.x * unit, center.y() + pixel.y * unit
+            if pixel.material in {"+", "*"}:
+                color.setAlphaF(alpha * .13)
+                painter.setBrush(color)
+                glow = unit * (1.85 if pixel.material == "*" else 1.45)
+                painter.drawEllipse(QRectF(x - glow / 2, y - glow / 2, glow, glow))
+            color.setAlphaF(alpha)
             painter.setBrush(color)
-            x, y = self.width() / 2 + pixel.x * unit, self.height() / 2 + pixel.y * unit
-            side = unit * 0.91
-            painter.drawRect(QRectF(x - side / 2, y - side / 2, side, side))
+            side = unit * (.66 if pixel.material == "*" else .53)
+            painter.drawRoundedRect(QRectF(x - side / 2, y - side / 2, side, side), unit * .10, unit * .10)
+
+        if self.state["phase"] == "speaking":
+            # This cadence is presentation only, not measured audio or lip sync.
+            frame = self.mouth_frame or 0
+            for index in range(-4, 5):
+                height = unit * (.28 + (frame + 1) * (.35 + .30 * math.cos(index * 1.4 + frame)))
+                x, y = center.x() + index * unit * .85, center.y() + unit * 10.7
+                painter.setBrush(QColor(colors["*"] if index % 2 else colors["+"]))
+                painter.drawRoundedRect(QRectF(x - unit * .18, y - height / 2, unit * .36, height),
+                                        unit * .12, unit * .12)
         painter.end()
 
     def mouseReleaseEvent(self, event) -> None:

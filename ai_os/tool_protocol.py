@@ -19,6 +19,7 @@ DESCRIPTIONS = {
     "terminal_task_status": "Read the exit status of an approved terminal job using its job_id. Launch acceptance is not proof of successful execution; output and passwords are never captured.",
     "research_topic": "Propose research about a public topic, requiring exact native approval before contacting Wikipedia and Crossref. Saves a local cited Markdown source brief, not a full-paper literature review. For pandas clarify animal or Python library when context is ambiguous.",
     "cleanup_files": "Preview recoverable Trash for owned regular files in one selected home subdirectory using an exact filename or extension pattern like *.py. No recursion or permanent erase. Reuses only an explicitly human-approved matching cleanup rule; cannot approve its own rule or touch system/runtime/repository paths.",
+    "github_read": "Read an explicitly human-enabled GitHub repository through the official read-only MCP server. Choose operation branches, commits, issues (open), pull_requests (open) or file; for file supply a relative path such as README.md. Bounded results are displayed directly, never passed to a model or saved as memory. No GitHub writes or arbitrary account searches.",
     "command_help": "Read the installed manual before choosing command arguments.",
     "find_commands": "Discover installed commands by task or topic.",
     "get_hardware_stats": "Read current hardware usage and device information.",

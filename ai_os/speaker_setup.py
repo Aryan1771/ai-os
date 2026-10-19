@@ -19,6 +19,7 @@ from ai_os.config import AI_OS_HOME, load_raw_config
 from ai_os.speaker_identity import (
     ENROLLMENT_SAMPLES, Enrollment, SpeakerError, backend_available,
     delete_profile, MAX_MODEL_BYTES,
+    EXTRACTION_ERRORS,
 )
 
 PROMPTS = (
@@ -46,6 +47,7 @@ class SpeakerSetupDialog(QDialog):
         self.capture_failed = False
         self.temporary = None
         self.audio_path = None
+        self.speech_guard = None
         self.setWindowTitle("REgenOS — local voice enrollment")
         self.resize(680, 580)
         root = QVBoxLayout(self)
@@ -69,6 +71,8 @@ class SpeakerSetupDialog(QDialog):
         self.progress = QProgressBar()
         self.progress.setRange(0, ENROLLMENT_SAMPLES + 1)
         root.addWidget(self.progress)
+        self.accepted_status = QLabel()
+        root.addWidget(self.accepted_status)
         self.prompt = QLabel()
         self.prompt.setWordWrap(True)
         self.prompt.setMinimumHeight(90)
@@ -78,6 +82,7 @@ class SpeakerSetupDialog(QDialog):
         root.addWidget(self.status)
         buttons = QHBoxLayout()
         self.record_button = QPushButton("Record 7-second sample")
+        self.record_button.setObjectName("primary")
         self.record_button.clicked.connect(self.record)
         buttons.addWidget(self.record_button)
         self.retry_button = QPushButton("Start over")
@@ -141,6 +146,8 @@ class SpeakerSetupDialog(QDialog):
         count = len(self.enrollment.samples) if self.enrollment else 0
         verified = bool(self.enrollment and self.enrollment.verified)
         self.progress.setValue(5 if verified else count)
+        self.accepted_status.setText(f"Accepted enrollment samples: {count} / 4 · "
+                                     + ("fresh verification matched" if verified else "fresh verification still required"))
         title, phrase = PROMPTS[min(count, 4)]
         self.prompt.setText(f"{min(count + 1, 5)} / 5 — {title}\n\n{phrase}" if not verified
                             else "Verification passed. Choose Save to retain only the private voice embedding.")
@@ -154,22 +161,43 @@ class SpeakerSetupDialog(QDialog):
     def record(self):
         if not self.record_button.isEnabled():
             return
+        from ai_os.speech_lease import speech_lease
+        guard = speech_lease(self.home)
+        try:
+            acquired = guard.__enter__()
+        except OSError:
+            self.status.setText("Could not coordinate audio access. No recording started; retry after checking runtime permissions.")
+            return
+        if not acquired:
+            guard.__exit__(None, None, None)
+            self.status.setText("RE is using audio. Wait for it to finish, then record this sample.")
+            return
+        self.speech_guard = guard
         self.raw.clear()
         self.capture_failed = False
         self.phase = "capture"
-        self.temporary = tempfile.TemporaryDirectory(prefix="regenos-speaker-")
-        os.chmod(self.temporary.name, 0o700)
-        self.audio_path = Path(self.temporary.name) / "sample.wav"
-        process = QProcess(self)
-        self.process = process
-        process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
-        process.readyReadStandardOutput.connect(self.read_process)
-        process.readyReadStandardError.connect(lambda: process.readAllStandardError())
-        process.errorOccurred.connect(self.process_error)
-        process.finished.connect(self.process_finished)
-        self.status.setText("● Microphone recording — speak now. Recording stops in seven seconds. Cancel stops immediately.")
-        process.start(shutil.which("pw-record") or "/usr/bin/pw-record",
-                      ["--raw", "--format", "s16", "--rate", "16000", "--channels", "1", "-"])
+        try:
+            self.temporary = tempfile.TemporaryDirectory(prefix="regenos-speaker-")
+            os.chmod(self.temporary.name, 0o700)
+            self.audio_path = Path(self.temporary.name) / "sample.wav"
+            process = QProcess(self)
+            self.process = process
+            process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+            process.readyReadStandardOutput.connect(self.read_process)
+            process.readyReadStandardError.connect(lambda: process.readAllStandardError())
+            process.errorOccurred.connect(self.process_error)
+            process.finished.connect(self.process_finished)
+            self.status.setText("● Microphone recording — speak now. Recording stops in seven seconds. Cancel stops immediately.")
+            process.start(shutil.which("pw-record") or "/usr/bin/pw-record",
+                          ["--raw", "--format", "s16", "--rate", "16000", "--channels", "1", "-"])
+        except (OSError, RuntimeError):
+            self.status.setText("Could not prepare microphone recording. Recording is stopped; no profile was changed. Check local runtime permissions, then retry.")
+            self.cleanup()
+            self.update_controls()
+            return
+        # FailedToStart may have synchronously cleaned up the process already.
+        if self.process is not process:
+            return
         self.capture_timer.start(CAPTURE_SECONDS * 1000)
         self.update_controls()
 
@@ -242,9 +270,12 @@ class SpeakerSetupDialog(QDialog):
                 self.update_controls()
             return
         try:
-            if code != 0 or self.capture_failed or len(self.output) > 65536:
+            if self.capture_failed or len(self.output) > 65536:
                 raise SpeakerError("The extraction worker failed.")
             result = json.loads(bytes(self.output))
+            if code != 0:
+                public_code = result.get("code") if isinstance(result, dict) else None
+                raise SpeakerError(EXTRACTION_ERRORS.get(public_code, EXTRACTION_ERRORS["extraction_failed"]))
             embedding = result["embedding"]
             digest = result["model_sha256"]
             if (not isinstance(digest, str) or len(digest) != 64
@@ -262,7 +293,9 @@ class SpeakerSetupDialog(QDialog):
                 self.status.setText("Fresh sample matched. Save is now available. Filtering stays off until explicitly enabled in Settings.")
             else:
                 self.status.setText("Verification did not match. Retry this fresh phrase or start over; no profile was changed.")
-        except (SpeakerError, OSError, ValueError, TypeError, KeyError):
+        except SpeakerError as exc:
+            self.status.setText(str(exc) + " No profile was changed. Accepted samples remain available; retry the current phrase.")
+        except (OSError, ValueError, TypeError, KeyError):
             self.status.setText("Sample could not be verified. Check the local model, backend and microphone, then retry. No profile was changed.")
         finally:
             self.cleanup()
@@ -336,6 +369,9 @@ class SpeakerSetupDialog(QDialog):
             self.temporary = None
         self.audio_path = None
         self.phase = "idle"
+        if self.speech_guard is not None:
+            guard, self.speech_guard = self.speech_guard, None
+            guard.__exit__(None, None, None)
 
     def done(self, result):
         self.cleanup()
@@ -348,6 +384,10 @@ class SpeakerSetupDialog(QDialog):
 
 def main():
     app = QApplication.instance() or QApplication(sys.argv)
+    from ai_os.native_widgets import theme_stylesheet
+    app.setApplicationName("regenos-speaker-setup")
+    app.setStyle("Fusion")
+    app.setStyleSheet(theme_stylesheet(load_raw_config(AI_OS_HOME)["theme"]))
     dialog = SpeakerSetupDialog()
     dialog.show()
     return app.exec()
