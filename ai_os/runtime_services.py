@@ -190,6 +190,12 @@ def voice_worker():
         voice_status(config.home, value)
         publish_state(value, home=config.home)
 
+    def capture_error(exc):
+        from ai_os.services.voice_errors import diagnostic
+        code, message = diagnostic(exc, phase)
+        voice_status(config.home, "error", message, error_code=code)
+        publish_state("error", home=config.home)
+
     def transcript(text):
         try:
             # Hold the output turn through reasoning and every spoken sentence.
@@ -228,6 +234,7 @@ def voice_worker():
         wake_backend=config.wake_backend, require_wake_word=config.wake_word_enabled,
         on_activity=activity, playback_active=lambda: read_state(config.home)["phase"] == "speaking",
         speaker_filter=lambda path: filter_utterance(path, config.home),
+        on_error=capture_error,
     )
     try:
         listener.run_forever()

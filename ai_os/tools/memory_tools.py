@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ai_os.config import AI_OS_HOME
+from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG
 
 
 @dataclass(frozen=True)
@@ -110,18 +110,15 @@ def store_semantic_memory(
     metadata: dict[str, Any] | None = None,
     *,
     collection_name: str = "ai_os_memories",
+    home: Path = AI_OS_HOME,
 ) -> dict[str, Any]:
-    """Store a local Chroma document when the optional memory dependency is installed."""
-    try:
-        import chromadb
-    except ImportError:
-        return {"ok": False, "error": "chromadb is not installed in the AI-OS virtual environment."}
+    """Compatibility API, unavailable until verified offline semantic setup exists.
 
-    chroma_dir = Path("~/.local/share/ai_os/chroma").expanduser()
-    client = chromadb.PersistentClient(path=str(chroma_dir))
-    collection = client.get_or_create_collection(collection_name)
-    collection.upsert(ids=[memory_id], documents=[text], metadatas=[metadata or {}])
-    return {"ok": True, "id": memory_id, "collection": collection_name}
+    Installing Chroma alone is not provisioning: its default embedding function
+    may download assets and its default client may emit telemetry. Do not import
+    it, open an existing store or accept model-supplied setup flags here.
+    """
+    return _semantic_memory_unavailable(home)
 
 
 def search_semantic_memory(
@@ -129,14 +126,44 @@ def search_semantic_memory(
     limit: int = 5,
     *,
     collection_name: str = "ai_os_memories",
+    home: Path = AI_OS_HOME,
 ) -> dict[str, Any]:
-    try:
-        import chromadb
-    except ImportError:
-        return {"ok": False, "error": "chromadb is not installed in the AI-OS virtual environment."}
+    """Fail closed without touching legacy vectors or creating an embedding model."""
+    return _semantic_memory_unavailable(home)
 
-    chroma_dir = Path("~/.local/share/ai_os/chroma").expanduser()
-    client = chromadb.PersistentClient(path=str(chroma_dir))
-    collection = client.get_or_create_collection(collection_name)
-    result = collection.query(query_texts=[query], n_results=max(1, min(20, int(limit))))
-    return {"ok": True, "result": result}
+
+def _semantic_memory_unavailable(home: Path) -> dict[str, Any]:
+    # Read only public runtime settings. load_raw_config() also initializes the
+    # tree/habits/slang; an unavailable legacy memory API must not create those.
+    try:
+        with (home / "config.json").open("r", encoding="utf-8") as handle:
+            saved = handle.read(65537)
+        if len(saved) > 65536:
+            raise ValueError("Configuration exceeds the legacy gate's bound.")
+        raw = json.loads(saved)
+        if not isinstance(raw, dict):
+            raise ValueError("Configuration must be an object.")
+    except FileNotFoundError:
+        raw = {}
+    except (OSError, ValueError, TypeError):
+        return {
+            "ok": False,
+            "code": "memory_configuration_unavailable",
+            "error": "Local memory settings are unavailable. No semantic store was opened.",
+        }
+    if raw.get("memory_enabled", DEFAULT_CONFIG["memory_enabled"]) is not True:
+        return {
+            "ok": False,
+            "code": "memory_disabled",
+            "error": "Memory is disabled. No semantic store was opened or changed.",
+        }
+    # There is deliberately no configuration flag that bypasses this gate.
+    # A future trusted setup must verify local assets/licensing, disable
+    # telemetry and supply explicit offline embeddings before enabling access.
+    return {
+        "ok": False,
+        "code": "semantic_setup_required",
+        "error": "Legacy semantic memory needs a trusted, verified offline embedding setup with telemetry disabled. "
+                 "This setup is not implemented; existing stores are preserved. Use local conversation history, "
+                 "explicit preferences and context notes instead.",
+    }

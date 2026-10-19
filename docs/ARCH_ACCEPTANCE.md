@@ -6,10 +6,15 @@ remains a preview prototype; no ISO/VM or production readiness claim follows.
 
 | Check | Actual result | Status |
 | --- | --- | --- |
-| Complete Python/Qt suite | 603 passed, including previously denied local-socket checks | Automated suite passed |
+| Complete Python/Qt suite | 774 passed, including previously denied local-socket checks | Automated suite passed |
 | Focused voice/context/memory/hardware/grant regressions | 134 passed; silence endpointing, current-turn/language routing, speech ownership, expiry, busy hotplug delivery and prior permission/context controls covered | Locally tested |
 | Correctness Ruff E4/E7/E9/F | All checks passed | Locally tested |
 | Existing venv dependency audit | pip check still reports openwakeword 0.6.0 requires missing tflite-runtime | Unresolved pre-existing optional-backend gap; selected RE/Whisper wake path separate |
+| Existing ONNX wake backend | Bounded isolated child loaded local openWakeWord ONNX backend/assets in 1.7s, no microphone | Backend loading passed; detection accuracy not tested |
+| Guided voice diagnostic | 53 synthetic regressions; actual native window opened with consent unchecked; no agent mic capture | Source-tested; owner capture/relevance/audibility pending |
+| Native memory curation | Explicit user-only pin, selected-note edit/remove and stale revision/session/expiry guards | Synthetic tests; no private memory inspection |
+| Legacy memory boundaries | 60 regressions for runtime paths, opt-out, remote consent and cached-result revocation; vector APIs disabled without trusted offline setup | Source tested; no private stores inspected or changed |
+| GNOME shortcuts | Owner approved three Super+Alt+A/C/R bindings; apply/fresh readback passed, no conflicts; private backup | Applied; physical key presses pending |
 | Whitespace | git diff --check passed | Locally tested |
 | Harmless namespace diagnostic | no_new_privs true, root read-only, physical NVMe node and D-Bus paths absent | Limited local smoke |
 | Existing source/venv provenance | Editable checkout, installed Qt, four native entry points/desktop launchers confirmed | Locally inspected |
@@ -17,13 +22,13 @@ remains a preview prototype; no ISO/VM or production readiness claim follows.
 | NVIDIA memory | RTX 4060 Laptop, driver 615.78.08, 8188 MiB total; 4707 MiB max observed in 25 samples during one native greeting | Sampled workload only; concurrent voice/peak budget pending |
 | GitHub MCP | Verified official v2.0.2; exact ai-os repo opt-in. Protocol reads and local model-to-read smoke passed in 2.00s; existing Codex connector metadata read passed | Read-only, ephemeral; write capability not implemented |
 | Model style/language | Local synthetic display reaction follows persona; explicit consciousness question answered honestly; en/hi replies tested | Limited model smoke; broad quality/latency/GPU peak pending |
-| Real microphone/STT/TTS/listening/recovery | Piper→Whisper synthetic en/hi detection passes; Hindi transcript still poor/Urdu-script. No agent microphone capture/audible playback | Personal/hardware acceptance pending |
+| Real microphone/STT/TTS/listening/recovery | Synthetic English Piper→Whisper→local reply→Piper completed; base Hindi script mismatch now rejects before actions. No agent microphone capture/audible playback | Personal/hardware acceptance pending; model comparison awaits approval |
 | Speaker enrollment | Approved sherpa/core 1.13.8 + CAMPPlus installed; 512-dimension synthetic extraction, 0.448s. Owner reports all five accepted after retries/profile saved; private file present/0600 | Completion owner-confirmed; English/Hindi accuracy not tested; filtering off |
 | Cursor size 64 | GNOME helper verified readback 64 | Applied; human visual confirmation pending |
-| Research/cleanup/compact chat | Native synthetic coverage, cited report provenance, Trash/rule limits, keyboard steering and bounded ordinary tool cancellation | Live online narration/user-file cleanup not exercised |
+| Research/cleanup/compact chat | Native regression coverage; live research returned 7 sources (3 encyclopedia, 2 abstract, 2 metadata) in 1.70s without warnings | Live audible narration/user-file cleanup not exercised |
 | GNOME accessibility text, lock/revoke and browser support | Synthetic protected-field and revocation tests pass; bindings import | Real desktop not tested |
 | App usage accuracy, proactive conversation | Synthetic storage/retention/clear controls; collection defaults off | Real usage not tested |
-| Website launch/app discovery/hardware hotplug | Regression coverage; no real launch or device attach performed | Hardware/user acceptance pending |
+| Website launch/app discovery/hardware hotplug | Actual Brave discovery and YouTube launch request accepted; no device attach performed | Visible page and hotplug owner acceptance pending |
 | Full isolation/privilege mediation | Disabled-by-default grant prototype; no adversarial or policy enforcement certification | Pending security work |
 | ISO/installer/VMs | No image built or VM started | Not tested; gated by runtime acceptance and architecture approval |
 
@@ -40,7 +45,7 @@ git diff --check
 ```
 
 Historical runs reported 350 passed/1 failure/7 errors with AF_UNIX `EPERM`.
-The final 603-pass run includes those socket tests; assertions were not disabled.
+The final 774-pass run includes those socket tests; assertions were not disabled.
 This resolves the executor restriction, not the outstanding physical acceptance.
 
 Host acceptance after approval of any service changes:

@@ -1,6 +1,6 @@
 # Current runtime inspection — 2026-10-16
 
-2026-10-19 follow-up: source/remote history reconciled and pushed; final 603-test
+2026-10-19 follow-up: source/remote history reconciled and pushed; final 774-test
 suite passes. Approved speaker assets are installed (synthetic extraction passed),
 the approved core restart is active with listening off, and cursor readback is 64.
 New Chat/Research launchers are installed. See [HANDOFF](HANDOFF.md) for commands,
@@ -14,6 +14,15 @@ not a concurrent audio/GPU budget acceptance. The owner reports saved voice
 enrollment after retries. Blue companion reloaded; official GitHub MCP v2.0.2
 reads are enabled only for ai-os and passed a real local-model route. No new
 service/privileged/boot/disk changes in this follow-up.
+
+The next runtime follow-up adds explicit memory curation, real research API
+repairs/source evidence and guided local voice tests. Owner-approved GNOME
+Super+Alt+A/C/R shortcuts applied/read back with a private rollback backup.
+Existing ONNX wake assets/backend load; base Hindi still fails closed on its
+script mismatch. The owner separately approved restarting only `ai-os.service`
+to load these repairs; it is active with listening/wake/filtering off.
+See [VOICE_DIAGNOSTICS](VOICE_DIAGNOSTICS.md) for measured
+synthetic timing and remaining microphone/model-approval gates.
 
 Scope: read-only inventory and source repairs, not a reinstall or ISO build.
 Baseline branch `main`, commit `82de882`; existing interrupted edits and unrelated

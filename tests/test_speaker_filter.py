@@ -82,7 +82,7 @@ def test_missing_profile_or_backend_denies_before_transcription(tmp_path, monkey
     service.last_transcription_language = "hi"
     assert service._capture_and_transcribe(VOICE * 16, len(VOICE)) == ""
     assert service.last_transcription_language is None
-    assert service.last_capture_error.code == "speaker_rejected"
+    assert service.last_capture_error.code == "speaker_unavailable"
     assert "verification unavailable" in str(service.last_capture_error)
     assert "transcribing" not in phases and not list(tmp_path.glob("*.wav"))
     status = json.loads((tmp_path / "run/speaker-status.json").read_text())
@@ -104,7 +104,8 @@ def test_rejected_speaker_audio_is_deleted_without_transcribing(tmp_path, monkey
                               lambda _: pytest.fail("Rejected speaker reached Whisper"))
     assert service._capture_and_transcribe(VOICE * 16, len(VOICE)) == ""
     assert service.last_capture_error.code == "speaker_rejected"
-    assert str(service.last_capture_error) == "Synthetic speaker mismatch"
+    assert "enrolled-speaker filter" in str(service.last_capture_error)
+    assert "Synthetic speaker mismatch" not in str(service.last_capture_error)
     assert observed and all(not path.exists() for path in observed)
     assert "transcribing" not in phases
 

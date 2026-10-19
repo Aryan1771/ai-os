@@ -39,6 +39,7 @@ class AlwaysListeningService:
         wake_backend: str = "openwakeword",
         require_wake_word: bool = True,
         speaker_filter: Callable[[Path], tuple[bool, str]] | None = None,
+        on_error: Callable[[Exception], None] | None = None,
     ) -> None:
         self.run_dir = run_dir
         self.require_wake_word = require_wake_word
@@ -47,6 +48,8 @@ class AlwaysListeningService:
         self.speaker_filter = speaker_filter
         self.last_transcription_language = None
         self.last_capture_error = None
+        self.on_error = on_error or (lambda _error: None)
+        self._last_reported_error = None
         if wake_backend not in {"openwakeword", "re_whisper"}:
             raise ValueError("Unsupported wake detector")
         self.wake_word = (ReWhisperWakeWord(transcriber, run_dir) if wake_backend == "re_whisper"
@@ -177,6 +180,15 @@ class AlwaysListeningService:
                     transcript = self._capture_and_transcribe(b"".join(preroll), chunk_bytes)
                     if transcript and not self._stop.is_set():
                         self.on_transcript(transcript)
+                    elif self.last_capture_error is not None and not self._stop.is_set():
+                        # A rejected speaker must be visible without killing the
+                        # worker or producing repeated unsolicited speech.
+                        code = getattr(self.last_capture_error, "code", "capture_failed")
+                        now = time.monotonic()
+                        previous = self._last_reported_error
+                        if previous is None or code != previous[0] or now - previous[1] >= 15:
+                            self.on_error(self.last_capture_error)
+                            self._last_reported_error = (code, now)
                     self._discard_backlog()
                     # Reply handling is synchronous; playback can start and
                     # finish before playback_active is sampled by this loop.
@@ -248,20 +260,26 @@ class AlwaysListeningService:
                 trim_samples = max(0, silent_samples - self.sample_rate // 5) if endpoint_reached else 0
                 wav_file.writeframes(audio[:-trim_samples * 2] if trim_samples else audio)
             if self.speaker_filter is not None:
-                from ai_os.services.voice_errors import VoicePipelineError
+                from ai_os.services.voice_errors import VoicePipelineError, VOICE_MESSAGES
+                from ai_os.speaker_filter import MESSAGES
                 try:
                     allowed, reason = self.speaker_filter(audio_path)
                 except Exception:
-                    allowed, reason = False, "Speaker verification unavailable; no request submitted. Check local enrollment."
+                    allowed, reason = False, MESSAGES["speaker_unavailable"]
                 if not allowed:
-                    self.last_capture_error = VoicePipelineError("speaker_rejected", reason)
+                    code = next((key for key in ("speaker_rejected", "speaker_unavailable", "speaker_timeout")
+                                 if reason == MESSAGES[key]), "speaker_rejected")
+                    self.last_capture_error = VoicePipelineError(code, VOICE_MESSAGES[code])
                     return ""
             self.on_activity("transcribing")
             result = self.transcriber.transcribe_file(audio_path)
             if not result.ok:
+                from ai_os.services.stt import STT_ERRORS
                 from ai_os.services.voice_errors import VoicePipelineError
                 if result.error == "No speech recognized":
                     return ""
+                if getattr(result, "error_code", "") in STT_ERRORS:
+                    raise VoicePipelineError(result.error_code, STT_ERRORS[result.error_code])
                 raise VoicePipelineError("transcription_failed", "Transcription failed in Whisper. Check the executable, multilingual model and selected language.")
             self.last_transcription_language = getattr(result, "detected_language", None)
             return result.text

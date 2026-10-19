@@ -37,6 +37,12 @@ The companion now uses an original blue particle hologram with topic morphing
 and a speech waveform. [GitHub MCP access](docs/GITHUB_MCP.md) provides scoped,
 read-only repository results in native chat, with separate controls in Permissions.
 
+Current follow-up adds explicit memory pin/edit controls, improved research source
+evidence, a [guided voice check](docs/VOICE_DIAGNOSTICS.md), and reviewed
+[GNOME shortcuts with rollback](docs/DESKTOP_SHORTCUTS.md).
+[Requested work versus remaining acceptance](docs/REQUEST_STATUS.md) tracks the
+unfinished voice, hardware, security and preview-ISO gates.
+
 Native chat can open supported applications such as Brave, inspect installed
 command manuals and request per-command approval through the optional full
 command access setting. See [command access, emotions and knowledge refresh](docs/COMMAND_ACCESS.md).
@@ -62,7 +68,8 @@ ai_os/tools/system_tools.py
   process management, hardware stats, wpctl volume, brightnessctl, safe command runner
 
 ai_os/tools/memory_tools.py
-  JSON-backed habits/slang plus optional ChromaDB memory
+  JSON-backed habits/slang with saved consent; legacy vector APIs disabled
+  until trusted offline provisioning exists (no implicit downloads/telemetry)
 
 ai_os/tools/ui_tools.py
   phase-gated UI bridge; disabled until Hyprland/Wayland phase

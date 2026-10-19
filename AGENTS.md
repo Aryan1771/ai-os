@@ -64,3 +64,11 @@
 - GitHub MCP uses the pinned official binary, read-only tools and a native exact
   repository opt-in. Keep account results ephemeral and outside model planning,
   remote providers, automatic memory and speech content. Never expose setup/auth as tools.
+- Guided voice diagnostics require each explicit Record click, remain local and
+  tool-free, and save no conversation. Group cancellation must never signal PID 0
+  or the desktop group; verify the task's fresh process group before signalling.
+- GNOME shortcut changes need exact native approval, private backups and readback.
+  Preserve unrelated/custom concurrent changes and refuse rollback over later edits.
+- Bind legacy memory reads to the selected runtime and recheck memory/remote consent
+  before reads and cached inference. Semantic APIs stay disabled until trusted offline
+  embeddings with no implicit downloads or telemetry are implemented.

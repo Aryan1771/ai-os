@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 import requests
 
 from ai_os.companion_state import SHAPE_NAMES, publish_state, read_state, visual_metadata, conversation_expression, emotion_levels
-from ai_os.config import AI_OS_HOME, load_config, load_raw_config
+from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, load_config, load_raw_config
 from ai_os.conversation_memory import ConversationMemory
 from ai_os.hardware_profile import inference_slot, refresh_profile, runtime_policy
 from ai_os.logging_utils import configure_logging
@@ -32,6 +32,37 @@ from ai_os.tools import desktop_tools, memory_tools, system_tools, ui_tools
 from ai_os import knowledge, reviewed_actions
 
 ToolFn = Callable[..., Any]
+MEMORY_READ_TOOLS = frozenset({
+    "get_habits", "resolve_preference", "apply_slang_replacements",
+    "search_recent_events", "search_semantic_memory",
+})
+
+
+def _memory_access_denial(home: Path) -> dict | None:
+    """Recheck saved consent without opening or initializing personal memory."""
+    try:
+        with (home / "config.json").open(encoding="utf-8") as handle:
+            saved = handle.read(65537)
+        if len(saved) > 65536:
+            raise ValueError("Configuration exceeds the memory gate's bound.")
+        raw = json.loads(saved)
+        if not isinstance(raw, dict):
+            raise ValueError("Configuration must be an object.")
+    except FileNotFoundError:
+        raw = {}
+    except (OSError, ValueError, TypeError):
+        return {"ok": False, "code": "memory_configuration_unavailable",
+                "error": "Saved memory settings are unavailable. No memory was read."}
+    if raw.get("memory_enabled", DEFAULT_CONFIG["memory_enabled"]) is not True:
+        return {"ok": False, "code": "memory_disabled", "error": "Saved memory is disabled."}
+    try:
+        host = urlsplit(raw.get("ollama_url", DEFAULT_CONFIG["ollama_url"])).hostname
+    except (ValueError, TypeError, AttributeError):
+        host = None
+    if host not in {"localhost", "127.0.0.1", "::1"} and raw.get("memory_allow_remote") is not True:
+        return {"ok": False, "code": "memory_remote_disabled",
+                "error": "Saved memory is not approved for remote providers."}
+    return None
 
 
 def build_tool_registry(home: Path = AI_OS_HOME) -> dict[str, ToolFn]:
@@ -42,6 +73,14 @@ def build_tool_registry(home: Path = AI_OS_HOME) -> dict[str, ToolFn]:
     from ai_os.research_reports import propose_research
     from ai_os.file_cleanup import propose_cleanup
     from ai_os.github_mcp import github_read
+    paths = memory_tools.MemoryPaths(habits=home / "habit_engine.json",
+                                     slang=home / "slang_vocab.json",
+                                     events=home / "data" / "events.jsonl")
+
+    def memory_read(function: ToolFn, **kwargs: Any) -> Any:
+        denial = _memory_access_denial(home)
+        return denial if denial else function(**kwargs)
+
     return {
         "discover_tools": lambda query="": discover(build_tool_registry(home), query),
         "runtime_status": lambda: report(home),
@@ -73,11 +112,11 @@ def build_tool_registry(home: Path = AI_OS_HOME) -> dict[str, ToolFn]:
         "mute_volume": system_tools.mute_volume,
         "get_brightness": system_tools.get_brightness,
         "set_brightness": system_tools.set_brightness,
-        "get_habits": memory_tools.get_habits,
-        "resolve_preference": memory_tools.resolve_preference,
-        "apply_slang_replacements": memory_tools.apply_slang_replacements,
-        "search_recent_events": memory_tools.search_recent_events,
-        "search_semantic_memory": memory_tools.search_semantic_memory,
+        "get_habits": lambda: memory_read(memory_tools.get_habits, paths=paths),
+        "resolve_preference": lambda key: memory_read(memory_tools.resolve_preference, key=key, paths=paths),
+        "apply_slang_replacements": lambda text: memory_read(memory_tools.apply_slang_replacements, text=text, paths=paths),
+        "search_recent_events": lambda query, limit=20: memory_read(memory_tools.search_recent_events, query=query, limit=limit, paths=paths),
+        "search_semantic_memory": lambda query, limit=5: memory_read(memory_tools.search_semantic_memory, query=query, limit=limit, home=home),
         "ui_status": lambda: ui_tools.ui_status(home),
         "list_windows": lambda: ui_tools.list_windows(home),
         "focus_window": lambda address: ui_tools.focus_window(address, home),
@@ -172,6 +211,11 @@ def _ask_model(
         # Defense in depth for future callers: account text never enters inference,
         # even when someone tries to reuse a saved or manually constructed trace.
         raise PermissionError("GitHub reference content cannot enter model inference or action planning.")
+    has_memory_trace = any(isinstance(step, dict) and isinstance(step.get("call"), dict)
+                           and step["call"].get("tool") in MEMORY_READ_TOOLS
+                           for step in tool_trace or [])
+    if has_memory_trace and _memory_access_denial(home):
+        raise PermissionError("Saved-memory consent was revoked; cached results cannot enter inference.")
     from ai_os.request_activity import record
     record(home, "model")
     from ai_os.screen_context import screen_message, local_screen_allowed
@@ -292,6 +336,8 @@ def _ask_model(
         payload["keep_alive"] = policy["keep_alive"]
     headers: dict[str, str] = {}
     validate_model_endpoint(asdict(config))
+    if has_memory_trace and _memory_access_denial(home):
+        raise PermissionError("Saved-memory consent was revoked; cached results cannot enter inference.")
     if config.ai_provider == "openai_compatible":
         api_key = os.environ.get(config.api_key_env)
         if api_key:

@@ -1,7 +1,10 @@
 """Public research provenance and native narration controls, without network/audio."""
 import os
+import json
 from pathlib import Path
 import socket
+import sys
+import time
 
 import pytest
 
@@ -48,6 +51,58 @@ def test_report_retains_actual_source_links_and_metadata_limitations(saved, tmp_
     assert Path(saved["path"]).stat().st_mode & 0o777 == 0o600
     assert Path(saved["path"]).parent.stat().st_mode & 0o777 == 0o700
     assert research.list_reports(tmp_path)[0]["report_id"] == saved["report_id"]
+
+
+def test_real_api_limits_and_short_abstract_provenance(tmp_path, monkeypatch):
+    calls = []
+    words = [f"abstractword{number}" for number in range(60)]
+
+    def deposited(url, params):
+        calls.append((url, params))
+        if "wikipedia" in url:
+            # Official TextExtracts only supports exchars up to 1200; the old
+            # mocked tests accepted 2200 and concealed a live endpoint failure.
+            assert 1 <= params["exchars"] <= 1200
+            return sources(url, params)
+        assert "abstract" in params["select"].split(",")
+        return {"message": {"items": [
+            {"title": ["Deposited abstract"], "URL": "https://doi.org/10.1234/abstract",
+             "abstract": "<jats:p>" + " ".join(words) + "</jats:p><script>should-not-appear</script>"},
+            {"title": ["Metadata only"], "URL": "https://doi.org/10.1234/metadata"},
+            {"title": ["Later duplicate metadata"], "URL": "https://doi.org/10.1234/abstract"},
+        ]}}
+
+    monkeypatch.setattr(research, "_fetch_json", deposited)
+    saved = research.run_research("giant pandas", home=tmp_path, human_confirmed=True)
+    assert len(calls) == 2
+    assert saved["evidence_counts"] == {"encyclopedia": 1, "abstract": 1, "metadata": 1}
+    report = research.read_report(saved["report_id"], home=tmp_path)
+    markdown = report["markdown"]
+    assert "publisher-deposited abstract" in markdown
+    assert "abstractword24" in markdown and "abstractword25" not in markdown
+    assert "should-not-appear" not in markdown and "<jats:p>" not in markdown
+    assert "https://doi.org/10.1234/abstract" in markdown
+    assert "copyright may belong to the publisher or authors" in markdown
+    assert "Full research papers were not read" in markdown
+    assert "Relevance and findings require reading the paper" in markdown
+    assert "Later duplicate metadata" not in markdown
+
+
+def test_report_language_is_explicit_and_does_not_translate_or_invent_sources(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(research, "_fetch_json", lambda url, params: calls.append((url, params)) or sources(url, params))
+    saved = research.run_research("giant pandas", home=tmp_path, language="hi", human_confirmed=True)
+    report = research.read_report(saved["report_id"], home=tmp_path)
+    assert report["language"] == "hi" and saved["language"] == "hi"
+    assert "स्रोत विवरण" in report["markdown"]
+    assert "A synthetic encyclopedia excerpt" in report["markdown"]
+    assert {call[1].get("query", call[1].get("gsrsearch")) for call in calls} == {"giant pandas"}
+    assert "https://" not in " ".join(report["paragraphs"])
+    calls.clear()
+    for invalid in ("fr", [], True):
+        with pytest.raises(ValueError, match="language"):
+            research.run_research("giant pandas", home=tmp_path, language=invalid, human_confirmed=True)
+    assert calls == []
 
 
 def test_missing_sources_never_fabricates_report(tmp_path, monkeypatch):
@@ -175,3 +230,117 @@ def test_native_cancel_never_starts_network_and_report_links_are_click_only(app,
     assert urls == ["https://doi.org/10.1234/example"]
     widget.action = None
     widget.close()
+
+
+def test_native_paragraph_selection_and_previous_are_explicit(app, saved, tmp_path, monkeypatch):
+    widget = ResearchWidget(tmp_path)
+    requests = []
+    monkeypatch.setattr(widget, "_start", lambda request, seconds: requests.append(request) or True)
+    assert widget.load_report(saved["report_id"])
+    assert widget.paragraph_picker.count() == len(widget.paragraphs)
+    assert widget.select_paragraph(2)
+    assert requests == []  # Browsing a paragraph must not start speech or inference.
+    assert widget.index == 2 and widget.paragraph_picker.currentIndex() == 2
+    assert widget.read_previous()
+    assert requests[-1]["index"] == 1 and widget.index == 1
+    widget.language.setCurrentIndex(widget.language.findData("hi"))
+    assert widget.explain_current()
+    assert requests[-1]["language"] == "hi" and requests[-1]["index"] == 1
+    assert not widget.select_paragraph(-1)
+    widget.action = None
+    widget.close()
+
+
+def test_native_selected_report_language_is_in_exact_consent_and_request(app, tmp_path, monkeypatch):
+    widget = ResearchWidget(tmp_path)
+    widget.topic.setText("giant pandas")
+    widget.report_language.setCurrentIndex(widget.report_language.findData("hi"))
+    requests = []
+    monkeypatch.setattr(widget, "_start", lambda request, seconds: requests.append(request) or True)
+
+    def approve(box):
+        assert box.defaultButton() == box.button(QMessageBox.StandardButton.No)
+        assert "Report labels: Hindi" in box.text()
+        assert "giant pandas" in box.text() and "original language" in box.text()
+        return QMessageBox.StandardButton.Yes
+
+    monkeypatch.setattr(QMessageBox, "exec", approve)
+    assert widget.research()
+    assert requests == [{"action": "research", "topic": "giant pandas", "language": "hi", "confirmed": True}]
+    widget.action = None
+    widget.close()
+
+
+def test_native_progress_updates_before_worker_finished_and_handles_partial_utf8(app, tmp_path, monkeypatch):
+    widget = ResearchWidget(tmp_path)
+    event = (json.dumps({"progress": "Searching sources…"}, ensure_ascii=False) + "\n").encode()
+    chunks = [event[:-2], event[-2:]]
+    monkeypatch.setattr(widget.process, "readAllStandardOutput", lambda: chunks.pop(0))
+    widget.status.setText("Waiting")
+    widget._output()
+    assert widget.status.text() == "Waiting"
+    widget._output()
+    assert widget.status.text() == "Searching sources…"
+    widget.action = None
+    widget.close()
+
+
+def test_native_failed_worker_and_removed_report_have_visible_feedback(app, saved, tmp_path, monkeypatch):
+    widget = ResearchWidget(tmp_path)
+    assert widget.load_report(saved["report_id"])
+    Path(saved["path"]).unlink()
+    assert widget.open_report() is False
+    assert "no longer available" in widget.status.text()
+    monkeypatch.setattr(widget.process, "readAllStandardOutput", lambda: b"")
+    widget.action = "speak"
+    widget.output = bytearray(json.dumps({"result": {"ok": True, "message": "Should not report success"}}).encode())
+    widget._finished(1, None)
+    assert "successful result" in widget.status.text()
+    assert "Should not report success" not in widget.status.text()
+    widget.action = None
+    widget.close()
+
+
+def test_pause_stops_synthetic_worker_and_its_playback_child(app, tmp_path):
+    """Exercise actual process-group cleanup without microphone or audio assets."""
+    import psutil
+    from PySide6.QtCore import QProcess
+
+    if sys.platform != "linux":
+        pytest.skip("Linux process group behavior")
+    widget = ResearchWidget(tmp_path)
+    widget.action = "speak"
+    pid_file = tmp_path / "synthetic-child.pid"
+    script = ("import subprocess,sys,time,pathlib; "
+              "child=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)']); "
+              "pathlib.Path(sys.argv[1]).write_text(str(child.pid)); "
+              "print('ready',flush=True);time.sleep(30)")
+    child_pid = None
+    try:
+        widget.process.start(sys.executable, ["-c", script, str(pid_file)])
+        assert widget.process.waitForStarted(2000)
+        assert widget.process.waitForReadyRead(2000)
+        child_pid = int(pid_file.read_text())
+        assert os.getpgid(child_pid) == widget.process.processId()
+        widget.stop()
+        assert widget.process.state() == QProcess.ProcessState.NotRunning
+        # A reparented dead child can briefly remain a zombie awaiting init;
+        # it is no longer executing or holding the speech lease/audio device.
+        for _ in range(100):
+            try:
+                if psutil.Process(child_pid).status() == psutil.STATUS_ZOMBIE:
+                    break
+            except psutil.NoSuchProcess:
+                break
+            time.sleep(.01)
+        else:
+            pytest.fail("Synthetic playback child survived pause")
+        assert widget.cancelled is True
+    finally:
+        widget.stop()
+        if child_pid is not None and psutil.pid_exists(child_pid):
+            try:
+                psutil.Process(child_pid).kill()
+            except psutil.NoSuchProcess:
+                pass
+        widget.close()

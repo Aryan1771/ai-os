@@ -25,6 +25,8 @@ import requests
 MAX_RESPONSE_BYTES = 524288
 MAX_REPORT_BYTES = 65536
 MAX_TOPIC_CHARS = 160
+MAX_ABSTRACT_WORDS = 25
+MAX_PARAGRAPHS = 32
 API_ENDPOINTS = {"https://en.wikipedia.org/w/api.php", "https://api.crossref.org/works"}
 REPORT_ID = re.compile(r"[0-9a-f]{32}\Z")
 
@@ -85,6 +87,17 @@ def _text(value, maximum=1200) -> str:
     return value[:maximum].strip()
 
 
+def _abstract_excerpt(value) -> str:
+    """A short attributed quotation, not a claim to have read the paper."""
+    if not isinstance(value, str):
+        return ""
+    # Deposited abstracts often use JATS XML. Remove active element contents,
+    # strip tags/entities, then cap quotations independently of the source size.
+    value = re.sub(r"(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)\s*>", " ", value[:12000])
+    words = _text(value, 4000).split()
+    return " ".join(words[:MAX_ABSTRACT_WORDS]) + (" …" if len(words) > MAX_ABSTRACT_WORDS else "")
+
+
 def _markdown(value: str) -> str:
     return re.sub(r"([\\`*_{}\[\]()#+.!<>])", r"\\\1", value)
 
@@ -111,7 +124,9 @@ def _sources(topic: str, progress) -> tuple[list[dict], list[str]]:
         result = _fetch_json("https://en.wikipedia.org/w/api.php", {
             "action": "query", "generator": "search", "gsrsearch": topic,
             "gsrnamespace": 0, "gsrlimit": 3, "prop": "extracts|info",
-            "exintro": 1, "explaintext": 1, "exlimit": 3, "exchars": 2200,
+            # TextExtracts supports exchars only in 1..1200. Larger values fail
+            # live requests even when mocked-source tests appear successful.
+            "exintro": 1, "explaintext": 1, "exlimit": 3, "exchars": 1200,
             "inprop": "url", "format": "json", "formatversion": 2,
         })
         query = result.get("query", {})
@@ -132,7 +147,7 @@ def _sources(topic: str, progress) -> tuple[list[dict], list[str]]:
     progress("Searching public scholarly metadata…")
     try:
         result = _fetch_json("https://api.crossref.org/works", {
-            "query": topic, "rows": 4, "select": "title,DOI,URL,published,container-title,type",
+            "query": topic, "rows": 4, "select": "title,DOI,URL,published,container-title,type,abstract",
         })
         message = result.get("message", {})
         items = message.get("items", []) if isinstance(message, dict) else None
@@ -152,12 +167,21 @@ def _sources(topic: str, progress) -> tuple[list[dict], list[str]]:
             if title and url:
                 detail = "; ".join(part for part in (journal, year) if part)
                 text = f"Scholarly metadata match: {title}." + (f" Listed in {detail}." if detail else "")
+                abstract = _abstract_excerpt(item.get("abstract"))
                 sources.append({"title": title, "url": url, "text": text,
-                                "kind": "metadata"})
+                                "kind": "abstract" if abstract else "metadata",
+                                "abstract": abstract})
     except (OSError, ValueError, requests.RequestException):
         warnings.append("Crossref metadata was unavailable; no scholarly results were invented.")
-    # The same returned URL must never acquire multiple apparent citations.
-    return list({source["url"]: source for source in sources}.values()), warnings
+    # The same returned URL must never acquire multiple apparent citations. If
+    # duplicate Crossref rows disagree, retain actual excerpt evidence rather
+    # than replacing it with a later metadata-only row.
+    unique = {}
+    for source in sources:
+        previous = unique.get(source["url"])
+        if previous is None or (source["kind"] == "abstract" and previous["kind"] == "metadata"):
+            unique[source["url"]] = source
+    return list(unique.values()), warnings
 
 
 def _report_directory(home: Path, *, create: bool) -> Path:
@@ -181,31 +205,52 @@ def _report_path(home: Path, report_id: str, *, create=False) -> Path:
     return _report_directory(home, create=create) / (report_id + ".md")
 
 
-def run_research(topic, *, home=None, human_confirmed=False, progress=None) -> dict:
+def run_research(topic, *, home=None, human_confirmed=False, progress=None, language=None) -> dict:
     """Trusted exact-topic native approval only; never expose as a model tool."""
     if human_confirmed is not True:
         return {"ok": False, "error": "This exact online research topic needs native human confirmation"}
-    from ai_os.config import AI_OS_HOME
+    from ai_os.config import AI_OS_HOME, load_raw_config
     topic = _topic(topic)
+    runtime_home = Path(home) if home is not None else AI_OS_HOME
+    if language is None:
+        language = load_raw_config(runtime_home)["whisper_language"]
+    if not isinstance(language, str) or language not in {"en", "hi"}:
+        raise ValueError("Report language must be English or Hindi")
     progress = progress or (lambda _message: None)
     sources, warnings = _sources(topic, progress)
     if not sources:
         return {"ok": False, "error": "No verified source results were returned. Nothing was saved; try a clearer topic or check the connection.",
                 "warnings": warnings}
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    paragraphs = [f"Research topic: {topic}.",
-                  "This is an extractive public-source brief. Encyclopedia introductions and scholarly metadata can be incomplete or mismatched. Full research papers were not read; the brief does not establish scientific consensus."]
-    lines = [f"# Research: {_markdown(topic)}", "", f"Created: {now}", "", paragraphs[1], ""]
+    hindi = language == "hi"
+    introduction = ("यह सार्वजनिक स्रोतों से संकलित संक्षिप्त रिपोर्ट है। परिचय, छोटे सारांश-अंश और ग्रंथसूची अधूरे या विषय से अलग हो सकते हैं। पूरे शोधपत्र नहीं पढ़े गए हैं; यह वैज्ञानिक सहमति का प्रमाण नहीं है। उद्धरण स्रोत की मूल भाषा में रखे गए हैं। हिंदी में समझने के लिए स्थानीय व्याख्या चुनें।"
+                    if hindi else
+                    "This is an extractive public-source brief. Encyclopedia introductions, short abstract excerpts and scholarly metadata can be incomplete or mismatched. Full research papers were not read; the brief does not establish scientific consensus. Excerpts retain their original language; choose a local explanation for English or Hindi interpretation.")
+    counts = {kind: sum(source["kind"] == kind for source in sources)
+              for kind in ("encyclopedia", "abstract", "metadata")}
+    coverage = (f"स्रोत विवरण: {counts['encyclopedia']} विश्वकोश परिचय; {counts['abstract']} छोटे सारांश-अंश; {counts['metadata']} केवल ग्रंथसूची वाले परिणाम। किसी परिणाम को स्वतंत्र रूप से सत्यापित शोध-निष्कर्ष न समझें।"
+                if hindi else
+                f"Evidence coverage: {counts['encyclopedia']} encyclopedia introduction(s); {counts['abstract']} short deposited abstract excerpt(s); {counts['metadata']} metadata-only match(es). No item is independently verified as a research finding.")
+    # Keep the stable title prefix and Sources delimiter for older report readers.
+    lines = [f"# Research: {_markdown(topic)}", "", f"Created: {now}", "",
+             f"Report language: {language}", "", introduction, "", coverage, ""]
     for number, source in enumerate(sources, 1):
         description = source["text"]
         if source["kind"] == "metadata":
-            description += " Relevance and findings require reading the paper."
+            description += (" प्रासंगिकता और निष्कर्ष जानने के लिए शोधपत्र पढ़ना आवश्यक है।" if hindi else
+                            " Relevance and findings require reading the paper.")
+        elif source["kind"] == "abstract":
+            description += (" प्रकाशक द्वारा दिए गए सारांश का छोटा उद्धरण; पूरा शोधपत्र नहीं पढ़ा गया है।" if hindi else
+                            " A short quotation from the publisher-deposited abstract follows; the full paper was not read.")
         lines += [f"## {_markdown(source['title'])}", "", _markdown(description) + f" [{number}]", ""]
-        paragraphs.append(description + f" Source {number}.")
+        if source["kind"] == "abstract":
+            label = "सारांश-अंश" if hindi else "Abstract excerpt"
+            lines += [f"{label}: “{_markdown(source['abstract'])}” [{number}]", ""]
     lines += ["## Sources", ""]
     for number, source in enumerate(sources, 1):
         lines += [f"[{number}] [{_markdown(source['title'])}](<{source['url']}>) — {source['kind']}.", ""]
     lines += ["Wikipedia extracts retain their source attribution and are available under the source page's Creative Commons terms; check the linked page before reuse.", "",
+              "Short abstracts are quoted with attribution; their copyright may belong to the publisher or authors. No redistribution license is inferred from API availability.", "",
               "## Limitations", "", "No model-generated facts, private history or account data were used. Search rank is not an endorsement. This report does not replace checking the cited source.", ""]
     lines += [warning + "\n" for warning in warnings]
     # Store paragraph boundaries in the Markdown itself; speech never reads the
@@ -223,6 +268,7 @@ def run_research(topic, *, home=None, human_confirmed=False, progress=None) -> d
         stream.write(encoded)
     progress("Saved the cited research brief locally.")
     return {"ok": True, "report_id": report_id, "path": str(path), "source_count": len(sources),
+            "language": language, "evidence_counts": counts,
             "warnings": warnings, "message": "Saved a cited public-source research brief. Open Research to review it and read one paragraph at a time; full papers were not read."}
 
 
@@ -260,14 +306,17 @@ def read_report(report_id: str, *, home=None) -> dict:
     body = markdown.split("\n## Sources\n", 1)[0]
     paragraphs = []
     for block in body.split("\n\n"):
-        if not block.strip() or block.startswith(("#", "Created:")):
+        if not block.strip() or block.startswith(("#", "Created:", "Report language:")):
             continue
         text = re.sub(r"\\([\\`*_{}\[\]()#+.!<>])", r"\1", block.strip())
         text = re.sub(r"\[(\d+)\]", r"Source \1.", text)
+        text = re.sub(r"https?://\S+", "[link omitted from narration]", text)
         if len(text) <= 8000:
             paragraphs.append(text)
+    language_match = re.search(r"(?m)^Report language: (en|hi)$", markdown)
     return {"ok": True, "report_id": report_id, "path": str(path), "markdown": markdown,
-            "paragraphs": paragraphs[:12]}
+            "language": language_match.group(1) if language_match else "en",
+            "paragraphs": paragraphs[:MAX_PARAGRAPHS]}
 
 
 def speak_paragraph(report_id: str, index: int, *, home, human_confirmed=False) -> dict:
@@ -356,6 +405,7 @@ def main() -> int:
             raise ValueError("Native confirmation required")
         if value.get("action") == "research":
             result = run_research(value.get("topic"), home=args.home, human_confirmed=True,
+                                  language=value.get("language"),
                                   progress=lambda status: print(json.dumps({"progress": status}), flush=True))
         elif value.get("action") == "speak":
             result = speak_paragraph(value.get("report_id"), value.get("index"), home=args.home,

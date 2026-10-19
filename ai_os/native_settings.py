@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import os
 import json
 import sqlite3
 import time
@@ -393,6 +394,8 @@ class SettingsWindow(QMainWindow):
         enrollment = QHBoxLayout()
         enrollment.addWidget(self.button("Set up / test my voice…", QStyle.StandardPixmap.SP_MediaVolume,
                                          self.setup_speaker))
+        enrollment.addWidget(self.button("Guided voice check…", QStyle.StandardPixmap.SP_MessageBoxInformation,
+                                         self.guided_voice_check))
         self.speaker_status = QLabel("Speaker filter is off.")
         self.speaker_status.setWordWrap(True)
         self.speaker_status.setTextFormat(Qt.TextFormat.PlainText)
@@ -514,6 +517,26 @@ class SettingsWindow(QMainWindow):
 
     def _desktop_page(self):
         layout = self.page("Desktop", QStyle.StandardPixmap.SP_FileDialogListView)
+        self.shortcut_process = None
+        self.shortcut_status = QLabel(
+            "GNOME session: review separate REgenOS shortcuts below. Hyprland defaults do not apply here."
+            if "GNOME" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+            else "Review GNOME shortcuts from a GNOME session, or use the installed Hyprland defaults."
+        )
+        self.shortcut_status.setTextFormat(Qt.TextFormat.PlainText)
+        self.shortcut_status.setWordWrap(True)
+        layout.addWidget(self.shortcut_status)
+        shortcuts = QHBoxLayout()
+        shortcuts.addWidget(self.button("Review GNOME shortcuts…", QStyle.StandardPixmap.SP_ComputerIcon,
+                                         lambda: self.run_shortcut_action("propose")))
+        shortcuts.addWidget(self.button("Restore shortcut backup…", QStyle.StandardPixmap.SP_BrowserReload,
+                                         self.restore_shortcut_backup))
+        layout.addLayout(shortcuts)
+        note = QLabel("Review adds Settings (Super+Alt+A), Chat (Super+Alt+C) and Companion (Super+Alt+R) only after confirmation. "
+                      "Existing GNOME shortcuts stay in place. Conflicts prevent installation; private backups support rollback. "
+                      "The defaults below belong to Hyprland, not GNOME.")
+        note.setWordWrap(True)
+        layout.addWidget(note)
         form = self.form(layout)
         self.check(form, "hyprland_enabled", "Allow Hyprland window tools")
         for keys, action in (
@@ -526,6 +549,99 @@ class SettingsWindow(QMainWindow):
         ):
             form.addRow(keys, QLabel(action))
         layout.addStretch()
+
+    def run_shortcut_action(self, action, request=None):
+        if action not in {"propose", "apply", "revert"}:
+            return False
+        if self.shortcut_process is not None:
+            self.shortcut_status.setText("A shortcut operation is already running. Wait for it to finish.")
+            return False
+        process = QProcess(self)
+        self.shortcut_process = process
+        environment = QProcessEnvironment.systemEnvironment()
+        environment.insert("AI_OS_HOME", str(self.home))
+        process.setProcessEnvironment(environment)
+        output = bytearray()
+        failed = False
+
+        def read():
+            nonlocal failed
+            output.extend(bytes(process.readAllStandardOutput()))
+            if len(output) > 65536:
+                failed = True
+                process.kill()
+
+        def finished(code, _status):
+            read()
+            self.shortcut_process = None
+            try:
+                result = json.loads(output) if code == 0 and not failed else None
+                if not isinstance(result, dict):
+                    raise ValueError()
+                self.shortcut_result(action, result)
+            except (ValueError, TypeError):
+                self.shortcut_status.setText("Shortcut operation did not complete. Keep any private backup and inspect desktop settings.")
+            process.deleteLater()
+
+        def error(kind):
+            if kind == QProcess.ProcessError.FailedToStart:
+                self.shortcut_process = None
+                self.shortcut_status.setText("The shortcut helper could not start. No settings were changed.")
+                process.deleteLater()
+
+        process.readyReadStandardOutput.connect(read)
+        process.readyReadStandardError.connect(lambda: process.readAllStandardError())
+        process.finished.connect(finished)
+        process.errorOccurred.connect(error)
+        self.shortcut_status.setText("Inspecting GNOME shortcut conflicts…" if action == "propose" else "Applying the reviewed shortcut change…")
+        process.start(sys.executable, ["-m", "ai_os.desktop_shortcuts", "--action", action])
+        if request is not None:
+            process.write(json.dumps(request).encode())
+        process.closeWriteChannel()
+        QTimer.singleShot(45000, process, process.kill)
+        return True
+
+    def shortcut_result(self, action, result):
+        if not result.get("ok"):
+            self.shortcut_status.setText(str(result.get("message") or
+                "Shortcut conflicts were found. Existing bindings were preserved; review them in GNOME Settings.")[:600])
+            return
+        if action != "propose":
+            self.shortcut_status.setText(str(result.get("message", "Shortcut operation completed."))[:600]
+                + (" Backup: " + result["backup_id"] if result.get("backup_id") else ""))
+            return
+        if result.get("already_applied"):
+            self.shortcut_status.setText("REgenOS GNOME shortcuts are already installed. Verify the three keys on your keyboard.")
+            return
+        box = QMessageBox(self)
+        box.setWindowTitle("Install these GNOME shortcuts?")
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        box.setText("Settings: Super + Alt + A\nChat: Super + Alt + C\nCompanion: Super + Alt + R\n\n"
+                    "Existing GNOME shortcuts are preserved. A private backup will be created. "
+                    "Restore shortcut backup reverses only these changes and refuses to overwrite later edits.")
+        box.setDetailedText("\n\n".join(str(b.get("accelerator", "")) + " → " + str(b.get("command", ""))
+                                            for b in result.get("bindings", [])))
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() == QMessageBox.StandardButton.Yes:
+            self.run_shortcut_action("apply", {"proposal": result, "confirmed": True})
+        else:
+            self.shortcut_status.setText("Shortcut review cancelled. No desktop settings changed.")
+
+    def restore_shortcut_backup(self):
+        folder = self.home / "backups/desktop-shortcuts"
+        filename, _ = QFileDialog.getOpenFileName(self, "Select private shortcut backup", str(folder), "Shortcut backup (*.json)")
+        if not filename:
+            return
+        path = Path(filename)
+        if path.parent.resolve() != folder.resolve() or len(path.stem) != 32 or any(c not in "0123456789abcdef" for c in path.stem):
+            self.shortcut_status.setText("Choose an existing REgenOS private shortcut backup in its original directory.")
+            return
+        if QMessageBox.question(self, "Restore shortcut backup?",
+                "Restore only these REgenOS bindings from the selected private backup? Unrelated shortcuts stay in place; later edits prevent rollback.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
+            self.run_shortcut_action("revert", {"backup_id": path.stem, "confirmed": True})
 
     def _sandbox_page(self):
         layout = self.page("Permissions", QStyle.StandardPixmap.SP_MessageBoxWarning)
@@ -819,6 +935,10 @@ class SettingsWindow(QMainWindow):
         self.status.style().polish(self.status)
         return True
 
+    def guided_voice_check(self):
+        from ai_os.voice_diagnostics import create_dialog
+        create_dialog(self.home, parent=self).exec()
+
     def setup_speaker(self):
         model = self.fields["speaker_model"].text().strip()
         if model != load_raw_config(self.home)["speaker_model"]:
@@ -998,6 +1118,10 @@ class SettingsWindow(QMainWindow):
         QTimer.singleShot(9000, process, process.kill)
 
     def closeEvent(self, event):
+        if self.shortcut_process is not None:
+            self.shortcut_status.setText("Wait for the bounded shortcut operation to finish before closing Settings.")
+            event.ignore()
+            return
         if self.collect() != self.saved:
             answer = QMessageBox.question(
                 self,

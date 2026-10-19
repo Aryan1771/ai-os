@@ -1,6 +1,6 @@
 # REgenOS: installed runtime, latency and continuity
 
-2026-10-19 latest: **603 passed**, correctness lint clean. Current executor reaches
+2026-10-19 latest: **774 passed**, correctness lint clean. Current executor reaches
 PipeWire/Ollama/user bus; older denied-socket counts below are historical.
 See [HANDOFF](HANDOFF.md), [research/chat/cleanup](RESEARCH_AND_CLEANUP.md) and
 [voice identity/voices](VOICE_IDENTITY_AND_VOICES.md) for commands and pending
@@ -13,6 +13,26 @@ xcb greeting smoke passed in 5.60s; whole-GPU sampled peak was 4707 MiB across
 RTX 4060 Laptop/8188 MiB. A local-model-to-GitHub read passed in 2.00s using an
 isolated temporary history and the approved exact repository; account text was
 withheld. See [GitHub MCP](GITHUB_MCP.md) for provisioning and privacy boundaries.
+
+Latest source and installed checks: [guided voice diagnostics](VOICE_DIAGNOSTICS.md)
+adds bounded local current-turn replies and public timings without history/actions.
+Initial synthetic English closed loop completed in 19.214s; subsequent diagnostic
+model-only turns after bounded replies took 3.645s/0.420s (cold/cache effects,
+not a universal performance gain). Base Hindi now rejects its script mismatch
+before submitting a request. Existing ONNX wake backend loading passes without
+microphone; wake accuracy remains untested. Live public research returned 7 cited
+sources in 1.70s; actual Brave/YouTube launch request accepted. Owner-approved
+GNOME shortcuts applied and passed readback with private rollback backup. No
+physical key/voice acceptance or new model download here. The owner separately
+approved restarting only `ai-os.service`: active/running, exit status 0, listening,
+wake and speaker filtering off; no other service or system changes.
+
+Legacy memory read tools now bind the selected runtime and enforce saved memory
+and remote-sharing consent on each invocation and before cached tool-result
+inference. Sixty regressions cover consent revocation and no private reference
+transmission. Legacy vector APIs preserve stores and return setup-required without
+importing Chroma, downloading embeddings or enabling telemetry. Local lexical
+conversation retrieval and explicit notes work; trusted semantic setup is pending.
 
 Earlier restricted-executor checkpoint (2026-10-19): [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md),
 [INTERACTION_HARNESS](INTERACTION_HARNESS.md) and

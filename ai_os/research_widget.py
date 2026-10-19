@@ -56,6 +56,11 @@ class ResearchWidget(QWidget):
         self.topic.setMaxLength(160)
         self.topic.setPlaceholderText("Topic, e.g. giant panda conservation")
         query.addWidget(self.topic, 1)
+        self.report_language = QComboBox()
+        self.report_language.addItem("English report", "en")
+        self.report_language.addItem("हिंदी रिपोर्ट", "hi")
+        self.report_language.setCurrentIndex(1 if load_raw_config(self.home)["whisper_language"] == "hi" else 0)
+        query.addWidget(self.report_language)
         self.research_button = QPushButton("Research online…")
         self.research_button.setObjectName("primary")
         self.research_button.clicked.connect(self.research)
@@ -84,7 +89,14 @@ class ResearchWidget(QWidget):
         self.explanation.setMaximumHeight(110)
         self.explanation.setPlaceholderText("Optional local-model explanation appears here. Verify it against the sources.")
         layout.addWidget(self.explanation)
+        self.paragraph_picker = QComboBox()
+        self.paragraph_picker.setPlaceholderText("Choose a paragraph to read or explain")
+        self.paragraph_picker.activated.connect(self.select_paragraph)
+        layout.addWidget(self.paragraph_picker)
         controls = QHBoxLayout()
+        self.previous_button = QPushButton("Previous paragraph")
+        self.previous_button.clicked.connect(self.read_previous)
+        controls.addWidget(self.previous_button)
         self.read_button = QPushButton("Read paragraph")
         self.read_button.clicked.connect(self.read_current)
         controls.addWidget(self.read_button)
@@ -136,28 +148,42 @@ class ResearchWidget(QWidget):
 
     def open_report(self):
         if self.report_id:
-            report = read_report(self.report_id, home=self.home)
-            QDesktopServices.openUrl(QUrl.fromLocalFile(report["path"]))
+            try:
+                report = read_report(self.report_id, home=self.home)
+            except (OSError, ValueError):
+                self.status.setText("The report file is no longer available or its permissions changed. Reload a saved report.")
+                return False
+            if not QDesktopServices.openUrl(QUrl.fromLocalFile(report["path"])):
+                self.status.setText("The desktop could not open this report. Its path is shown above.")
+                return False
+            return True
+        return False
 
     def _controls(self):
         busy = self.process.state() != QProcess.ProcessState.NotRunning
         self.research_button.setEnabled(not busy)
         self.load_button.setEnabled(not busy)
         self.topic.setEnabled(not busy)
+        self.report_language.setEnabled(not busy)
         self.saved_id.setEnabled(not busy)
         self.saved_reports.setEnabled(not busy)
         self.open_button.setEnabled(bool(self.report_id) and not busy)
         self.explain_button.setEnabled(bool(self.paragraphs) and not busy)
         self.language.setEnabled(not busy)
         self.read_button.setEnabled(bool(self.paragraphs) and not busy)
+        self.previous_button.setEnabled(bool(self.paragraphs) and self.index > 0 and not busy)
+        self.paragraph_picker.setEnabled(bool(self.paragraphs) and not busy)
         self.next_button.setEnabled(bool(self.paragraphs) and self.index + 1 < len(self.paragraphs) and not busy)
         self.stop_button.setEnabled(busy)
         self.position.setText(f"Paragraph {self.index + 1} of {len(self.paragraphs)}" if self.paragraphs else "No report loaded")
+        if self.paragraphs:
+            self.paragraph_picker.setCurrentIndex(self.index)
 
     def _start(self, request, seconds):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             return False
         self.output.clear()
+        self._progress_offset = 0
         self.cancelled = False
         self.action = request["action"]
         self.process.start(sys.executable, ["-m", "ai_os.research_reports", "--home", str(self.home)])
@@ -176,14 +202,16 @@ class ResearchWidget(QWidget):
         box = QMessageBox(self)
         box.setWindowTitle("Research this exact topic online?")
         box.setTextFormat(Qt.TextFormat.PlainText)
-        box.setText(f"Topic: {topic}\n\nThis topic and your network address will be visible to Wikipedia and Crossref. No chat history, memory, files or account details are uploaded. Results stay in your local REgenOS research folder. Sources may be incomplete or unrelated. Continue?")
+        language = self.report_language.currentData()
+        box.setText(f"Topic: {topic}\nReport labels: {'Hindi' if language == 'hi' else 'English'}\n\nThis exact topic and your network address will be visible to Wikipedia and Crossref. No chat history, memory, files or account details are uploaded. Results stay in your local REgenOS research folder. Source excerpts keep their original language; use local Explain & read for your selected language. Sources may be incomplete or unrelated. Continue?")
         box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         box.setDefaultButton(QMessageBox.StandardButton.No)
         if box.exec() != QMessageBox.StandardButton.Yes:
             self.status.setText("Online research cancelled.")
             return False
         self.status.setText("Starting public-source search…")
-        return self._start({"action": "research", "topic": topic, "confirmed": True}, 45)
+        return self._start({"action": "research", "topic": topic, "language": language,
+                            "confirmed": True}, 45)
 
     def load_report(self, report_id):
         if self.process.state() != QProcess.ProcessState.NotRunning:
@@ -197,16 +225,43 @@ class ResearchWidget(QWidget):
         self.saved_id.setText(report_id)
         self.paragraphs = report["paragraphs"]
         self.index = 0
+        self.paragraph_picker.clear()
+        for number, paragraph in enumerate(self.paragraphs, 1):
+            self.paragraph_picker.addItem(f"{number}. {paragraph[:100]}", number - 1)
+        language_index = self.language.findData(report["language"])
+        self.language.setCurrentIndex(max(0, language_index))
         self.explanation.clear()
         self.preview.setMarkdown(report["markdown"])
         self.refresh_saved()
         self.status.setText("Saved locally: " + report["path"] + ". Reading pauses after every paragraph.")
         self._controls()
+        self._show_current()
+        return True
+
+    def _show_current(self):
+        if self.paragraphs:
+            # Highlight a literal prefix in the already rendered local report;
+            # do not interpret source text as rich markup or a navigation URL.
+            cursor = self.preview.document().find(self.paragraphs[self.index][:80])
+            if not cursor.isNull():
+                self.preview.setTextCursor(cursor)
+                self.preview.ensureCursorVisible()
+
+    def select_paragraph(self, index):
+        if (self.process.state() != QProcess.ProcessState.NotRunning
+                or type(index) is not int or not 0 <= index < len(self.paragraphs)):
+            return False
+        self.index = index
+        self.explanation.clear()
+        self._controls()
+        self._show_current()
+        self.status.setText(f"Paragraph {index + 1} selected. Choose Read or Explain & read; nothing plays automatically.")
         return True
 
     def read_current(self):
         if not self.paragraphs:
             return False
+        self._show_current()
         self.status.setText(f"Speaking paragraph {self.index + 1}. Stop / pause stops its audio.")
         return self._start({"action": "speak", "report_id": self.report_id, "index": self.index,
                             "confirmed": True}, 250)
@@ -215,6 +270,15 @@ class ResearchWidget(QWidget):
         if self.process.state() != QProcess.ProcessState.NotRunning or self.index + 1 >= len(self.paragraphs):
             return False
         self.index += 1
+        self.explanation.clear()
+        self._controls()
+        return self.read_current()
+
+    def read_previous(self):
+        if self.process.state() != QProcess.ProcessState.NotRunning or self.index <= 0:
+            return False
+        self.index -= 1
+        self.explanation.clear()
         self._controls()
         return self.read_current()
 
@@ -228,7 +292,25 @@ class ResearchWidget(QWidget):
     def _output(self):
         self.output.extend(bytes(self.process.readAllStandardOutput()))
         if len(self.output) > 65536:
+            self.output.clear()  # Avoid recursively stopping on the same buffer.
             self.stop()
+            self.status.setText("Research worker exceeded its output limit and was stopped.")
+            return
+        # Display completed progress lines as they arrive rather than waiting
+        # for the finished signal. A partial UTF-8/JSON line remains buffered.
+        offset = getattr(self, "_progress_offset", 0)
+        while b"\n" in self.output[offset:]:
+            end = self.output.index(b"\n", offset)
+            line = self.output[offset:end]
+            offset = end + 1
+            try:
+                event = json.loads(line)
+                if (not self.cancelled and isinstance(event, dict)
+                        and isinstance(event.get("progress"), str)):
+                    self.status.setText(event["progress"][:200])
+            except (ValueError, UnicodeError):
+                pass
+        self._progress_offset = offset
 
     def _finished(self, code, exit_status):
         self.timer.stop()
@@ -247,7 +329,7 @@ class ResearchWidget(QWidget):
                     self.status.setText(item["progress"][:200])
         except (ValueError, UnicodeError, TypeError):
             result = None
-        if isinstance(result, dict) and result.get("ok"):
+        if code == 0 and isinstance(result, dict) and result.get("ok") is True:
             if self.action == "research":
                 self.load_report(result["report_id"])
             else:
@@ -255,7 +337,8 @@ class ResearchWidget(QWidget):
                     self.explanation.setPlainText(str(result.get("explanation", ""))[:3000])
                 self.status.setText(str(result.get("message", "Paragraph finished. Paused; choose Next paragraph to continue."))[:300])
         else:
-            self.status.setText(result.get("error", "Research or reading failed.")[:300] if isinstance(result, dict) else "Research worker stopped without a valid result.")
+            error = result.get("error") if isinstance(result, dict) else None
+            self.status.setText(error[:300] if isinstance(error, str) else "Research worker stopped without a valid successful result.")
         self._controls()
 
     def _error(self, error):

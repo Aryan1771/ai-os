@@ -1,5 +1,83 @@
 # REgenOS handoff — 2026-10-19
 
+## Continued runtime completion checkpoint — 2026-10-19
+
+This follows `c8d2c28` on `main`. Preserve unrelated `:memory:.ses`.
+Final full regression run: **774 passed in 10.53s**; correctness Ruff, whitespace,
+native installer shell syntax and Chat/Research desktop validation pass.
+[REQUEST_STATUS](REQUEST_STATUS.md) maps the owner's requests to implementation,
+physical acceptance and approval gates. Work is not universally complete; Hindi
+recognition remains a blocker before ISO release work.
+
+- Native memory now supports explicit inspected-user-statement pinning to durable
+  shared notes, selected-note editing/removal and stale-revision guards. No private
+  memory was inspected; no semantic auto-merging or model-weight training claim.
+- Closed legacy memory-tool consent/path gaps: all five read tools bind the active
+  runtime, recheck memory and remote-sharing consent, and reject cached results
+  after revocation, including immediately before network submission. Sixty new
+  privacy regressions pass. Legacy vector APIs now return `semantic_setup_required`
+  without importing Chroma, opening stores, fetching weights or enabling telemetry.
+  Existing stores are preserved; trusted offline semantic provisioning is pending.
+- Fixed Wikipedia `exchars` 2200 → supported 1200. Added short attributed Crossref
+  abstract excerpts/evidence counts, en/hi structure, paragraph selection/Previous
+  and incremental progress. Live `giant panda conservation` query: 7 sources
+  (3 encyclopedia, 2 abstract, 2 metadata), no warnings, 1.70s. Temp report removed.
+- Added [guided voice checks](VOICE_DIAGNOSTICS.md) with per-record consent,
+  local current-utterance-only inference, no actions/history and owned-group
+  cleanup. Opened the actual native window with recording off; no agent microphone
+  capture or audible playback. Public STT errors replace private backend details;
+  Hindi/script mismatch rejects before actions. Continuous speaker-filter errors
+  now reach visible status with 15-second callback rate limiting.
+- Existing openWakeWord ONNX assets/backend load in a bounded child (1.7s), no
+  microphone/download. Wake accuracy remains untested; `pip check` still reports
+  the package's missing TFLite dependency. Explicit ONNX loading succeeds.
+- English synthetic Piper→Whisper→local reply→Piper completed in 19.214s initially
+  (model 14.136s). After bounded diagnostic replies, hardware-policy reuse and
+  timing counters, model-only turns took 3.645s/0.420s, load 3.111s/0.001s and
+  generation 0.375s/0.367s. Cache/cold effects prevent a universal speedup claim.
+  Whole-GPU peak sampled across sequential synthetic stages: 4701 MiB/103 samples,
+  not simultaneous worst-case or real mic latency. Hindi base still fails closed.
+- Actual installed Brave discovery and YouTube launch request passed; owner must
+  confirm the intended visible page. No browser/account content was read.
+- After the final 774-test run, `scripts/verify_native_runtime.py` passed again:
+  nine native pages, xcb, visible temporary companion and a completed synthetic
+  local greeting. It used temporary settings/history with voice and memory off.
+- Owner approved three GNOME bindings only: Super+Alt+A Settings, +C Chat, +R
+  Companion. Apply/fresh readback passed; physical keys remain unverified.
+  [Rollback](DESKTOP_SHORTCUTS.md) backup `1b32cb89af574ced9d092e35d3261e34` is
+  outside Git. Existing bindings preserved. The owner separately approved only
+  `ai-os.service` restart for these latest repairs; it is active/running with
+  exit status 0 and zero restarts. No driver/firewall/boot/disk change occurred.
+- Readiness: continuous listening/filtering off, private profile present, PipeWire
+  unmuted, core active, local model installed/reachable, `voice_blockers=[]`.
+  Asset readiness is not personal recognition/quality acceptance. Official
+  multilingual Whisper small download/comparison still awaits its own approval;
+  resume and shortcut approval do not authorize model downloads.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q --tb=short
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests
+git diff --check
+~/.ai_os/venv/bin/python -m ai_os.runtime_health
+~/.ai_os/venv/bin/python -m ai_os.voice_diagnostics
+~/.ai_os/venv/bin/python -m ai_os.desktop_shortcuts --action propose
+# Only after the owner's explicit approval for this checkpoint:
+systemctl --user restart ai-os.service
+systemctl --user show ai-os.service --property=ActiveState --property=SubState --property=MainPID --property=ExecMainStatus --property=NRestarts
+```
+
+Live research used `run_research('giant panda conservation', home=temporary_path,
+language='en', human_confirmed=True)`. Synthetic model checks used fixed public
+questions with `voice_diagnostics.local_reply(..., metrics={})`; no private
+history/actions. Reports/audio were temporary. No ISO/VM/release was produced.
+Before the approved restart the unit was inactive/dead with prior exit status 0;
+afterward active/running, PID 18484, `NRestarts=0`, `ExecMainStatus=0`. A diagnostic
+script initially used a nonexistent raw speaker-filter key after successful restart;
+corrected readback through `runtime_health.report` passed: core active,
+`voice_ready=true`, no blockers, speaker filtering/listening/wake all off. No raw
+journal or private conversations were read. Fresh native workers use current source;
+already open Settings/Chat windows may need an ordinary close/reopen.
+
 ## Blue hologram and GitHub MCP checkpoint — 2026-10-19
 
 **603 tests passed in 9.44s**; correctness Ruff, whitespace, native installer shell

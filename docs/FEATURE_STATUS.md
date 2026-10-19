@@ -1,6 +1,25 @@
 # REgenOS Feature Checklist
 
-Latest 2026-10-19: **603 tests pass**, correctness lint passes. [Compact chat, reports, cleanup rules, activity and mouth animation](RESEARCH_AND_CLEANUP.md)
+Latest full regression checkpoint: **774 tests passed in 10.53s**, including the
+semantic-memory and registry-permission follow-up. Correctness lint, whitespace,
+installer shell syntax and Chat/Research desktop-file validation passed.
+The runtime follow-up adds memory pin/edit controls, accurate voice readiness,
+guided one-shot local voice checks, research abstracts/paragraph navigation and
+approved GNOME shortcut installation/readback. See [request status](REQUEST_STATUS.md).
+Live research returned seven cited sources; existing openWakeWord ONNX loads
+without a microphone. Hindi base still fails script consistency; the proposed
+small-model download awaits approval. No ISO/VM or universal-command claim follows.
+
+Legacy semantic-memory APIs now fail closed: they do not import Chroma, open
+existing vectors, fetch default embeddings or start telemetry. A trusted offline
+embedding setup is not implemented; ordinary memory uses local SQLite/history,
+explicit preferences, notes and bounded reinforcement. Legacy read tools bind to
+the selected runtime and recheck memory and remote-sharing consent on each call.
+Existing stores are preserved; installing Chroma alone does not enable semantic
+retrieval. These guards are included in the final full run; successful semantic
+retrieval and independent security certification are not established by it.
+
+Previous 2026-10-19 checkpoint: **603 tests pass**, correctness lint passes. [Compact chat, reports, cleanup rules, activity and mouth animation](RESEARCH_AND_CLEANUP.md)
 and [speaker enrollment/reply language](VOICE_IDENTITY_AND_VOICES.md) are source-tested.
 Approved speaker backend/model are provisioned and synthetic extraction passes;
 the owner completed enrollment after retries. Personal recognition accuracy remains
@@ -112,12 +131,12 @@ Updated 2026-09-26. Checked items mean implemented in this repository, not certi
 - [x] Local habits JSON with permanent defaults and temporary overrides that expire.
 - [x] Slang/jargon replacement dictionary and protected-term handling.
 - [x] Local event log and recent-event text search.
-- [x] Optional ChromaDB store/search helper functions and persistent local collection path.
+- [ ] ChromaDB semantic store/search: compatibility functions deliberately return setup-required without importing Chroma or opening legacy stores. Trusted offline embeddings, disabled telemetry and semantic retrieval acceptance remain unimplemented; existing vectors are preserved.
 - [x] Bounded persistent recent conversation history and automatic keyword retrieval of explicitly curated context notes into model requests, shared by default across terminal, voice and hub. Local SQLite; no embedding download required. Can be disabled.
 - [x] Context note create/edit/delete, text/Markdown import, validated JSON import/export, conversation retention and clear-history controls in the C++ hub.
 - [ ] Semantic retrieval of older conversation facts, sensitive-data filtering, automatic summarization and memory conflict resolution. Keyword notes plus recent history are not unlimited memory.
 - [ ] Self-training or local model fine-tuning. Saving facts and preferences does not modify model weights.
-- [ ] Offline provisioning/verification of Chroma's embedding model and full semantic-memory integration tests.
+- [ ] Trusted offline provisioning/verification of a semantic embedding model and successful semantic retrieval integration. Fail-closed privacy tests exist; they do not establish that semantic retrieval works.
 
 ## Security And System Integration
 

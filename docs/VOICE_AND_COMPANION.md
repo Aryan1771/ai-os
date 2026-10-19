@@ -7,6 +7,12 @@ Listening/filtering remain off. Base Whisper still produces poor
 Urdu-script Hindi in synthetic tests despite detecting hi. Mood guides conversational
 tone; the speaking mouth uses approximate cadence, not phoneme lip sync.
 
+The [guided voice check](VOICE_DIAGNOSTICS.md) now isolates one explicit recording,
+shows transcript/reply/timings and runs no actions or stored conversation. Current
+Hindi/script mismatch fails before action instead of using an unreliable transcript.
+Existing openWakeWord ONNX loading passes without a microphone; wake accuracy is
+still untested and the distribution's TFLite dependency audit remains unresolved.
+
 Current assistant name: **RE**, spoken **R E**. The new experimental local Whisper
 wake option and current installed assets/validation are documented in
 [RE session and identity](RE_SESSION_AND_IDENTITY.md). The older openWakeWord path

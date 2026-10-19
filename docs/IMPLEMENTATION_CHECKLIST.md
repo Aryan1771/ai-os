@@ -1,6 +1,9 @@
 # REgenOS implementation and Arch verification audit
 
-Latest native checkpoint (2026-10-19): 603 tests pass; new compact chat/steering,
+Latest native full-suite checkpoint (2026-10-19): **774 tests passed in 10.53s**,
+including the semantic-memory and registry-consent follow-up. Correctness lint,
+whitespace, installer shell syntax and Chat/Research desktop-file validation pass.
+New compact chat/steering,
 reviewed interactive jobs, optional speaker setup, language matching, source briefs,
 recoverable cleanup and mood/mouth presentation are source-tested. [HANDOFF](HANDOFF.md)
 distinguishes implementation from acceptance. Approved speaker assets are installed
@@ -10,6 +13,24 @@ The owner reports saved voice enrollment after retries; recognition accuracy is
 still unverified. Blue hologram/native shade controls and scoped GitHub MCP reads
 are source-tested; native greeting and live model-to-GitHub reads passed.
 Older denied-socket counts below are superseded; installer/Arch acceptance stays open.
+
+Current additional evidence: native pin/edit/remove memory controls; precise STT
+failures and one-shot diagnostic consent; actual research API success (7 sources);
+approved GNOME application shortcuts applied/read back. OpenWakeWord ONNX loads
+with existing assets, while TFLite dependency metadata remains incomplete.
+[REQUEST_STATUS](REQUEST_STATUS.md) classifies requested work and remaining gates.
+
+Latest privacy repair: semantic compatibility APIs return setup-required without
+importing Chroma, opening legacy vectors, downloading default embeddings or
+starting telemetry. Verified offline semantic provisioning remains absent.
+Legacy read tools use the selected runtime and recheck saved memory/remote-sharing
+consent on every call; ordinary SQLite continuity and explicit curation remain
+available. Existing stores are preserved. See the focused semantic/privacy and
+memory-tool boundary tests, included in the completed full regression run. Fresh
+readiness reports voice ready with no blockers and continuous listening/wake off;
+approved shortcut readback passes without conflicts. This is not physical voice,
+keyboard or broad hardware acceptance. The owner separately approved restarting only `ai-os.service` for these repairs;
+active/running readback passed, with listening, wake and speaker filtering off.
 
 2026-10-19 checkpoint: voice silence/utterance separation, language/current-turn
 routing, shared speech ownership, queued device reactions and memory decay repairs
@@ -27,15 +48,17 @@ any remaining task. The older C++ UI is outside the supported Python/PySide6 pat
 
 1. **P0 — Installed-runtime provenance and backup:** confirmed editable source,
    older installed metadata/config, user unit path, private pre-migration backup.
-   User confirmed direct Ollama CLI use; voice assets are deliberately deferred.
-2. **P1 — Core latency:** CPU cold/warm baseline and prompt reduction measured;
-   driver repair requires user involvement. Then GPU offload/peak VRAM, context
-   budget, request scheduling, and bounded multi-tool result-grounded follow-ups.
+   Direct Ollama CLI use bypasses the harness. Approved Whisper/Piper/speaker
+   assets are now installed; preserve them and the existing private runtime.
+2. **P1 — Core latency:** CPU and small GPU inference probes passed; the historical
+   driver mismatch is superseded. Sampled VRAM is not worst-case or a hard cap.
+   Continue context budgeting, request scheduling, concurrent-load measurement
+   and bounded multi-tool result-grounded follow-ups.
 3. **P2 — Continuity:** persistent sessions, explicit preferences, lexical retrieval,
    native/CLI inspection/deletion tested; validate the user's actual entry point,
    then tighten tokenizer-aware budgeting, concurrent requests and privacy controls.
-4. **P3 — Voice:** locate/install approved assets, instrument capture/STT/model/
-   synthesis/playback separately, validate audible output with user, then VAD,
+4. **P3 — Voice:** use the already provisioned assets and instrument capture/STT/model/
+   synthesis/playback separately, validate current replies with the user, then VAD,
    recorder-stall handling, cancellation, echo suppression and hotplug.
 5. **P4 — Native Qt:** conversation and memory pages now Python; validate real
    interaction, all saved controls and multi-monitor behavior; hardware policy
@@ -100,7 +123,7 @@ Source inspected: `ai_os/ai_os_core.py; tools/system_tools.py; security/consent_
 
 | ID | Original claim | Status / remaining acceptance |
 |---|---|---|
-| A025 (P1) | Local Ollama connection, configured for `qwen2.5:7b-instruct-q4_K_M` by default. | T/H — installed model completed CPU probes and continuity acceptance; GPU mismatch blocks offload/peak validation. |
+| A025 (P1) | Local Ollama connection, configured for `qwen2.5:7b-instruct-q4_K_M` by default. | T/H — installed model completed CPU/GPU probes and synthetic continuity checks. Historical driver mismatch is resolved; sustained/concurrent GPU and owner quality acceptance remain. |
 | A026 (P1) | OpenAI-compatible model endpoint support, including another offline loopback server. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A027 (P1) | Optional HTTPS remote provider mode with hostname approval and API key supplied via an environment variable. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A028 (P1) | Text and JSON tool-call parsing, registered-tool routing and rejection of unknown tool names. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
@@ -113,18 +136,18 @@ Source inspected: `ai_os/ai_os_core.py; tools/system_tools.py; security/consent_
 | A035 (P1) | Background/noninteractive consent requests are denied instead of waiting on nonexistent terminal input. | T/H — argument/consent regression coverage; independent audit and hostile-input review pending. |
 | A036 (P1) | Complete autonomous planning loop with multiple tool steps, result-grounded follow-up answers, retry policies and durable task recovery. | I/H — Native schemas and a tested three-step result-follow-up loop exist, with duplicate and approval stops. Durable recovery and a complete retry policy remain absent; host acceptance is pending. |
 | A037 (P1) | Native C++ conversation window, with recent-history loading and optional spoken replies using the saved Piper voice. | S/I — historical C++ implementation is not supported deployment evidence. Python conversation/memory now added; full page parity pending. |
-| A038 (P1) | Native system-action approval broker. Background risky actions still fail closed; the hub is not a privileged approval channel. | M — CLI consent only; noninteractive requests fail closed. Do not add a model-trusted confirmation flag. |
+| A038 (P1) | Native system-action approval broker. Background risky actions still fail closed; the hub is not a privileged approval channel. | T/I/H — Exact native review and an expiring background proposal inbox exist. Sudo requires separate visible-terminal authentication; same-account dialogs are not independent privileged authorization. No model self-approval. |
 | A039 (P1) | Native adapters for every provider's proprietary protocol. Present remote support assumes an OpenAI-compatible chat-completions schema. | M — Only Ollama/OpenAI-compatible protocols implemented. |
-| A040 (P1) | Hard enforcement of an 8 GB VRAM ceiling, GPU admission control, adaptive model unloading and model performance benchmarks. | M/H — CPU latency probe now exists; no strict VRAM reservation/admission or measured GPU peak. |
+| A040 (P1) | Hard enforcement of an 8 GB VRAM ceiling, GPU admission control, adaptive model unloading and model performance benchmarks. | M/H — CPU/GPU latency probes and sampled device-wide peaks exist; no strict VRAM reservation/admission or sustained simultaneous worst-case bound. |
 ### Voice And Listening
 
 Source inspected: `ai_os/services/listener.py; stt.py; wakeword.py; ai_os/speech_queue.py; tests/test_listener.py; tests/test_hub_backend.py`.
 
 | ID | Original claim | Status / remaining acceptance |
 |---|---|---|
-| A041 (P3) | Local PipeWire microphone capture with openWakeWord gating. | T/I/H — raw capture transport passed; wake-word/model integration and acoustic acceptance pending. |
-| A042 (P3) | Explicit listening and wake-word switches; microphone stays off until both are enabled. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
-| A043 (P3) | Fixed-duration command recording and local Whisper.cpp transcription adapter. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
+| A041 (P3) | Local PipeWire microphone capture with openWakeWord gating. | T/I/H — capture transport and existing openWakeWord ONNX backend/model loading passed separately. Real wake accuracy, acoustic rejection and end-to-end owner acceptance remain pending. |
+| A042 (P3) | Explicit listening and wake-word switches; microphone stays off until both are enabled. | T/H — continuous capture requires listening plus an explicit wake or conversation mode; one-shot capture requires its own Record consent. Listening remains opt-in; owner disable/indicator checks remain. |
+| A043 (P3) | Fixed-duration command recording and local Whisper.cpp transcription adapter. | T/H — distinct initial wait, ending silence and maximum utterance replace a single fixed recording duration; incomplete/mismatched transcripts fail before actions. Personal Hindi/accent and latency acceptance remain. |
 | A044 (P3) | Temporary command WAV deletion after transcription. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A045 (P3) | Piper speech queue with sentence splitting and priority bridge messages; PipeWire playback adapter. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A046 (P3) | Speech activity drives the companion and carries model-generated form metadata into playback. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
@@ -133,9 +156,9 @@ Source inspected: `ai_os/services/listener.py; stt.py; wakeword.py; ai_os/speech
 | A049 (P3) | Verified microphone selection, hotplug recovery, user-calibrated voice activity detection and noise suppression on the laptop. | M/H — Capture transport verified; explicit device selection, VAD calibration, hotplug/noise handling incomplete. |
 | A050 (P3) | Full acoustic echo cancellation, reliable interruption/barge-in, streaming transcription and streaming speech. | M/I/H — Feedback suppression is a speaking flag; no AEC/barge-in or streaming STT/TTS. |
 | A051 (P3) | Voice/model download manager and all wake/embedding model assets pre-provisioned for first-run offline use. | M/I — CLI adapters exist; no verified asset manifest/provisioner. Do not redownload installed models. |
-| A052 (P3) | Piper WAV playback uses each voice's sample rate rather than fixed 22050 Hz; bounded synthesis/playback subprocesses are reaped on timeouts, temporary audio is removed, and failures are surfaced without killing the speech worker. Real audio remains unverified here. | T/I/H — subprocess/WAV tests pass; only synthetic pw-play transport tested, Piper model absent. |
+| A052 (P3) | Piper WAV playback uses each voice's sample rate rather than fixed 22050 Hz; bounded synthesis/playback subprocesses are reaped on timeouts, temporary audio is removed, and failures are surfaced without killing the speech worker. Real audio remains unverified here. | T/H — installed English/Hindi Piper assets, synthetic synthesis/STT and playback transport have evidence; subprocess/WAV cleanup tests pass. Current spoken relevance, quality, echo and owner audibility acceptance remain. |
 | A053 (P3) | Custom ONNX/TFLite wake-word file selection, voice duration multiplier and native voice-test command. A custom phrase requires a trained wake-word model, not simply typing a new name. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
-| A054 (P3) | End-to-end Arch audio validation with the installed Ollama, Whisper and Piper models. | I/H — Missing configured Whisper/Piper assets blocks recognition and first-audible-response timing. |
+| A054 (P3) | End-to-end Arch audio validation with the installed Ollama, Whisper and Piper models. | T/I/H — configured Whisper/Piper assets are installed; synthetic English closed-loop/timing checks pass. Guided owner microphone/reply/audibility checks and reliable Hindi recognition remain; missing models are not the current blocker. |
 ### Memory And Personalization
 
 Source inspected: `ai_os/conversation_memory.py; memory_cli.py; memory_widget.py; tools/memory_tools.py; tests/test_conversation_continuity.py`.
@@ -145,12 +168,12 @@ Source inspected: `ai_os/conversation_memory.py; memory_cli.py; memory_widget.py
 | A055 (P2) | Local habits JSON with permanent defaults and temporary overrides that expire. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A056 (P2) | Slang/jargon replacement dictionary and protected-term handling. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A057 (P2) | Local event log and recent-event text search. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
-| A058 (P2) | Optional ChromaDB store/search helper functions and persistent local collection path. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
+| A058 (P2) | Optional ChromaDB store/search helper functions and persistent local collection path. | T/M/I — compatibility APIs fail closed without importing Chroma, opening legacy stores, downloading embeddings or emitting telemetry. Existing vectors are preserved; functional semantic access requires unimplemented trusted offline setup. |
 | A059 (P2) | Bounded persistent recent conversation history and automatic keyword retrieval of explicitly curated context notes into model requests, shared by default across terminal, voice and hub. Local SQLite; no embedding download required. Can be disabled. | T/I — fresh-process follow-up and forget tested with real Ollama using temporary synthetic data; real Phase 1 runtime had no database. |
 | A060 (P2) | Context note create/edit/delete, text/Markdown import, validated JSON import/export, conversation retention and clear-history controls in the C++ hub. | S/I — historical C++ implementation is not supported deployment evidence. Python conversation/memory now added; full page parity pending. |
 | A061 (P2) | Semantic retrieval of older conversation facts, sensitive-data filtering, automatic summarization and memory conflict resolution. Keyword notes plus recent history are not unlimited memory. | M/I — New bounded lexical older-turn retrieval and basic secret heuristic tested; semantic retrieval/summarization/conflict resolution absent. |
 | A062 (P2) | Self-training or local model fine-tuning. Saving facts and preferences does not modify model weights. | M — No training pipeline, intentionally deferred; memory is not model training. |
-| A063 (P2) | Offline provisioning/verification of Chroma's embedding model and full semantic-memory integration tests. | I/H — Chroma helpers can fetch embedding assets on demand; no verified offline embedding bundle. |
+| A063 (P2) | Offline provisioning/verification of Chroma's embedding model and full semantic-memory integration tests. | T/M/I/H — no trusted verified offline embedding setup exists. APIs return setup-required even with ordinary memory enabled or Chroma installed; regression tests prevent import, download, telemetry and legacy-store access. Successful retrieval acceptance remains pending. |
 ### Security And System Integration
 
 Source inspected: `ai_os/settings_store.py; security/consent_broker.py; tools/system_tools.py; security/apparmor.ai-os; scripts/security_baseline.sh`.
@@ -185,11 +208,11 @@ Source inspected: `ai_os/hardware_profile.py; hardware_monitor.py; services/jobs
 | A083 (P6) | Original REgenOS logo, wallpapers, lock-screen art, companion concept atlas and Plymouth theme sources. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A084 (P6) | Explicit user appearance application: GTK icon/cursor/font preferences plus Hyprpaper/Hyprlock config, with backups of pre-existing files. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A085 (P6) | Written boot-splash, desktop, logo installation and branding commands. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
-| A086 (P6) | Hardware events automatically routed into conversations/speech and jobs automatically scheduled by the AI. | M/I — Monitor and cooperative job library are not connected to autonomous conversation/scheduler. |
+| A086 (P6) | Hardware events automatically routed into conversations/speech and jobs automatically scheduled by the AI. | T/I/H — bounded localized device/display speech reactions are connected behind explicit opt-in; owner attach/remove acceptance remains. Autonomous AI job scheduling is not implemented. |
 | A087 (P6) | Compositor-wide autonomous window manipulation, arbitrary UI navigation and completed vision pipeline. OpenCV is only an optional dependency. | M/I/H — Phase-gated window listing/typing only; no general navigation/vision pipeline. |
 | A088 (P6) | Full OS theme engine across Qt, GTK, bootloader, display manager, application icons and all desktop components. | M/I/H — App themes and user appearance files exist; no complete Qt/GTK/boot/login theme manager. |
 | A089 (P6) | Firmware-logo replacement. Plymouth only covers the later Linux boot stage. | M — Not implemented; Plymouth cannot replace firmware branding. |
-| A090 (P6) | Portable multi-machine driver handling, suspend/resume verification and NVIDIA/audio/display regression testing. | I/H — Capability discovery is not portable driver/suspend validation; NVIDIA currently mismatched. |
+| A090 (P6) | Portable multi-machine driver handling, suspend/resume verification and NVIDIA/audio/display regression testing. | I/H — current RTX 4060/NVIDIA access and small GPU inference probes pass; the historical mismatch is resolved. Portable driver behavior, suspend and multi-machine audio/display acceptance remain unverified. |
 ### Packaging And Validation
 
 Source inspected: `install; scripts; systemd; archiso; .github/workflows; tests`.

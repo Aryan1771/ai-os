@@ -9,6 +9,11 @@ unsaved/save feedback are source-tested; this is not a claim that every OS contr
 or physical desktop interaction is verified. Reopen old application instances to
 load new Python UI code.
 
+GNOME now has a separate [reviewed shortcut setup and rollback](DESKTOP_SHORTCUTS.md)
+under Desktop. The owner-approved Super+Alt+A/C/R bindings passed installed readback;
+Hyprland defaults are labelled separately. Voice & listening also offers a
+[guided local voice check](VOICE_DIAGNOSTICS.md) with explicit per-record consent.
+
 The native installer also installs and applies the original `REgenOS-Cool`
 cursor theme. See [cursor setup](CURSOR_THEME.md) for session-specific activation,
 backups, and rollback. Appearance applies cursor preferences to GTK 3/4 and

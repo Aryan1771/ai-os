@@ -25,20 +25,29 @@ opens source links only when clicked. HTTPS endpoints, response size/time,
 redirects, public address checks and private regular-file reads are bounded.
 At most 128 reports are created before asking the user to review/export them.
 
-This initial implementation compiles encyclopedia introduction excerpts and
-scholarly metadata. It does not read full papers, establish consensus, cover the
+This implementation compiles encyclopedia introductions, attributed publisher
+abstract quotations of at most 25 words, and scholarly metadata. Evidence counts
+distinguish these types; API availability is not a redistribution license.
+English/Hindi report structure is selectable; excerpts retain their original
+language and local explanation interprets them in the selected language.
+It does not read full papers, establish consensus, cover the
 whole web, or guarantee relevance. Missing results fail without inventing sources.
 Retrieved text never becomes tool instructions or consent. Search requires a
 network; saved reports and provisioned speech assets can be used offline.
 
 **Read paragraph** reads the current block once and pauses. **Next paragraph**
-advances and reads once; **Stop / pause** stops its worker/audio. **Explain & read**
+advances and reads once; the paragraph selector and **Previous paragraph** allow
+explicit revisiting. The reader follows the selected block. **Stop / pause** stops
+its worker/audio; a synthetic process test covers a separate playback child too.
+**Explain & read**
 uses local Ollama without tools, memory, remote providers or saved model reasoning,
 then speaks a short interpretation in the chosen English/Hindi language. An
 explanation is model-generated interpretation, not extra verified research; check
 it against the source. Voice pause/next commands and full automated literature
 review remain pending. No online or audible hardware acceptance is claimed from
-the mocked API/speech tests.
+the mocked API/speech tests. A later real public-query smoke succeeded for giant
+panda conservation: 7 sources (3 encyclopedia, 2 abstract excerpts, 2 metadata),
+1.70s, no warnings. The temporary report was removed; no source text was logged.
 
 ## Cleanup that can remember a narrowly approved permission
 
@@ -90,8 +99,8 @@ on the next request; a currently running process keeps its imported code until
 reopened/restarted. Shared native styling adds focus/pressed states and status
 colors. Not every underlying Arch setting or desktop shortcut is implemented.
 
-Speaking uses a bounded animated pixel mouth on the core face and restores task
-forms afterward. Cadence follows the speaking phase, not measured phonemes/audio
+Speaking drives a bounded animated blue aperture and waveform, preserving topic
+forms during speech. Cadence follows the speaking phase, not measured phonemes/audio
 amplitude. Motion/animation controls still apply. Mood bars guide tone, warmth,
 focus and care; they never change facts, permissions or model weights. RE can say
 “I'm excited about the extra space” in character without repeating a disclaimer.

@@ -138,12 +138,54 @@ class ConversationMemory:
                 for row in db.execute("SELECT * FROM notes ORDER BY updated DESC LIMIT 256")
             ]
 
-    def put(self, title: str, body: str, note_id: int | None = None):
+    @staticmethod
+    def _check_revision(db, expected_revision: int | None) -> None:
+        if (expected_revision is not None
+                and db.execute("SELECT revision FROM memory_state WHERE id=1").fetchone()[0]
+                != expected_revision):
+            raise ValueError("Memory changed since inspection. Inspect it again before saving.")
+
+    def recent_user_statements(self, session: str = "default", limit: int = 12) -> list[dict]:
+        """Human inspector source IDs, never assistant text or a model write tool."""
+        with self.connect() as db:
+            return [dict(row) for row in db.execute(
+                "SELECT id,user,created FROM turns WHERE session=? AND created>=? "
+                "ORDER BY id DESC LIMIT ?",
+                (session[:80], self._retention_cutoff(None), max(1, min(50, int(limit)))),
+            )]
+
+    def pin_user_statement(self, turn_id: int, title: str, *, session: str = "default",
+                           expected_revision: int | None = None) -> int:
+        """Explicit human curation into durable notes; recurrence is not needed."""
+        if not isinstance(title, str) or not title.strip() or len(title) > 120:
+            raise ValueError("A note needs a title of 1-120 characters.")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._check_revision(db, expected_revision)
+            row = db.execute(
+                "SELECT user FROM turns WHERE id=? AND session=? AND created>=?",
+                (int(turn_id), session[:80], self._retention_cutoff(None)),
+            ).fetchone()
+            if row is None:
+                raise ValueError("This user statement is unavailable or expired. Inspect again.")
+            if not row["user"].strip():
+                raise ValueError("An empty user statement cannot be pinned.")
+            if db.execute("SELECT COUNT(*) FROM notes").fetchone()[0] >= 256:
+                raise ValueError("The context notebook is limited to 256 notes.")
+            return db.execute(
+                "INSERT INTO notes(title,body,updated) VALUES(?,?,?)",
+                (title.strip(), row["user"], time.time()),
+            ).lastrowid
+
+    def put(self, title: str, body: str, note_id: int | None = None, *,
+            expected_revision: int | None = None):
         if not isinstance(title, str) or not title.strip() or len(title) > 120:
             raise ValueError("A note needs a title of 1-120 characters.")
         if not isinstance(body, str) or not body.strip() or len(body) > 8192:
             raise ValueError("A note needs 1-8192 characters of text.")
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._check_revision(db, expected_revision)
             if note_id is None:
                 if db.execute("SELECT COUNT(*) FROM notes").fetchone()[0] >= 256:
                     raise ValueError("The context notebook is limited to 256 notes.")
@@ -157,12 +199,19 @@ class ConversationMemory:
             )
             if result.rowcount != 1:
                 raise ValueError("This note no longer exists. Refresh the notebook.")
+            # A request that read the previous value must not re-save it in a
+            # late conversation turn after the human corrected the note.
+            db.execute("UPDATE memory_state SET revision=revision+1 WHERE id=1")
             return note_id
 
-    def delete_note(self, note_id: int):
+    def delete_note(self, note_id: int, *, expected_revision: int | None = None):
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._check_revision(db, expected_revision)
+            removed = db.execute("DELETE FROM notes WHERE id=?", (int(note_id),))
+            if removed.rowcount != 1:
+                raise ValueError("This note no longer exists. Inspect the notebook again.")
             db.execute("UPDATE memory_state SET revision=revision+1 WHERE id=1")
-            db.execute("DELETE FROM notes WHERE id=?", (int(note_id),))
 
     def clear_history(self, session: str | None = None):
         with self.connect() as db:
