@@ -28,7 +28,7 @@ ai-os/
 │   └── tools/                    # System, memory, and UI tools
 ├── archiso/
 │   ├── packages.x86_64.add
-│   └── calamares/                 # Installer integration plan, not a shippable installer
+│   └── calamares/                 # Calamares config/branding scaffold; not yet ISO-enabled
 ├── branding/
 │   ├── regenos-mark.svg           # Scalable REgenOS mark
 │   ├── regenos-mark.png

@@ -56,8 +56,10 @@ The sherpa dry run resolved compatible 1.13.8/core wheels; it did not install th
 gap; the selected RE/Whisper path is separate. Do not claim the venv is dependency-clean.
 New bridge requests import current source. Reopen Settings/corner companion for
 new controls/animation; neither app was silently closed. Preserve `:memory:.ses`.
-GitHub has two newer commits, including the Calamares skeleton: merge their source
-without resetting or claiming installer validation. No ISO, VM install, physical
+Merged GitHub's two newer commits, including the Calamares skeleton, preserving
+their source without resetting or claiming installer validation. The README voice
+status conflict was resolved by retaining both per-machine provisioning and the
+host's limited measured results. No ISO, VM install, physical
 disk operation, release publication or signing was performed.
 
 ## Voice, reinforcement and device speech checkpoint — 2026-10-19
@@ -357,6 +359,13 @@ and Arch runtime prototype, not a finished distribution. Start with
 [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md) for commands, measurements, rollback
 and limitations, and [IMPLEMENTATION_CHECKLIST](IMPLEMENTATION_CHECKLIST.md) for
 the dependency-ordered audit of all 100 feature checkboxes (33 unchecked).
+
+## Documentation review — 2026-10-08
+
+The root README now links directly to setup and feature guides, identifies the
+Python Settings path as supported, and aligns its voice-status summary with this
+handoff. Documentation checks do not constitute new hardware, audio, or runtime
+validation. Historical commands and measurements below are preserved.
 
 ## Actual installation versus source
 

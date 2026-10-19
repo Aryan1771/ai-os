@@ -1,0 +1,33 @@
+---
+componentName: regenos
+welcomeStyleCalamares: false
+welcomeExpandingLogo: false
+windowExpanding: normal
+windowSize: 980px,640px
+windowPlacement: center
+sidebar: widget
+navigation: widget
+strings:
+  productName: REgenOS
+  shortProductName: REgenOS
+  version: "Development"
+  shortVersion: "Dev"
+  versionedName: "REgenOS Development"
+  shortVersionedName: "REgenOS Dev"
+  bootloaderEntryName: REgenOS
+  productUrl: https://github.com/Aryan1771/ai-os
+  supportUrl: https://github.com/Aryan1771/ai-os/issues
+  knownIssuesUrl: https://github.com/Aryan1771/ai-os/issues
+  releaseNotesUrl: https://github.com/Aryan1771/ai-os/releases
+  donateUrl: ""
+images:
+  productIcon: regenos-mark.png
+  productLogo: regenos-mark.png
+  productWelcome: regenos-mark.png
+style:
+  SidebarBackground: "#171a1f"
+  SidebarText: "#d8dee8"
+  SidebarTextCurrent: "#ffffff"
+  SidebarBackgroundCurrent: "#287c78"
+uploadServer:
+  type: none
