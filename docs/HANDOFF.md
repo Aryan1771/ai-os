@@ -2,6 +2,23 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-20 checkpoint: bounded boot/recovery inspection
+
+The helper now separates permission-denied from missing files, literal enabled
+presets from inactive image assignments, and static GRUB declarations/defaults
+from current-boot evidence. Fixed-path image type/size and mount-space metadata
+omit identifiers; optional current-stub evidence is explicitly firmware-reported,
+not a verified disk/recovery identity. No configuration is sourced or executed.
+Root independent run: **60 mocked tests passed in 0.05s**, correctness lint clean.
+See [BOOT_RECOVERY_INVENTORY](BOOT_RECOVERY_INVENTORY.md) for exact commands.
+
+Nonprivileged readback reports standard kernel `7.2.10-arch1-1` (not Zen), no
+BOOT_IMAGE/quiet/splash, default-only linux/zen presets and an inactive fallback
+UKI declaration. Boot images remain permission-denied and active entry/recovery
+unknown. No privileged command, boot/package/service/mount write or reboot ran.
+The already approved elevated read-only inspection still needs the owner's
+terminal context; no new boot-write permission is implied.
+
 ## 2026-10-20 checkpoint: headless CI test isolation
 
 GitHub Python 3.12 runs exposed three desktop-dependent tests: two required an

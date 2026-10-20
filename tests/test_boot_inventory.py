@@ -20,6 +20,9 @@ def test_inventory_reports_only_recognized_metadata_and_fixed_commands(monkeypat
         command = argv[3:] if argv[:3] == ["/usr/bin/sudo", "-n", "--"] else argv
         if command[0] == "/usr/bin/bootctl":
             return 0, f"System:\n Firmware: {private}\nCurrent Boot Loader:\n Product: systemd-boot 260\n UUID: {private}\n", "", ""
+        if command[0] == "/usr/bin/stat":
+            return ((0, "regular file|1024", "", "") if command[-1] == "/boot/initramfs-linux-fallback.img"
+                    else (1, "", "No such file or directory", ""))
         path = command[-1]
         if command[0] == "/usr/bin/ls":
             listings = {"/boot": f"vmlinuz-linux\ninitramfs-linux.img\ninitramfs-linux-fallback.img\ngrub/\nloader/\n{private}\n",
@@ -47,14 +50,26 @@ def test_inventory_reports_only_recognized_metadata_and_fixed_commands(monkeypat
     assert "/vmlinuz-linux" in result["referenced_images"]
     assert result["readable_presets"] == ["/etc/mkinitcpio.d/linux.preset"]
     for argv in calls:
-        assert argv[:3] == ["/usr/bin/sudo", "-n", "--"]
-        command = argv[3:]
-        assert command[0] in {"/usr/bin/bootctl", "/usr/bin/ls", "/usr/bin/cat"}
+        elevated = argv[:3] == ["/usr/bin/sudo", "-n", "--"]
+        command = argv[3:] if elevated else argv
+        assert command[0] in {"/usr/bin/bootctl", "/usr/bin/ls", "/usr/bin/cat", "/usr/bin/stat", "/usr/bin/uname", "/usr/bin/findmnt"}
+        if command[0] in {"/usr/bin/bootctl", "/usr/bin/ls", "/usr/bin/stat"}:
+            assert elevated
         if command[0] == "/usr/bin/cat":
             assert command[1] == "--" and command[-1] in boot.CONFIG_FILES
+            assert elevated is command[-1].startswith(("/boot/", "/efi/"))
         if command[0] == "/usr/bin/ls":
             assert command == ["/usr/bin/ls", "--color=never", "--file-type", "-1", "--", command[-1]]
             assert command[-1] in boot.DIRECTORIES
+        if command[0] == "/usr/bin/stat":
+            assert command == ["/usr/bin/stat", "--format=%F|%s", "--", command[-1]]
+            assert command[-1] in boot.IMAGE_PATHS
+        if command[0] == "/usr/bin/uname":
+            assert command == ["/usr/bin/uname", "-r"] and not elevated
+        if command[0] == "/usr/bin/findmnt":
+            assert command == ["/usr/bin/findmnt", "--json", "--bytes", "--target", command[4],
+                               "--output", "TARGET,FSTYPE,SIZE,AVAIL,OPTIONS"]
+            assert command[4] in boot.MOUNT_TARGETS and not elevated
 
 
 def test_sudo_password_failure_stops_once_without_raw_error(monkeypatch):
@@ -66,7 +81,8 @@ def test_sudo_password_failure_stops_once_without_raw_error(monkeypatch):
 
     monkeypatch.setattr(boot, "_read_command", denied)
     result = boot.inspect(sudo=True)
-    assert len(calls) == 1 and result["status"] == "sudo_unavailable"
+    assert len([argv for argv in calls if argv[0] == "/usr/bin/sudo"]) == 1
+    assert result["status"] == "sudo_unavailable"
     assert result["sudo_reason"] == "authentication_required"
     assert "SYNTHETIC_PRIVATE_LOG" not in json.dumps(result)
 
@@ -204,7 +220,8 @@ def test_sudo_warning_does_not_misclassify_command_failure_as_authentication(mon
     calls = []
     def fake(argv, _budget):
         calls.append(argv)
-        if argv[3] == "/usr/bin/bootctl":
+        command = argv[3:] if argv[0] == "/usr/bin/sudo" else argv
+        if command[0] == "/usr/bin/bootctl":
             return 1, "", "sudo: unable to resolve host SYNTHETIC_PRIVATE_HOST", ""
         return 1, "", "No such file or directory", ""
     monkeypatch.setattr(boot, "_read_command", fake)
@@ -229,3 +246,192 @@ def test_cleanup_only_signals_verified_owned_group(monkeypatch, pid, actual_grou
     boot._kill(process)
     assert groups == ([(expected_group, boot.signal.SIGKILL)] if expected_group is not None else [])
     assert bool(singles) is expected_single
+
+
+@pytest.mark.parametrize("error,expected", [
+    ("cat: /boot/grub/grub.cfg: Permission denied", "permission_denied"),
+    ("cat: /boot/grub/grub.cfg: No such file or directory", "not_found"),
+    ("cat: /boot/grub/grub.cfg: Not a directory", "not_directory"),
+    ("SYNTHETIC_PRIVATE_RAW_ERROR", "unavailable"),
+])
+def test_read_failures_are_distinct_public_categories(error, expected):
+    assert boot._read_status(1, error, "") == expected
+    assert boot._read_status(None, error, "limit") == "budget_exhausted"
+
+
+def test_enabled_preset_outputs_are_separate_from_inactive_fallback():
+    parsed = boot._preset("/etc/mkinitcpio.d/linux.preset", """
+PRESETS=('default')
+ALL_kver='/boot/vmlinuz-linux'
+default_uki='/boot/EFI/Linux/arch-linux.efi'
+fallback_uki='/boot/EFI/Linux/arch-linux-fallback.efi'
+""")
+    assert parsed["enabled_presets"] == ["default"]
+    assert parsed["kernel_image"] == "/boot/vmlinuz-linux"
+    assert [(item["preset"], item["enabled"]) for item in parsed["outputs"]] == [("default", True), ("fallback", False)]
+    assert parsed["bootability_verified"] is False
+
+
+def test_multiline_presets_and_comments_are_literal_without_execution():
+    parsed = boot._preset("/etc/mkinitcpio.d/linux.preset", """
+# PRESETS=('private')
+PRESETS=(
+    'default' # ordinary
+    'fallback'
+)
+fallback_image='/boot/initramfs-linux-fallback.img'
+""")
+    assert parsed["enabled_presets"] == ["default", "fallback"]
+    assert parsed["outputs"][0]["enabled"] is True
+    assert parsed["bootability_verified"] is False
+
+
+@pytest.mark.parametrize("declaration", [
+    "", "PRESETS=('$PRIVATE')", "PRESETS=('custom-private-name')",
+    "PRESETS=('default')\nPRESETS+=('fallback')",
+    "PRESETS=('default')\nPRESETS=('fallback')",
+    "PRESETS=('default')\nPRESETS[1]='fallback'",
+    "source '/SYNTHETIC_PRIVATE_CONFIG'\nPRESETS=('default')",
+    "PRESETS=('default')\nfunction choose_outputs {\nfallback_image='/boot/initramfs-linux-fallback.img'\n}",
+])
+def test_dynamic_or_missing_presets_never_enable_outputs_by_guess(declaration):
+    parsed = boot._preset("/etc/mkinitcpio.d/linux.preset", declaration + "\nfallback_image='/boot/initramfs-linux-fallback.img'")
+    assert parsed["enabled_presets"] is None and parsed["parse_status"] == "partial_or_custom"
+    assert parsed["outputs"][0]["enabled"] is None
+    assert "PRIVATE" not in json.dumps(parsed)
+
+
+def test_unknown_preset_paths_are_not_exposed():
+    parsed = boot._preset("/etc/mkinitcpio.d/linux.preset", "PRESETS=('default')\ndefault_image='/home/PRIVATE/key'\nfallback_uki='$PRIVATE'")
+    assert all(item["path"] is None for item in parsed["outputs"])
+    assert "PRIVATE" not in json.dumps(parsed)
+
+
+def test_grub_nested_static_ordinals_and_chainloader_drop_ids_titles_and_rootargs():
+    parsed = boot._grub_entries("/boot/grub/grub.cfg", """
+function load_video {
+  insmod efi_gop
+}
+menuentry 'Arch Linux SECRET_TITLE { # }' --class arch --id SECRET_ID {
+  linux /vmlinuz-linux root=UUID=SECRET_UUID quiet splash
+  initrd /intel-ucode.img /initramfs-linux.img
+}
+submenu 'SECRET_SUBMENU' $menuentry_id_option 'SECRET_SUBMENU_ID' {
+  menuentry 'Arch Linux fallback' --id SECRET_ID_2 {
+    linux /vmlinuz-linux root=UUID=SECRET_UUID
+    initrd /initramfs-linux-fallback.img
+  }
+  menuentry 'Arch Linux recovery' {
+    chainloader (SECRET_DEVICE)/EFI/Linux/arch-linux.efi
+  }
+}
+menuentry 'SECRET_WINDOWS_TITLE' {
+  chainloader /EFI/Unknown/SECRET.efi
+}
+""")
+    assert [entry["ordinal"] for entry in parsed["entries"]] == ["0", "1>0", "1>1", "2"]
+    assert [entry["class"] for entry in parsed["entries"]] == ["normal", "fallback", "recovery", "unknown"]
+    assert parsed["entries"][2]["images"] == ["/EFI/Linux/arch-linux.efi"]
+    assert parsed["entries"][2]["boot_form"] == "chainloader"
+    assert parsed["entries"][3]["custom_or_dynamic"] is True
+    assert parsed["entries"][0]["flags"]["splash"] is True
+    assert "SECRET" not in json.dumps(parsed) and "root=" not in json.dumps(parsed)
+    assert parsed["active_entry_verified"] is False and parsed["runtime_order_verified"] is False
+
+
+@pytest.mark.parametrize("body", [
+    "if [ x = y ]; then\nmenuentry 'Arch Linux' {\nlinux /vmlinuz-linux\n}\nfi",
+    "function dynamic_menu {\nmenuentry 'Arch Linux' {\nlinux /vmlinuz-linux\n}\n}\ndynamic_menu",
+    "configfile '/PRIVATE/another.cfg'\nmenuentry 'Arch Linux' {\nchainloader +1\n}",
+])
+def test_conditional_function_or_external_grub_never_has_runtime_ordinal_confidence(body):
+    parsed = boot._grub_entries("/boot/grub/grub.cfg", body)
+    assert parsed["ordinal_confidence"] == "unknown_custom_syntax"
+    assert parsed["active_entry_verified"] is False
+    assert "PRIVATE" not in json.dumps(parsed)
+
+
+def test_grub_entry_count_and_parser_time_are_bounded():
+    text = "\n".join("menuentry 'Arch Linux' {\nlinux /vmlinuz-linux\n}" for _ in range(1000))
+    parsed = boot._grub_entries("/boot/grub/grub.cfg", text)
+    assert len(parsed["entries"]) == boot.MAX_MENU_ENTRIES and parsed["truncated"]
+    assert boot._grub_entries("/boot/grub/grub.cfg", text, boot.Budget(time.monotonic() - 1))["truncated"]
+
+
+def test_current_stub_evidence_is_distinct_from_default_entry_or_loader():
+    parsed = boot._reported_images("""
+Current Boot Loader:
+        Product: GRUB 2.16
+         Loader: └─/boot//EFI/GRUB/grubx64.efi
+      Partition: /dev/disk/by-partuuid/PRIVATE_UUID
+Current Stub:
+        Product: systemd-stub 262
+           Stub: └─/EFI/Linux/arch-linux.efi
+      Partition: /dev/disk/by-partuuid/PRIVATE_UUID
+Default Boot Loader Entry:
+          title: PRIVATE_TITLE
+            efi: /EFI/Linux/arch-linux-fallback.efi
+""")
+    assert [item["source"] for item in parsed] == ["bootctl_current_loader", "bootctl_current_stub"]
+    assert parsed[0]["path"] == "/boot/EFI/GRUB/grubx64.efi"
+    assert parsed[1]["path"] == "/EFI/Linux/arch-linux.efi"
+    assert "not_disk_verified" in parsed[1]["confidence"]
+    assert "PRIVATE" not in json.dumps(parsed) and "fallback" not in json.dumps(parsed)
+
+
+def test_unknown_stub_format_or_private_uki_name_produces_no_image_guess():
+    assert boot._reported_images("Current Stub:\n Product: unknown-stub\n Stub: /EFI/Linux/arch-linux.efi") == []
+    assert boot._reported_images("Current Stub:\n Product: systemd-stub 262\n Stub: /EFI/Linux/PRIVATE_ID.efi") == []
+
+
+def test_cmdline_emits_only_known_image_and_presentation_booleans():
+    result = boot._cmdline("BOOT_IMAGE=(PRIVATE_DEVICE)/vmlinuz-linux root=UUID=PRIVATE_UUID quiet splash disablehooks=autodetect,plymouth secret=PRIVATE_SECRET")
+    assert result["recognized_boot_image"] == "/vmlinuz-linux"
+    assert result["flags"] == {"quiet": True, "splash": True, "plymouth_disabled": True}
+    assert "PRIVATE" not in json.dumps(result) and "root=" not in json.dumps(result)
+    assert boot._cmdline("root=UUID=PRIVATE_UUID")["recognized_boot_image"] is None
+
+
+def test_mount_metadata_excludes_device_identity_and_exactly_classifies_inherited_mount():
+    text = json.dumps({"filesystems": [{"target": "/boot", "fstype": "vfat", "size": "1000000",
+                       "avail": 750000, "options": "rw,uid=PRIVATE_UID,secret=PRIVATE_SECRET",
+                       "source": "/dev/PRIVATE_DEVICE", "uuid": "PRIVATE_UUID"}]})
+    result = boot._mount(text, "/boot/efi")
+    assert result["target"] == "/boot" and not result["exact_mount"]
+    assert result["total_bytes"] == 1000000 and result["available_bytes"] == 750000
+    assert result["read_only"] is False and "PRIVATE" not in json.dumps(result)
+    assert boot._mount('{"filesystems":[]}', "/boot")["status"] == "unrecognized"
+
+
+def test_static_default_and_hook_parsers_do_not_expose_unreviewed_values():
+    defaults = boot._grub_defaults("GRUB_DEFAULT='PRIVATE_ID'\nGRUB_CMDLINE_LINUX_DEFAULT='root=UUID=PRIVATE_UUID quiet splash'")
+    assert defaults["configured_default"] == {"kind": "custom"}
+    assert defaults["active_entry_verified"] is False and "PRIVATE" not in json.dumps(defaults)
+    assert boot._grub_defaults("GRUB_DEFAULT='1>0'")["configured_default"] == {"kind": "static_ordinal", "ordinal": "1>0"}
+    hooks = boot._hooks("HOOKS=(base udev PRIVATE_HOOK plymouth keyboard)")
+    assert hooks["known_hooks"] == ["base", "udev", "plymouth", "keyboard"]
+    assert hooks["unknown_hook_count"] == 1 and "PRIVATE" not in json.dumps(hooks)
+
+
+def test_known_image_metadata_distinguishes_missing_permission_symlink_empty_and_regular():
+    path = "/boot/EFI/Linux/arch-linux-fallback.efi"
+    assert boot._image_metadata(path, None, "permission_denied")["status"] == "permission_denied"
+    assert boot._image_metadata(path, None, "not_found")["status"] == "not_found"
+    assert boot._image_metadata(path, "symbolic link|12", "readable")["kind"] == "symlink"
+    assert boot._image_metadata(path, "regular empty file|0", "readable")["bytes"] == 0
+    assert boot._image_metadata(path, "regular file|1234", "readable")["bytes"] == 1234
+
+
+def test_deadline_while_waiting_is_reported_as_budget_limit(monkeypatch):
+    process = FakeProcess()
+    waits, killed = [], []
+    def wait(timeout):
+        waits.append(timeout)
+        if len(waits) == 1:
+            raise subprocess.TimeoutExpired("mock-command", timeout)
+        return 0
+    process.wait = wait
+    monkeypatch.setattr(boot.subprocess, "Popen", lambda *a, **kw: process)
+    monkeypatch.setattr(boot, "_kill", lambda child: killed.append(child))
+    assert boot._read_command(["/usr/bin/stat"], boot.Budget(time.monotonic() + 1))[-1] == "limit"
+    assert killed == [process]
