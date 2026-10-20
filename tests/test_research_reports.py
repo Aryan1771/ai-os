@@ -24,6 +24,12 @@ def sources(url, params):
     return {"message": {"items": [{"title": ["A synthetic conservation paper"], "URL": "https://doi.org/10.1234/example", "published": {"date-parts": [[2025]]}}]}}
 
 
+@pytest.fixture(autouse=True)
+def no_real_browser(monkeypatch):
+    monkeypatch.setattr("ai_os.tools.desktop_tools.open_website",
+                        lambda *_args, **_kwargs: pytest.fail("Tests must fake browser launches"))
+
+
 @pytest.fixture
 def saved(tmp_path, monkeypatch):
     monkeypatch.setattr(research, "_fetch_json", sources)
@@ -144,11 +150,21 @@ def test_report_traversal_and_symlink_reads_fail_closed(saved, tmp_path):
 
 
 def test_native_bridge_requires_confirmed_topic_and_never_model_launch(tmp_path, monkeypatch):
+    opened = []
     monkeypatch.setattr(research, "_fetch_json", sources)
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *_args, **_kwargs:
+                        [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 443))])
+    monkeypatch.setattr("ai_os.tools.desktop_tools.open_website",
+                        lambda url: opened.append(url) or {"ok": True})
     request = {"action": "approved_research", "topic": "giant pandas"}
     assert not dispatch(request, tmp_path)["response"]["result"]["ok"]
+    assert opened == []
     result = dispatch(request | {"confirmed": True}, tmp_path)
     assert result["response"]["result"]["ok"]
+    assert opened == ["https://en.wikipedia.org/wiki/Giant_panda",
+                      "https://doi.org/10.1234/example"]
+    assert result["response"]["result"]["mode"] == "articles"
+    assert not list(tmp_path.rglob("*.md"))
 
 
 def test_narration_is_one_paragraph_with_shared_speech_lease(saved, tmp_path, monkeypatch):

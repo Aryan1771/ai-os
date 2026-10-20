@@ -59,8 +59,10 @@ def test_timeout_terminates_command_group(tmp_path):
     pytest.fail("Command descendant survived timeout cleanup")
 
 
-def test_broad_grant_allows_readonly_system_directory_cwd():
+def test_broad_grant_allows_readonly_system_directory_cwd(monkeypatch):
     from ai_os.unprivileged_command import bubblewrap_argv
+    is_file = Path.is_file
+    monkeypatch.setattr(Path, 'is_file', lambda path: path == Path('/usr/bin/bwrap') or is_file(path))
     argv = bubblewrap_argv(['/usr/bin/pwd'], Path.home(), Path('/usr'))
     assert argv[argv.index('--chdir')+1] == '/usr'
     assert argv[argv.index('--ro-bind')+1:argv.index('--ro-bind')+3] == ['/', '/']

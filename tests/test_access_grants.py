@@ -136,16 +136,29 @@ def test_explicit_user_grant_keeps_elevation_and_disk_barriers(store, argv):
     assert result is None
 
 
-def test_broad_command_runner_uses_bubblewrap_and_no_privilege_gain():
+def test_broad_command_runner_uses_bubblewrap_and_no_privilege_gain(monkeypatch):
     from pathlib import Path
     from ai_os.unprivileged_command import bubblewrap_argv
 
+    # This checks argv construction, not the test machine's installed packages.
+    is_file = Path.is_file
+    monkeypatch.setattr(Path, "is_file", lambda path: path == Path("/usr/bin/bwrap") or is_file(path))
     argv = bubblewrap_argv(["/usr/bin/id"], Path.home(), Path.home())
     assert argv[0].endswith("bwrap")
     assert "--unshare-user" in argv and "--unshare-pid" in argv
     assert argv[argv.index("--dev") + 1] == "/dev"
     assert argv[argv.index("--ro-bind") + 1:argv.index("--ro-bind") + 3] == ["/", "/"]
     assert "/run/dbus" in argv and "/run/user" in argv
+
+
+def test_broad_command_runner_refuses_missing_bubblewrap(monkeypatch):
+    from pathlib import Path
+    from ai_os.unprivileged_command import bubblewrap_argv
+
+    is_file = Path.is_file
+    monkeypatch.setattr(Path, "is_file", lambda path: path != Path("/usr/bin/bwrap") and is_file(path))
+    with pytest.raises(RuntimeError, match="no unsandboxed fallback"):
+        bubblewrap_argv(["/usr/bin/id"], Path.home(), Path.home())
 
 
 def test_speech_request_is_pending_not_model_granted(store, monkeypatch):

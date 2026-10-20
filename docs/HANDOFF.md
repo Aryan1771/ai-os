@@ -2,6 +2,20 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-20 checkpoint: headless CI test isolation
+
+GitHub Python 3.12 runs exposed three desktop-dependent tests: two required an
+installed Bubblewrap merely to inspect argv; one launched article links after
+consent instead of faking DNS/browser dispatch. Tests now isolate those effects,
+preserve confinement assertions and add an explicit missing-Bubblewrap denial.
+Root independently verified **79 passed in 0.96s** across the three edited test
+modules; the agent's broader article suite passed 89 tests. Correctness lint and
+whitespace checks pass. No production confinement or host package changed.
+
+Remote runs also exited 139 after their failing summaries; no local reproduction
+or cause is established. The hosted rerun remains required, with no suppression
+or speculative production workaround. See [CI_VALIDATION](CI_VALIDATION.md).
+
 ## 2026-10-20 checkpoint: compact GDM installation verified
 
 The owner executed the approved compact correction and `dconf update`, reporting
