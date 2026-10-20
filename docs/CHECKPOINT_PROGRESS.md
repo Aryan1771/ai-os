@@ -7,7 +7,7 @@ because independent source work advances.
 
 | Checkpoint | Verified evidence | Remaining gate |
 | --- | --- | --- |
-| 1. Compact login logo | 144×48 wordmark and 33 installer regressions; approved exact plan documented in [LOGIN_LOGO_FIX](LOGIN_LOGO_FIX.md). | Not installed: native authentication timed out; fresh compact-file/key readback failed. Owner terminal apply, readback, then normal-login password-field check. No forced logout/GDM restart. |
+| 1. Compact login logo | Owner applied the approved four-file correction and dconf update; independent source/hash/mode/144×48 readback and compiled key pass. 33 installer regressions pass. See [LOGIN_LOGO_FIX](LOGIN_LOGO_FIX.md). | Installation checkpoint complete. Normal-login password-field/scaling appearance remains owner verification. No forced logout/GDM restart. |
 | 2. Boot and recovery | Earlier owner allowlisted inspection identified GRUB; public inspection finds only default presets enabled. | Improved sanitized inventory is being prepared. Active entry and independently bootable recovery remain unverified; package/hook/boot changes need exact approval. |
 | 3. Voice reliability | [Capture recovery](VOICE_LISTENER_RECOVERY.md): 39 focused synthetic tests pass; rejected speech never becomes a command. | Resident core not restarted for this change. Real English/Hindi, genuine/impostor speaker checks, wake/echo, latency and concurrent VRAM acceptance remain. No listening enabled. |
 | 4. Desktop interactions | Source controls, monitor placement, app entries and three previously approved GNOME shortcuts exist. | Owner tests cursor/scaling, unhide, monitor reconnect/transfer, keys, apps and opt-in device reactions. |

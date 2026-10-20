@@ -57,8 +57,8 @@ Installer validation should reject a missing, oversized or mismatched compact
 asset instead of silently using the square mark.
 
 The owner explicitly requested this correction under the already approved GDM
-branding scope. The reviewed replacement still needs to be executed by the owner
-in their terminal; it is not blocked on a fresh approval request. Preserve the
+branding scope. The owner executed the reviewed replacement in their terminal
+on 2026-10-20; installed readback is recorded below. Preserve the
 prior owned file/key values and hashes in the existing private rollback record.
 Do not change PAM, password masking,
 authentication policy, automatic login, GNOME Shell CSS or resource bundles.
@@ -140,8 +140,29 @@ PY
 
 ## Remaining acceptance
 
-After approved installation, read back the compact file's dimensions/hash and
-exact GDM key. On the next owner-initiated normal login, verify the password field,
+The owner applied the four-file GDM correction and chained `dconf update`:
+
+```bash
+sudo -- /usr/bin/python ~/src/ai-os/scripts/install_branding_defaults.py --apply --root / --stage gdm --expected-plan e26d1419c5cdd8ba7b68315478d3f183b2f541add69a22e423030830a336646e && sudo -- /usr/bin/dconf update
+```
+
+Installer JSON reported `ok: true`; the private rollback backup ID is
+`6b784910f5954a72b897d3ab79599901`. Independent readback verified both wordmark
+assets, the GDM logo key and preserved profile all match their source payloads
+with mode 0644. The installed PNG is 144×48 with the SHA256 above; the compiled
+GDM database exists and is newer than the key file. This read-only query returned
+`'/usr/share/regenos/branding/regenos-wordmark.png'`:
+
+```bash
+DCONF_PROFILE=gdm dconf read /org/gnome/login-screen/logo
+~/.ai_os/venv/bin/python -m pytest -q tests/test_branding_defaults.py --tb=short
+```
+
+The 33 installer regressions pass. An earlier invocation used the nonexistent
+`tests/test_branding_installer.py`; no tests ran until the filename was corrected.
+Earlier unattended/native authentication attempts made no changes.
+
+On the next owner-initiated normal login, verify the password field,
 masked input, error/retry text, recovery/accessibility controls and compact logo
 remain visible. Repeat on the relevant displays at the saved normal/high-DPI
 scales. Source checks and file hashes cannot substitute for this physical result.

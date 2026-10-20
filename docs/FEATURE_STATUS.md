@@ -4,9 +4,10 @@ Incremental listener recovery after `4ec0150`: **39 focused synthetic tests pass
 including 14 new regressions. Expected capture/transcription rejection now re-arms
 the existing listener without a supervisor restart; broken transports still fail
 closed. No microphone, model/configuration or service change occurred. This does
-not fix Hindi accuracy. The compact GDM correction remains uninstalled after local
-authentication timed out; the owner-reported oversized login layout is **not
-accepted**. See [checkpoint progress](CHECKPOINT_PROGRESS.md).
+not fix Hindi accuracy. The owner has now applied the compact GDM correction:
+four files, 144×48 PNG/hash and compiled GDM logo-key readback pass, as do 33 installer
+regressions. Physical password-field/scaling acceptance is still pending. See
+[checkpoint progress](CHECKPOINT_PROGRESS.md).
 
 2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
 whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native

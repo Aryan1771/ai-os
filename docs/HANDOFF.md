@@ -2,6 +2,22 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-20 checkpoint: compact GDM installation verified
+
+The owner executed the approved compact correction and `dconf update`, reporting
+`ok: true`, backup `6b784910f5954a72b897d3ab79599901`. Independent readback confirms
+all four payloads match source at mode 0644, PNG 144×48/SHA256
+`3817b717f0ec749c88fd48ede237ad5c5f713832dbad2569ebbfd9af0281b9e0`, and a freshly
+compiled GDM database. `DCONF_PROFILE=gdm dconf read /org/gnome/login-screen/logo`
+returns the compact wordmark path. The 33 installer tests pass; an initial test
+command used a nonexistent filename and ran no tests before correction.
+
+Installation/readback is complete; normal-login password visibility and scaling
+remain owner acceptance. No GDM restart, forced lock/logout or boot write.
+Earlier authentication failure below describes the preceding state, now superseded.
+Boot startup still showing Arch is a separate pending recovery/boot integration.
+See [LOGIN_LOGO_FIX](LOGIN_LOGO_FIX.md) and [CHECKPOINT_PROGRESS](CHECKPOINT_PROGRESS.md).
+
 ## 2026-10-20 incremental checkpoint: listener recovery
 
 After source baseline `4ec0150`, a rejected transcription no longer terminates
