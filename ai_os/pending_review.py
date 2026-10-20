@@ -7,7 +7,7 @@ import sqlite3
 import stat
 import time
 
-TOOLS = {"run_terminal_command", "research_topic", "cleanup_files"}
+TOOLS = {"run_terminal_command", "research_topic", "cleanup_files", "power_action"}
 
 
 def _canonical(proposal):

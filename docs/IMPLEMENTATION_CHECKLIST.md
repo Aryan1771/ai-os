@@ -1,36 +1,29 @@
 # REgenOS implementation and Arch verification audit
 
-Latest native full-suite checkpoint (2026-10-19): **774 tests passed in 10.53s**,
-including the semantic-memory and registry-consent follow-up. Correctness lint,
-whitespace, installer shell syntax and Chat/Research desktop-file validation pass.
-New compact chat/steering,
-reviewed interactive jobs, optional speaker setup, language matching, source briefs,
-recoverable cleanup and mood/mouth presentation are source-tested. [HANDOFF](HANDOFF.md)
-distinguishes implementation from acceptance. Approved speaker assets are installed
-and synthetic extraction passes; no agent microphone enrollment, audible research
-walkthrough, ISO build or VM acceptance was performed.
-The owner reports saved voice enrollment after retries; recognition accuracy is
-still unverified. Blue hologram/native shade controls and scoped GitHub MCP reads
-are source-tested; native greeting and live model-to-GitHub reads passed.
-Older denied-socket counts below are superseded; installer/Arch acceptance stays open.
+2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
+whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native
+nine-page greeting and six-page temporary onboarding previews passed; final UI
+greeting attempts were interrupted by window closure (not passed), while a
+current tool-free local core reply passed in 4.521s; no physical
+microphone, boot, installer or multi-monitor acceptance is inferred.
 
-Current additional evidence: native pin/edit/remove memory controls; precise STT
-failures and one-shot diagnostic consent; actual research API success (7 sources);
-approved GNOME application shortcuts applied/read back. OpenWakeWord ONNX loads
-with existing assets, while TFLite dependency metadata remains incomplete.
-[REQUEST_STATUS](REQUEST_STATUS.md) classifies requested work and remaining gates.
+Implemented: optional 2D/3D avatar and responsive opt-in sensor menus; placement/
+Stop/steering repairs; recipient-bound final privacy checks including revoked
+app-usage/OCR/accessibility consent; article-first research, optional saved reports
+and one-shot report navigation; website synonyms and bounded read-only argument
+repair; native reviewed power scheduling; Aurora Ridge branding and six-page
+post-install setup with completed/live gating. See [HANDOFF](HANDOFF.md),
+[request status](REQUEST_STATUS.md), [setup](FIRST_RUN_SETUP.md) and
+[branding proposal](REGENOS_BRANDING_PROPOSAL.md).
 
-Latest privacy repair: semantic compatibility APIs return setup-required without
-importing Chroma, opening legacy vectors, downloading default embeddings or
-starting telemetry. Verified offline semantic provisioning remains absent.
-Legacy read tools use the selected runtime and recheck saved memory/remote-sharing
-consent on every call; ordinary SQLite continuity and explicit curation remain
-available. Existing stores are preserved. See the focused semantic/privacy and
-memory-tool boundary tests, included in the completed full regression run. Fresh
-readiness reports voice ready with no blockers and continuous listening/wake off;
-approved shortcut readback passes without conflicts. This is not physical voice,
-keyboard or broad hardware acceptance. The owner separately approved restarting only `ai-os.service` for these repairs;
-active/running readback passed, with listening, wake and speaker filtering off.
+Approved CUDA executable-only switch is applied with backup; base/model/language/
+profile/listening unchanged. Five-phrase comparison CPU 80.243s/CUDA 22.500s,
+sampled CUDA peak 961 MiB with Ollama unloaded. English exact; Hindi still inaccurate
+or rejected. No universal command, GPU support, sentience, training or finished-OS
+claim. Owner-approved restart of only `ai-os.service` passed active/running readback,
+with listening/wake/filter off and config unchanged. Owner-approved desktop/GDM artwork and defaults installed with private backups;
+source hashes, compiled databases and logo-key readback pass. Visual login is
+pending. No boot write, ISO build, VM test or publication.
 
 2026-10-19 checkpoint: voice silence/utterance separation, language/current-turn
 routing, shared speech ownership, queued device reactions and memory decay repairs
@@ -111,11 +104,11 @@ Source inspected: `ai_os/native_settings.py; native_widgets.py; avatar_overlay.p
 | A016 (P4) | Corner, scale, color, fluid-motion intensity, animation enable, resting form, topic morphing and visible-bar preferences update in the running overlay. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A017 (P4) | Activity states connected to wake-word readiness, capture, transcription, model requests, tool execution, response, speech and errors. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A018 (P4) | Stale or malformed activity snapshots recover to idle; state files contain presentation metadata rather than executable instructions or hidden reasoning. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
-| A019 (P4) | Native `.desktop` launchers, optional login autostart instructions, optional companion user service, and Hyprland floating/pinned rules. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
+| A019 (P4) | Native `.desktop` launchers, optional login autostart instructions, optional companion user service, and Hyprland floating/pinned rules. | T/H — native Settings launch/recovery and read-only companion status have regressions; existing launchers inspected. Status does not establish resident visibility, app-grid discovery or login acceptance. |
 | A020 (P4) | Unrestricted high-quality conversion of every possible topic into artwork. Custom grids are supported, but model artistry/reliability is not guaranteed. | M/H — Bounded pixel grids exist; unrestricted quality is not a realistic completion guarantee. |
 | A021 (P4) | Physical liquid simulation. The current renderer is a controlled spring/wave animation. | M — Spring/wave renderer exists; physical simulation absent and optional. |
 | A022 (P4) | Pure Wayland layer-shell overlay. Current corner placement uses X11 or XWayland; validate placement and pinning on the installed compositor. | M/H — No layer-shell adapter; XWayland rendering smoke passed, compositor placement pending. |
-| A023 (P4) | Arbitrary multi-monitor selection, drag-to-place persistence, avatar packs, and a visual pixel editor. | S/M/H — Display selector, cross-display drag and persistence now have synthetic coverage; physical acceptance pending. Avatar packs/editor absent. |
+| A023 (P4) | Arbitrary multi-monitor selection, drag-to-place persistence, avatar packs, and a visual pixel editor. | T/M/H — display selection/drag, usable-area clamping and manual placement across unrelated preference refreshes have synthetic coverage. Physical multi-monitor/compositor acceptance remains; packs/editor absent. |
 | A024 (P4) | Complete replacement of every Linux desktop environment's settings application. | M — No universal desktop settings adapters; constrain supported scope. |
 ### AI And Tool Execution
 
@@ -134,7 +127,7 @@ Source inspected: `ai_os/ai_os_core.py; tools/system_tools.py; security/consent_
 | A033 (P1) | Command assessment, subprocess timeouts, captured results and `shell=False` execution. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A034 (P1) | Risky command consent and process-termination consent. Model-supplied `approve=true` cannot approve its own request through the router. | T/H — argument/consent regression coverage; independent audit and hostile-input review pending. |
 | A035 (P1) | Background/noninteractive consent requests are denied instead of waiting on nonexistent terminal input. | T/H — argument/consent regression coverage; independent audit and hostile-input review pending. |
-| A036 (P1) | Complete autonomous planning loop with multiple tool steps, result-grounded follow-up answers, retry policies and durable task recovery. | I/H — Native schemas and a tested three-step result-follow-up loop exist, with duplicate and approval stops. Durable recovery and a complete retry policy remain absent; host acceptance is pending. |
+| A036 (P1) | Complete autonomous planning loop with multiple tool steps, result-grounded follow-up answers, retry policies and durable task recovery. | T/I/H — three-step schemas/result follow-up, duplicate/approval stops, owned cancellation and bounded same-session steering references are implemented. The fixed local benchmark passes 11/11 without executing tools; one real read-only diagnostic grounds its reply. Durable recovery, retry policy and broad owner task acceptance remain absent. |
 | A037 (P1) | Native C++ conversation window, with recent-history loading and optional spoken replies using the saved Piper voice. | S/I — historical C++ implementation is not supported deployment evidence. Python conversation/memory now added; full page parity pending. |
 | A038 (P1) | Native system-action approval broker. Background risky actions still fail closed; the hub is not a privileged approval channel. | T/I/H — Exact native review and an expiring background proposal inbox exist. Sudo requires separate visible-terminal authentication; same-account dialogs are not independent privileged authorization. No model self-approval. |
 | A039 (P1) | Native adapters for every provider's proprietary protocol. Present remote support assumes an OpenAI-compatible chat-completions schema. | M — Only Ollama/OpenAI-compatible protocols implemented. |
@@ -147,7 +140,7 @@ Source inspected: `ai_os/services/listener.py; stt.py; wakeword.py; ai_os/speech
 |---|---|---|
 | A041 (P3) | Local PipeWire microphone capture with openWakeWord gating. | T/I/H — capture transport and existing openWakeWord ONNX backend/model loading passed separately. Real wake accuracy, acoustic rejection and end-to-end owner acceptance remain pending. |
 | A042 (P3) | Explicit listening and wake-word switches; microphone stays off until both are enabled. | T/H — continuous capture requires listening plus an explicit wake or conversation mode; one-shot capture requires its own Record consent. Listening remains opt-in; owner disable/indicator checks remain. |
-| A043 (P3) | Fixed-duration command recording and local Whisper.cpp transcription adapter. | T/H — distinct initial wait, ending silence and maximum utterance replace a single fixed recording duration; incomplete/mismatched transcripts fail before actions. Personal Hindi/accent and latency acceptance remain. |
+| A043 (P3) | Fixed-duration command recording and local Whisper.cpp transcription adapter. | T/H — distinct wait/silence/maximum and transcript rejection are tested. Approved small-model CPU comparison passes Hindi script only, with poor single-phrase WER/CER and slower output; no setting switched. GPU Whisper build/runtime and personal Hindi/accent/latency acceptance remain pending. |
 | A044 (P3) | Temporary command WAV deletion after transcription. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A045 (P3) | Piper speech queue with sentence splitting and priority bridge messages; PipeWire playback adapter. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |
 | A046 (P3) | Speech activity drives the companion and carries model-generated form metadata into playback. | S; H — implementation found in the cited source; item-specific installed acceptance remains unverified. |

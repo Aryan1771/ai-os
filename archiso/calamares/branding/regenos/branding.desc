@@ -22,8 +22,8 @@ strings:
   donateUrl: ""
 images:
   productIcon: regenos-mark.png
-  productLogo: regenos-mark.png
-  productWelcome: regenos-mark.png
+  productLogo: regenos-wordmark.png
+  productWelcome: regenos-wordmark.png
 style:
   SidebarBackground: "#171a1f"
   SidebarText: "#d8dee8"

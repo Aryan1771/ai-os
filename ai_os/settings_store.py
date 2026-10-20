@@ -58,6 +58,7 @@ CHOICES = {
     "hardware_backend": {"auto", "cpu"},
     "ai_provider": {"ollama", "openai_compatible"},
     "avatar_corner": {"top-left", "top-right", "bottom-left", "bottom-right"},
+    "avatar_render_mode": {"2d", "3d"},
     "theme": {"forest", "graphite", "ocean", "light", "sunrise"},
     "avatar_idle_shape": set(SHAPE_NAMES),
 }

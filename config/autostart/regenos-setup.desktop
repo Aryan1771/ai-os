@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=REgenOS first-run setup
+Comment=Open onboarding once in an installed desktop session
+Exec=regenos-setup --if-needed
+Icon=regenos
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

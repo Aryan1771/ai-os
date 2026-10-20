@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="48" viewBox="0 0 256 85.085" fill="none">
+  <title>REgenOS — Aurora Ridge wordmark</title>
+  <desc>Original aurora mountain emblem and outlined REgenOS lettering. Transparent landscape artwork, native 144 by 48 pixels.</desc>
+  <defs>
+    <linearGradient id="aurora" x1="22" y1="60" x2="106" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7795ff"/><stop offset=".5" stop-color="#5bdcff"/><stop offset="1" stop-color="#3be6bd"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="28" y1="64" x2="103" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e1f2ff"/><stop offset="1" stop-color="#6aaff0"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(-3 -1) scale(.68)">
+    <path d="M23 51C46 15 73 56 104 25M26 61C49 29 78 67 106 38" stroke="url(#aurora)" stroke-width="7" stroke-linecap="round"/>
+    <path d="M18 101 47 62 67 88 82 72 112 103H90L82 94 68 107 47 82 33 101Z" fill="url(#ridge)"/>
+    <path d="m47 62 7 23-7-3-14 19H18Z" fill="#fff" opacity=".16"/>
+    <circle cx="24" cy="28" r="2" fill="#cbeaff"/>
+    <circle cx="91" cy="17" r="1.5" fill="#b5cbff"/>
+  </g>
+  <!-- Original geometric letter outlines: no external fonts or upstream logo paths. -->
+  <g stroke="#e1f2ff" stroke-width="3.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M80 60V24H90C102 24 103 42 90 42H80M90 42 101 60"/>
+    <path d="M120 24H105V60H120M105 41H117"/>
+    <path d="M143 37V60Q143 69 135 69Q130 69 127 66M143 41Q140 36 135 36Q126 36 126 47Q126 58 135 58Q140 58 143 53" stroke="#69caff"/>
+    <path d="M152 47H168Q168 36 160 36Q151 36 151 47Q151 58 160 58Q165 58 168 55" stroke="#69caff"/>
+    <path d="M175 58V37M175 43Q178 36 184 36Q192 36 192 44V58" stroke="#69caff"/>
+    <path d="M210 24C196 24 196 60 210 60C224 60 224 24 210 24Z"/>
+    <path d="M246 28Q241 22 234 25Q222 30 236 41Q252 50 243 58Q235 64 227 56"/>
+  </g>
+</svg>

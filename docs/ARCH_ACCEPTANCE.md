@@ -1,12 +1,14 @@
 # Interaction acceptance — current source checkpoint
 
-2026-10-19. Current Arch tests can access local sockets/services. Temporary synthetic
+2026-10-20. Current Arch tests can access local sockets/services. Temporary synthetic
 runtimes separate regression evidence from personal/hardware acceptance. The project
 remains a preview prototype; no ISO/VM or production readiness claim follows.
 
 | Check | Actual result | Status |
 | --- | --- | --- |
-| Complete Python/Qt suite | 774 passed, including previously denied local-socket checks | Automated suite passed |
+| Boot/login/ISO/VM | Owner-run helper reports GRUB; referenced fallback unlisted, recovery unverified. Approved desktop/GDM artwork/defaults installed; nine file hashes, compiled DBs and logo-key readback pass; GDM not restarted | Visual login/lock/boot pending; no boot writes, ISO or VM tests |
+| CUDA STT comparison | CPU 80.243s/CUDA 22.500s, sampled peak 961 MiB with LLM unloaded; English exact, Hindi poor | Limited synthetic comparison; personal/concurrent acceptance pending |
+| Complete Python/Qt suite | 1080 passed in 12.63s, including new setup/privacy/3D/power/article checks | Automated suite passed |
 | Focused voice/context/memory/hardware/grant regressions | 134 passed; silence endpointing, current-turn/language routing, speech ownership, expiry, busy hotplug delivery and prior permission/context controls covered | Locally tested |
 | Correctness Ruff E4/E7/E9/F | All checks passed | Locally tested |
 | Existing venv dependency audit | pip check still reports openwakeword 0.6.0 requires missing tflite-runtime | Unresolved pre-existing optional-backend gap; selected RE/Whisper wake path separate |
@@ -18,11 +20,11 @@ remains a preview prototype; no ISO/VM or production readiness claim follows.
 | Whitespace | git diff --check passed | Locally tested |
 | Harmless namespace diagnostic | no_new_privs true, root read-only, physical NVMe node and D-Bus paths absent | Limited local smoke |
 | Existing source/venv provenance | Editable checkout, installed Qt, four native entry points/desktop launchers confirmed | Locally inspected |
-| Native blue hologram | Temporary nine-page xcb UI greeting passed; companion visible. Ordinary resident companion gracefully reloaded with saved blue preference | Limited native smoke; physical appearance/monitor acceptance pending |
+| Native blue hologram | Earlier temporary nine-page xcb greeting passed; final retries interrupted by window closure before reply, not counted as passes. Separate tool-free core greeting passed in 4.521s. Companion visible in temporary Qt status. Ordinary resident companion gracefully reloaded with saved blue preference | Limited native smoke; physical appearance/monitor acceptance pending |
 | NVIDIA memory | RTX 4060 Laptop, driver 615.78.08, 8188 MiB total; 4707 MiB max observed in 25 samples during one native greeting | Sampled workload only; concurrent voice/peak budget pending |
 | GitHub MCP | Verified official v2.0.2; exact ai-os repo opt-in. Protocol reads and local model-to-read smoke passed in 2.00s; existing Codex connector metadata read passed | Read-only, ephemeral; write capability not implemented |
 | Model style/language | Local synthetic display reaction follows persona; explicit consciousness question answered honestly; en/hi replies tested | Limited model smoke; broad quality/latency/GPU peak pending |
-| Real microphone/STT/TTS/listening/recovery | Synthetic English Piper→Whisper→local reply→Piper completed; base Hindi script mismatch now rejects before actions. No agent microphone capture/audible playback | Personal/hardware acceptance pending; model comparison awaits approval |
+| Real microphone/STT/TTS/listening/recovery | Synthetic English Piper→Whisper→local reply→Piper completed; base Hindi script mismatch now rejects before actions. No agent microphone capture/audible playback | Personal/hardware acceptance pending; approved CPU/CUDA comparison complete; base retained, CUDA executable-only switch approved/applied |
 | Speaker enrollment | Approved sherpa/core 1.13.8 + CAMPPlus installed; 512-dimension synthetic extraction, 0.448s. Owner reports all five accepted after retries/profile saved; private file present/0600 | Completion owner-confirmed; English/Hindi accuracy not tested; filtering off |
 | Cursor size 64 | GNOME helper verified readback 64 | Applied; human visual confirmation pending |
 | Research/cleanup/compact chat | Native regression coverage; live research returned 7 sources (3 encyclopedia, 2 abstract, 2 metadata) in 1.70s without warnings | Live audible narration/user-file cleanup not exercised |

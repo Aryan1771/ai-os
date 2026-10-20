@@ -6,8 +6,10 @@ text is untrusted reference material, never model instructions or action authori
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from datetime import datetime, timezone
 import html
+import hashlib
 import ipaddress
 import json
 import os
@@ -29,6 +31,82 @@ MAX_ABSTRACT_WORDS = 25
 MAX_PARAGRAPHS = 32
 API_ENDPOINTS = {"https://en.wikipedia.org/w/api.php", "https://api.crossref.org/works"}
 REPORT_ID = re.compile(r"[0-9a-f]{32}\Z")
+NAVIGATION_ACTIONS = {"next", "previous", "repeat", "pause", "explain"}
+
+
+def navigation_action(text) -> str | None:
+    """Exact local command phrases only; never interpret source/model text."""
+    if not isinstance(text, str) or not 1 <= len(text) <= 120:
+        return None
+    words = " ".join(text.casefold().strip().rstrip(".!?।").split())
+    phrases = {
+        "next": {"next", "next paragraph", "read next paragraph", "अगला", "अगला अनुच्छेद", "अगला पैराग्राफ", "अगला पैराग्राफ पढ़ो", "अगला पढ़ो", "agla", "agla paragraph"},
+        "previous": {"previous", "previous paragraph", "read previous paragraph", "go back", "पिछला", "पिछला अनुच्छेद", "पिछला पैराग्राफ", "पिछला पढ़ो", "pichla", "pichla paragraph"},
+        "repeat": {"repeat", "repeat paragraph", "read again", "read this paragraph", "फिर से पढ़ो", "दोबारा पढ़ो", "दोहराओ", "यह अनुच्छेद पढ़ो", "dobara padho", "phir se padho"},
+        "pause": {"pause", "stop", "stop reading", "pause reading", "रुको", "रुक जाओ", "पढ़ना बंद करो", "रोक दो", "ruko"},
+        "explain": {"explain", "explain this", "explain this paragraph", "समझाओ", "इसे समझाओ", "यह अनुच्छेद समझाओ", "यह पैराग्राफ समझाओ", "samjhao", "ise samjhao"},
+    }
+    return next((action for action, choices in phrases.items() if words in choices), None)
+
+
+def report_revision(report: dict) -> str:
+    return hashlib.sha256(report["markdown"].encode("utf-8")).hexdigest()
+
+
+def capture_navigation(report_id, index, revision, nonce, *, home, human_confirmed=False, progress=None):
+    """One native-approved capture, bound to the displayed saved report revision."""
+    if human_confirmed is not True:
+        return {"ok": False, "error": "Use the native report voice-command button and confirm this one capture."}
+    if (not isinstance(revision, str) or re.fullmatch(r"[0-9a-f]{64}", revision) is None
+            or not isinstance(nonce, str) or REPORT_ID.fullmatch(nonce) is None):
+        raise ValueError("Invalid report navigation identity")
+    report = read_report(report_id, home=home)
+    if (type(index) is not int or not 0 <= index < len(report["paragraphs"])
+            or report_revision(report) != revision):
+        return {"ok": False, "error": "The selected report changed. Reload it before recording a navigation command."}
+    from ai_os.config import load_config, load_raw_config
+    from ai_os.companion_state import publish_state
+    from ai_os.services.voice_input import capture_once
+    from ai_os.services.voice_errors import diagnostic
+    from ai_os.speech_lease import speech_lease
+    keys = ("always_listening_enabled", "whisper_language", "reply_language_mode", "whisper_model",
+            "speaker_recognition_enabled", "speaker_model", "speaker_threshold")
+    raw = load_raw_config(home)
+    if raw["always_listening_enabled"]:
+        return {"ok": False, "error": "Disable continuous listening before using one-shot report navigation."}
+    # Preserve saved language/identity filtering and ending silence. Navigation
+    # has a shorter utterance bound, without enabling or saving any preference.
+    saved_voice = load_config(home)
+    voice = replace(saved_voice, voice_command_seconds=min(8, saved_voice.voice_command_seconds),
+                    voice_max_utterance_seconds=min(15, saved_voice.voice_max_utterance_seconds))
+    progress = progress or (lambda _message: None)
+    with speech_lease(home) as acquired:
+        if not acquired:
+            return {"ok": False, "error": "Another conversation owns speech. Try report navigation after it finishes."}
+        try:
+            progress("Microphone: recording one report navigation command. Stop cancels recording.")
+            recognized = capture_once(voice, return_result=True)
+            if recognized.ok is not True:
+                return {"ok": False, "error": "Speech recognition did not complete. No report navigation was submitted."}
+            current = load_raw_config(home)
+            if any(raw.get(key) != current.get(key) for key in keys):
+                return {"ok": False, "error": "Voice permissions or language changed during recording. The command was discarded."}
+            language = recognized.detected_language if voice.reply_language_mode == "match" else voice.whisper_language
+            if language not in {"en", "hi"}:
+                return {"ok": False, "error": "Could not identify English or Hindi. Repeat a short navigation phrase."}
+            action = navigation_action(recognized.text)
+            if action is None:
+                return {"ok": False, "error": "No report navigation phrase recognized. Say next, previous, repeat, pause or explain. No computer action was submitted."}
+            if report_revision(read_report(report_id, home=home)) != revision:
+                return {"ok": False, "error": "The report changed during recording; the navigation command was discarded."}
+            return {"ok": True, "report_id": report_id, "revision": revision, "index": index,
+                    "nonce": nonce, "navigation": action, "language": language,
+                    "message": "One local report navigation command is ready. No transcript was saved."}
+        except Exception as exc:
+            code, message = diagnostic(exc, "listening")
+            return {"ok": False, "error_code": code, "error": message}
+        finally:
+            publish_state("idle", home=home)
 
 
 def _topic(value) -> str:
@@ -37,11 +115,34 @@ def _topic(value) -> str:
     return value.strip()
 
 
-def propose_research(topic) -> dict:
+def report_requested(text) -> bool:
+    """Only explicit current document creation may select persistent reporting."""
+    if not isinstance(text, str) or not 1 <= len(text) <= 8000:
+        return False
+    text = " ".join(text.casefold().split())
+    document = r"(?:report|document|file|markdown|pdf|रिपोर्ट|दस्तावेज़|दस्तावेज|फ़ाइल|फाइल)"
+    if re.search(r"(?:\b(?:no|not|without|don't|do not|never)\b.{0,45}" + document
+                 + r"|" + document + r".{0,20}(?:नहीं|मत)|(?:नहीं|मत).{0,25}" + document + r")", text):
+        return False
+    if re.search(r"\b(?:create|write|make|compile|generate|save|prepare|produce|want|need)\b.{0,65}" + document, text):
+        return True
+    if re.search(document + r".{0,35}(?:बनाओ|बनाएं|बनाइए|लिखो|लिखें|चाहिए|सहेजो|तैयार करो)", text):
+        return True
+    return bool(re.match(r"(?:please\s+)?(?:a\s+)?(?:research\s+)?report\s+(?:on|about|for)\b", text))
+
+
+def research_mode(value) -> str:
+    if not isinstance(value, str) or value not in {"articles", "report"}:
+        raise ValueError("Research mode must be articles or report")
+    return value
+
+
+def propose_research(topic, mode="articles") -> dict:
     topic = _topic(topic)
+    mode = research_mode(mode)
     return {"ok": False,
-            "message": "Review this exact public research topic in the native dialog. Only that topic is sent to Wikipedia and Crossref; no chat history, memory, files or accounts are uploaded.",
-            "approval_required": {"tool": "research_topic", "arguments": {"topic": topic}}}
+            "message": "Review this exact public topic and output mode in the native dialog. Articles are the default; a report file is created only when explicitly requested. No chat history, memory, files or accounts are uploaded.",
+            "approval_required": {"tool": "research_topic", "arguments": {"topic": topic, "mode": mode}}}
 
 
 def _public_endpoint(url: str) -> None:
@@ -115,6 +216,75 @@ def _source_url(value, host: str, path_prefix: str) -> str:
     except ValueError:
         return ""
     return value
+
+
+def article_sources(values) -> list[dict]:
+    """Canonical bounded returned public sources; do not follow or render HTML."""
+    if not isinstance(values, list) or not 1 <= len(values) <= 7:
+        raise ValueError("Choose a bounded returned article list")
+    sources, seen = [], set()
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("Invalid returned article")
+        url = value.get("url")
+        if not (_source_url(url, "en.wikipedia.org", "/wiki/") or _source_url(url, "doi.org", "/10.")):
+            raise ValueError("Article links must be returned public Wikipedia/DOI HTTPS sources")
+        title = _text(value.get("title"), 240)
+        if not title or not isinstance(value.get("kind"), str) or value["kind"] not in {"encyclopedia", "abstract", "metadata"}:
+            raise ValueError("Invalid returned source description")
+        if url not in seen:
+            seen.add(url)
+            sources.append({"title": title, "url": url, "kind": value["kind"],
+                            "summary": _text(value.get("summary", value.get("text", "")), 1400)})
+    return sources
+
+
+def selected_article_urls(sources, indices, *, check_network=True) -> list[str]:
+    sources = article_sources(sources)
+    if (not isinstance(indices, list) or not 1 <= len(indices) <= 3
+            or any(type(index) is not int or not 0 <= index < len(sources) for index in indices)
+            or len(set(indices)) != len(indices)):
+        raise ValueError("Choose one to three distinct returned articles")
+    urls = [sources[index]["url"] for index in indices]
+    if check_network:
+        for url in urls:
+            addresses = socket.getaddrinfo(urlsplit(url).hostname, 443, type=socket.SOCK_STREAM)
+            if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
+                raise ValueError("An article source resolved to a nonpublic network address")
+    return urls
+
+
+def open_articles(sources, indices, *, human_confirmed=False) -> dict:
+    """Native selection only, never a model tool or content-triggered action."""
+    if human_confirmed is not True:
+        return {"ok": False, "message": "Review the exact selected article URLs locally first."}
+    from ai_os.tools.desktop_tools import open_website
+    urls = selected_article_urls(sources, indices)
+    results = []
+    for url in urls:
+        result = open_website(url)
+        ok = result.get("ok", False) if isinstance(result, dict) else getattr(result, "ok", False)
+        results.append({"url": url, "accepted": bool(ok)})
+        if not ok:
+            break  # Do not repeatedly launch browsers after a failure.
+    ok = len(results) == len(urls) and all(item["accepted"] for item in results)
+    return {"ok": ok, "opened": results,
+            "message": ("Selected article launch requests sent. Check the browser; page load is not verified."
+                        if ok else "Some article launch requests failed. Inspect the browser before retrying; no report was created.")}
+
+
+def open_article_results(result, *, human_confirmed=False) -> dict:
+    """Trusted search-and-open consent covers at most three returned links."""
+    if human_confirmed is not True:
+        return {"ok": False, "message": "Native approval to search and open up to three article links is required."}
+    try:
+        if not isinstance(result, dict) or result.get("ok") is not True or result.get("mode") != "articles":
+            raise ValueError("No successful article search")
+        _topic(result.get("topic"))
+        sources = article_sources(result.get("sources"))
+        return open_articles(sources, list(range(min(3, len(sources)))), human_confirmed=True)
+    except (OSError, ValueError, TypeError):
+        return {"ok": False, "message": "Returned article links could not be validated or opened. No report was created; inspect the links in Research."}
 
 
 def _sources(topic: str, progress) -> tuple[list[dict], list[str]]:
@@ -205,18 +375,28 @@ def _report_path(home: Path, report_id: str, *, create=False) -> Path:
     return _report_directory(home, create=create) / (report_id + ".md")
 
 
-def run_research(topic, *, home=None, human_confirmed=False, progress=None, language=None) -> dict:
+def run_research(topic, *, home=None, human_confirmed=False, progress=None, language=None, mode="articles") -> dict:
     """Trusted exact-topic native approval only; never expose as a model tool."""
     if human_confirmed is not True:
         return {"ok": False, "error": "This exact online research topic needs native human confirmation"}
     from ai_os.config import AI_OS_HOME, load_raw_config
     topic = _topic(topic)
+    mode = research_mode(mode)
+    progress = progress or (lambda _message: None)
+    if mode == "articles":
+        sources, warnings = _sources(topic, progress)
+        if not sources:
+            return {"ok": False, "mode": mode, "warnings": warnings,
+                    "error": "No verified article links were returned. Nothing was saved or opened."}
+        sources = article_sources(sources)
+        return {"ok": True, "mode": mode, "topic": topic, "sources": sources,
+                "source_count": len(sources), "warnings": warnings,
+                "message": "Article links are ready. Review and choose up to three in Research to open them; no report file was created and no browser was opened automatically."}
     runtime_home = Path(home) if home is not None else AI_OS_HOME
     if language is None:
         language = load_raw_config(runtime_home)["whisper_language"]
     if not isinstance(language, str) or language not in {"en", "hi"}:
         raise ValueError("Report language must be English or Hindi")
-    progress = progress or (lambda _message: None)
     sources, warnings = _sources(topic, progress)
     if not sources:
         return {"ok": False, "error": "No verified source results were returned. Nothing was saved; try a clearer topic or check the connection.",
@@ -267,7 +447,7 @@ def run_research(topic, *, home=None, human_confirmed=False, progress=None, lang
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(encoded)
     progress("Saved the cited research brief locally.")
-    return {"ok": True, "report_id": report_id, "path": str(path), "source_count": len(sources),
+    return {"ok": True, "mode": mode, "report_id": report_id, "path": str(path), "source_count": len(sources),
             "language": language, "evidence_counts": counts,
             "warnings": warnings, "message": "Saved a cited public-source research brief. Open Research to review it and read one paragraph at a time; full papers were not read."}
 
@@ -400,12 +580,16 @@ def main() -> int:
     parser.add_argument("--home", type=Path, default=AI_OS_HOME)
     args = parser.parse_args()
     try:
-        value = json.loads(sys.stdin.buffer.read(2049))
+        raw = sys.stdin.buffer.read(16385)
+        if len(raw) > 16384:
+            raise ValueError("Research request exceeds its size limit")
+        value = json.loads(raw)
         if not isinstance(value, dict) or value.get("confirmed") is not True:
             raise ValueError("Native confirmation required")
         if value.get("action") == "research":
             result = run_research(value.get("topic"), home=args.home, human_confirmed=True,
                                   language=value.get("language"),
+                                  mode=value.get("mode", "articles"),
                                   progress=lambda status: print(json.dumps({"progress": status}), flush=True))
         elif value.get("action") == "speak":
             result = speak_paragraph(value.get("report_id"), value.get("index"), home=args.home,
@@ -413,6 +597,13 @@ def main() -> int:
         elif value.get("action") == "explain":
             result = explain_paragraph(value.get("report_id"), value.get("index"), home=args.home,
                                        language=value.get("language", "en"), human_confirmed=True)
+        elif value.get("action") == "navigate":
+            result = capture_navigation(value.get("report_id"), value.get("index"),
+                                        value.get("revision"), value.get("nonce"), home=args.home,
+                                        human_confirmed=True,
+                                        progress=lambda status: print(json.dumps({"progress": status}), flush=True))
+        elif value.get("action") == "open_articles":
+            result = open_articles(value.get("sources"), value.get("indices"), human_confirmed=True)
         else:
             raise ValueError("Unsupported research action")
         print(json.dumps({"result": result}), flush=True)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import argparse
+import json
 import sys
 import time
 import sqlite3
@@ -9,8 +10,8 @@ import signal
 from pathlib import Path
 
 from PySide6.QtCore import QProcess, QProcessEnvironment, Qt, QTimer, QEvent, QPropertyAnimation, QPoint
-from PySide6.QtGui import QCursor
-from PySide6.QtWidgets import QApplication, QLabel, QMenu, QVBoxLayout, QWidget
+from PySide6.QtGui import QActionGroup, QCursor
+from PySide6.QtWidgets import QApplication, QLabel, QMenu, QMessageBox, QVBoxLayout, QWidget
 
 from ai_os.companion_state import read_state
 from ai_os.config import AI_OS_HOME, load_raw_config
@@ -33,6 +34,42 @@ def texture_score(image):
     return edges / (47*47*2)
 
 
+def placement_report(home: Path = AI_OS_HOME) -> dict:
+    """Read configuration/display geometry without constructing or raising an overlay."""
+    app = QApplication.instance()
+    screens = []
+    if app is not None:
+        for screen in app.screens():
+            rect = screen.availableGeometry()
+            screens.append({"name": screen.name(), "available": [rect.x(), rect.y(), rect.width(), rect.height()]})
+    enabled, selected, error = None, "", ""
+    try:
+        with (home / "config.json").open("r", encoding="utf-8") as handle:
+            saved = handle.read(65537)
+        if len(saved) > 65536:
+            raise ValueError()
+        config = json.loads(saved)
+        if not isinstance(config, dict):
+            raise ValueError()
+        enabled = config.get("avatar_enabled", True)
+        selected = config.get("avatar_display", "")
+        if not isinstance(enabled, bool) or not isinstance(selected, str) or len(selected) > 255:
+            enabled, selected = None, ""
+            raise ValueError()
+    except (OSError, ValueError, TypeError):
+        error = "Saved companion preferences are unavailable; no settings were changed."
+    return {
+        "ok": bool(screens) and not error,
+        "configured_visible": enabled,
+        "configured_display": selected,
+        "configured_display_connected": any(screen["name"] == selected for screen in screens) if selected else None,
+        "platform": app.platformName() if app is not None else "unavailable",
+        "screens": screens,
+        "message": error or "Configuration and available displays only; this does not prove the resident avatar is visible.",
+        "recovery": "Run regenos-companion --show from the graphical desktop terminal to unhide and reposition the companion.",
+    }
+
+
 class AvatarOverlay(QWidget):
     def __init__(self, home: Path = AI_OS_HOME) -> None:
         super().__init__(
@@ -51,6 +88,10 @@ class AvatarOverlay(QWidget):
         self.selected_screen_name = ""
         self.next_proactive = time.monotonic() + 300
         self.speech_cancelled = False
+        self.speaker_group = None
+        self.settings_launch_error_until = 0.0
+        self.control_notice = ""
+        self.control_notice_until = 0.0
         self.screen_reader = QProcess(self)
         self.screen_requested = False
         screen_environment = QProcessEnvironment.systemEnvironment()
@@ -71,6 +112,7 @@ class AvatarOverlay(QWidget):
         self.speech_timeout.setInterval(90_000)
         self.speech_timeout.timeout.connect(self.stop_speech)
         self.speaker.finished.connect(self.speech_finished)
+        self.speaker.started.connect(self.remember_speech_group)
         self.setWindowTitle("REgenOS Companion")
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
@@ -115,6 +157,10 @@ class AvatarOverlay(QWidget):
         except (OSError, ValueError, TypeError):
             return
         if config != self.last_config:
+            geometry_changed = not self.last_config or any(
+                config[key] != self.last_config[key] for key in
+                ("avatar_corner", "avatar_display", "avatar_scale", "avatar_show_status", "avatar_show_emotion_bars")
+            )
             if config["screen_context_enabled"] and not self.screen_requested:
                 self.screen_requested = True
                 self.screen_reader.start(sys.executable, ["-m", "ai_os.screen_observer"])
@@ -130,13 +176,15 @@ class AvatarOverlay(QWidget):
             branding = config["branding"]
             self.setWindowTitle(f"{branding['brand_name']} {branding['assistant_name']}")
             scale = config["avatar_scale"] / 100
-            self.canvas.setFixedHeight(round(230 * scale))
+            if geometry_changed:
+                self.canvas.setFixedHeight(round(230 * scale))
             self.setStyleSheet(
                 theme_stylesheet(config["theme"]) + "AvatarOverlay {background: transparent;}"
             )
             self.bars.setVisible(config["avatar_show_emotion_bars"])
             self.setVisible(config["avatar_enabled"])
-            self.place()
+            if geometry_changed:
+                self.place()
         state = read_state(self.home)
         self.canvas.set_state(state, config)
         self.status.setText(state["phase"].capitalize())
@@ -168,6 +216,13 @@ class AvatarOverlay(QWidget):
             important = True
         if config["speaker_recognition_enabled"]:
             self.status.setText(self.status.text() + " · Enrolled voice filter on")
+            important = True
+        if time.monotonic() < self.settings_launch_error_until:
+            self.status.setText(self.status.text() + " · Settings failed; run regenos-settings")
+            important = True
+        if time.monotonic() < self.control_notice_until:
+            self.status.setText(self.status.text() + " · " + self.control_notice)
+            self.status.setToolTip(self.control_notice)
             important = True
         show_status = config["avatar_show_status"] or important
         self.status.setVisible(show_status)
@@ -217,6 +272,7 @@ class AvatarOverlay(QWidget):
             return
         self.selected_screen_name = target.name()
         rect = target.availableGeometry()
+        self.fit_workarea(rect)
         point = global_pointer - self.drag_origin
         self.move(QPoint(max(rect.left(), min(point.x(), rect.right()-self.width()+1)),
                          max(rect.top(), min(point.y(), rect.bottom()-self.height()+1))))
@@ -226,10 +282,24 @@ class AvatarOverlay(QWidget):
         if not screen or not self.last_config:
             return
         rect = screen.availableGeometry()
+        self.motion.stop()
+        self.fit_workarea(rect)
         corner = self.auto_corner or self.last_config["avatar_corner"]
-        x = rect.left() + 18 if "left" in corner else rect.right() - self.width() - 18
-        y = rect.top() + 18 if "top" in corner else rect.bottom() - self.height() - 18
+        x = rect.left() + 18 if "left" in corner else rect.right() - self.width() - 17
+        y = rect.top() + 18 if "top" in corner else rect.bottom() - self.height() - 17
+        x = max(rect.left(), min(x, rect.right() - self.width() + 1))
+        y = max(rect.top(), min(y, rect.bottom() - self.height() + 1))
         self.move(x, y)
+
+    def fit_workarea(self, rect):
+        """Fit the runtime window without changing the saved size preference."""
+        if not self.last_config or rect.isEmpty():
+            return
+        width = min(max(210, round(260 * self.last_config["avatar_scale"] / 100)), rect.width())
+        chrome = 8 + (27 if not self.status.isHidden() else 0) + (129 if self.last_config["avatar_show_emotion_bars"] else 0)
+        canvas_height = min(round(230 * self.last_config["avatar_scale"] / 100), max(1, rect.height() - chrome))
+        self.canvas.setFixedHeight(canvas_height)
+        self.setFixedSize(width, min(rect.height(), canvas_height + chrome))
 
     def move_away(self):
         screen = self.screen()
@@ -313,41 +383,176 @@ class AvatarOverlay(QWidget):
         self.speaker.closeWriteChannel()
         self.speech_timeout.start()
 
+    def remember_speech_group(self):
+        if sys.platform != "linux":
+            return
+        pid = self.speaker.processId()
+        try:
+            if pid > 1 and pid != os.getpgrp() and os.getpgid(pid) == pid:
+                self.speaker_group = pid
+        except (ProcessLookupError, PermissionError):
+            pass
+
+    def signal_speech_group(self, signum):
+        if self.speaker_group is None:
+            return False
+        try:
+            os.killpg(self.speaker_group, signum)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            return False
+        return True
+
     def stop_speech(self):
         self.speech_timeout.stop()
+        self.speech_cancelled = True
         if self.speaker.state() != QProcess.ProcessState.NotRunning:
-            self.speech_cancelled = True
-            pid = self.speaker.processId()
-            if sys.platform == "linux" and pid > 0:
-                try:
-                    os.killpg(pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-            self.speaker.terminate()
+            self.remember_speech_group()
+            if not self.signal_speech_group(signal.SIGTERM):
+                self.speaker.terminate()
             if not self.speaker.waitForFinished(1000):
-                if sys.platform == "linux" and pid > 0:
-                    try:
-                        os.killpg(pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
+                self.signal_speech_group(signal.SIGKILL)
                 self.speaker.kill()
                 self.speaker.waitForFinished(1000)
+        # A descendant can ignore TERM after the worker itself has exited.
+        self.signal_speech_group(signal.SIGKILL)
+        self.speaker_group = None
 
     def speech_finished(self, code, _status):
         self.speech_timeout.stop()
+        self.signal_speech_group(signal.SIGKILL)
+        self.speaker_group = None
         self.speaker.readAllStandardOutput()
         self.speaker.readAllStandardError()
         from ai_os.companion_state import publish_state
         publish_state("error" if code and not self.speech_cancelled else "idle", home=self.home)
 
-    def open_settings(self) -> None:
-        QProcess.startDetached(sys.executable, ["-m", "ai_os.hub_launcher"])
+    def open_settings(self) -> bool:
+        process = QProcess(self)
+        environment = QProcessEnvironment.systemEnvironment()
+        environment.insert("AI_OS_HOME", str(self.home))
+        process.setProcessEnvironment(environment)
+        process.setProgram(sys.executable)
+        process.setArguments(["-m", "ai_os.hub_launcher"])
+        try:
+            result = process.startDetached()
+            success = result[0] if isinstance(result, tuple) else result
+        except (OSError, RuntimeError):
+            success = False
+        process.deleteLater()
+        if not success:
+            self.settings_launch_error_until = time.monotonic() + 10
+            self.status.setText("Settings could not start; run regenos-settings from a desktop terminal.")
+            self.status.show()
+        return bool(success)
 
-    def contextMenuEvent(self, event) -> None:
+    def notify_control(self, text):
+        self.control_notice, self.control_notice_until = text, time.monotonic() + 10
+        self.status.setText(text)
+        self.status.setToolTip(text)
+        self.status.show()
+        self.status.repaint()
+
+    def confirm_sensor_start(self, title, text):
+        box = QMessageBox(self)
+        box.setWindowTitle(title)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        box.setText(text)
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        return box.exec() == QMessageBox.StandardButton.Yes
+
+    def set_listening(self, enabled):
+        try:
+            config = load_raw_config(self.home)
+            if enabled and not config["always_listening_enabled"]:
+                if not (config["wake_word_enabled"] or config["conversation_listening_enabled"]):
+                    self.notify_control("Choose wake-word or conversation listening in Voice settings first.")
+                    return False
+                mode = "wake-word detection" if config["wake_word_enabled"] else "continuous conversation listening without a wake word"
+                if not self.confirm_sensor_start("Enable microphone listening?",
+                    "Enable " + mode + " using the saved local voice settings? Nearby speech may be captured. "
+                    "Recognized requests follow the saved memory and command-permission policy. "
+                    "The current speaker filter is not command or login authorization. "
+                    "The core must already be running; this does not start or change a service. "
+                    "You can disable listening from this menu at any time."):
+                    return False
+                if load_raw_config(self.home) != config:
+                    self.notify_control("Settings changed during approval; review and start the microphone again.")
+                    return False
+            save_settings({"always_listening_enabled": bool(enabled)}, self.home, human_confirmed=True)
+            self.refresh()
+            self.notify_control("Microphone enabled in settings; check Voice status for capture readiness." if enabled
+                                else "Microphone stop requested; saved listening is off.")
+            return True
+        except (OSError, ValueError, TypeError):
+            self.notify_control("Microphone setting could not be changed; open Voice settings.")
+            return False
+
+    def set_screen_sharing(self, enabled):
+        try:
+            config = load_raw_config(self.home)
+            if enabled and not config["screen_context_enabled"]:
+                if not self.confirm_sensor_start("Enable local screen awareness?",
+                    "Start the native screen-sharing selector? Only a screen you explicitly select is read locally. "
+                    "Visible text is temporary, is not saved as memory, and cannot authorize actions. "
+                    "Remote AI providers receive no screen context. Use Stop screen sharing or Pause to disable it."):
+                    return False
+                if load_raw_config(self.home) != config:
+                    self.notify_control("Settings changed during approval; review and start screen sharing again.")
+                    return False
+            save_settings({"screen_context_enabled": bool(enabled)}, self.home, human_confirmed=True)
+            if not enabled:
+                self.screen_requested = False
+                self.notify_control("Stopping screen sharing and clearing its local context…")
+                self.stop_screen_reader()
+            self.refresh()
+            self.notify_control("Screen sharing requested; choose a screen in the desktop selector." if enabled
+                                else "Screen sharing disabled.")
+            return True
+        except (OSError, ValueError, TypeError):
+            self.notify_control("Screen-sharing setting could not be changed; open Companion settings.")
+            return False
+
+    def set_overlay_option(self, key, value):
+        try:
+            save_settings({key: value}, self.home)
+            self.refresh()
+        except (OSError, ValueError, TypeError):
+            self.notify_control("Companion preference could not be saved.")
+
+    def set_render_mode(self, mode):
+        try:
+            save_settings({"avatar_render_mode": mode}, self.home)
+            self.refresh()
+            self.notify_control("3D depth appearance selected (up to 24 frames/s)." if mode == "3d"
+                                else "2D particles selected — lighter rendering.")
+            return True
+        except (OSError, ValueError, TypeError):
+            self.notify_control("Hologram appearance could not be saved.")
+            return False
+
+    def build_context_menu(self):
         self.last_move = time.monotonic() + 30
+        try:
+            config = load_raw_config(self.home)
+        except (OSError, ValueError, TypeError):
+            config = self.last_config
         menu = QMenu(self)
         menu.addAction("Settings", self.open_settings)
         menu.addAction("Move out of the way", self.move_away)
+        appearance = menu.addMenu("Hologram appearance")
+        render_group = QActionGroup(appearance)
+        render_group.setExclusive(True)
+        selected_mode = config.get("avatar_render_mode", "2d") if config else "2d"
+        for mode, label in (("2d", "2D particles — lighter"), ("3d", "3D depth appearance")):
+            action = appearance.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(mode == selected_mode)
+            render_group.addAction(action)
+            action.triggered.connect(lambda _checked=False, mode=mode: self.set_render_mode(mode))
         displays = menu.addMenu("Move to display")
         for index, screen in enumerate(QApplication.screens(), 1):
             name = screen.name()
@@ -358,17 +563,26 @@ class AvatarOverlay(QWidget):
         for key, label in (("avatar_show_emotion_bars", "Debug emotion bars"), ("avatar_show_status", "Debug mood/activity label"), ("avatar_auto_move", "Move away from pointer")):
             action = menu.addAction(label)
             action.setCheckable(True)
-            action.setChecked(self.last_config[key])
-            action.toggled.connect(lambda value, key=key: save_settings({key: value}, self.home))
+            action.setChecked(config.get(key, False) if config else False)
+            action.toggled.connect(lambda value, key=key: self.set_overlay_option(key, value))
         menu.addAction("Stop proactive speech", lambda: (save_settings({"proactive_speech_enabled": False}, self.home, human_confirmed=True), self.stop_speech()))
-        menu.addAction("Stop screen awareness", lambda: (save_settings({"screen_context_enabled": False}, self.home, human_confirmed=True), self.stop_screen_reader()))
-        menu.addAction("Stop microphone", lambda: save_settings({"always_listening_enabled": False}, self.home, human_confirmed=True))
+        sharing = bool(config and config.get("screen_context_enabled"))
+        menu.addAction("Stop screen sharing" if sharing else "Start screen sharing…",
+                       lambda: self.set_screen_sharing(not sharing))
+        listening = bool(config and config.get("always_listening_enabled"))
+        menu.addAction("Stop microphone" if listening else "Start microphone…",
+                       lambda: self.set_listening(not listening))
         menu.addAction("Revoke all access grants", lambda: revoke_all(self.home))
         menu.addAction(
-            "Hide companion", lambda: save_settings({"avatar_enabled": False}, self.home)
+            "Hide companion", lambda: self.set_overlay_option("avatar_enabled", False)
         )
         menu.addAction("Quit companion", QApplication.instance().quit)
+        return menu
+
+    def contextMenuEvent(self, event) -> None:
+        menu = self.build_context_menu()
         menu.exec(event.globalPos())
+        menu.deleteLater()
 
     def stop_screen_reader(self):
         if self.screen_reader.state() != QProcess.ProcessState.NotRunning:
@@ -386,7 +600,9 @@ class AvatarOverlay(QWidget):
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="REgenOS native companion")
-    parser.add_argument("--show", action="store_true", help="Reveal the companion even when saved as hidden")
+    flags = parser.add_mutually_exclusive_group()
+    flags.add_argument("--show", action="store_true", help="Reveal the companion even when saved as hidden")
+    flags.add_argument("--status", action="store_true", help="Report saved visibility and current display geometry without activating the companion")
     args = parser.parse_args()
     if args.show:
         save_settings({"avatar_enabled": True}, AI_OS_HOME)
@@ -399,7 +615,13 @@ def main() -> int:
     app.setStyle("Fusion")
     app.setApplicationName("regenos-companion")
     app.setDesktopFileName("regenos-companion")
+    from ai_os.brand_assets import brand_icon
+    app.setWindowIcon(brand_icon())
     app.setQuitOnLastWindowClosed(False)
+    if args.status:
+        result = placement_report()
+        print(json.dumps(result, ensure_ascii=True))
+        return 0 if result["ok"] else 1
     overlay = None
 
     def activate():

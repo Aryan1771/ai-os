@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=REgenOS Setup
+GenericName=First-run setup
+Comment=Personalize the installed REgenOS runtime and review local readiness
+Exec=regenos-setup
+Icon=regenos
+Terminal=false
+Categories=Settings;
+Keywords=REgenOS;Setup;Welcome;First Run;Onboarding;RE;
+StartupWMClass=regenos-setup

@@ -1,10 +1,231 @@
-logo_image = Image("regenos-mark.png");
-logo_sprite = Sprite(logo_image);
-logo_sprite.SetX(Window.GetWidth() / 2 - logo_image.GetWidth() / 2);
-logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2);
+# REgenOS Aurora Ridge — calm boot identity with native Plymouth prompts.
+# API reference: upstream Plymouth 26.134.222 script plugin.
+# This theme renders only: it never reads keys, approves input or logs answers.
+# Escape / console fallback remain owned by Plymouth, not by this script.
 
-fun refresh_callback() {
-    logo_sprite.SetOpacity(0.78 + 0.22 * Math.Sin(Plymouth.GetBootProgress() * 6.28));
+Window.SetBackgroundTopColor(0.025, 0.050, 0.095);
+Window.SetBackgroundBottomColor(0.010, 0.020, 0.040);
+
+brand.original = Image("regenos-wordmark.png");
+brand.wordmark = brand.original && brand.original.GetWidth() > 0;
+if (!brand.wordmark) brand.original = Image("regenos-mark.png");
+brand.sprite = Sprite();
+title.sprite = Sprite();
+prompt.sprite = Sprite();
+answer.sprite = Sprite();
+message.sprite = Sprite();
+hint.sprite = Sprite();
+
+state.mode = "normal";
+state.prompt = "";
+state.answer = "";
+state.message = "";
+state.progress = 0;
+state.phase = 0;
+view.width = 0;
+
+dot.image = Image.Text("•", 0.30, 0.78, 0.96);
+for (index = 0; index < 3; index++)
+    dot.sprite[index] = Sprite(dot.image);
+
+fun fit_image(image, width, height)
+{
+    if (!image || image.GetWidth() < 1 || image.GetHeight() < 1)
+        return NULL;
+    local.scale = Math.Min(1, Math.Min(width / image.GetWidth(), height / image.GetHeight()));
+    if (scale < 1)
+        return image.Scale(Math.Max(1, Math.Int(image.GetWidth() * scale)),
+                           Math.Max(1, Math.Int(image.GetHeight() * scale)));
+    return image;
+}
+
+fun draw_text(sprite, text, y, height)
+{
+    sprite.SetOpacity(0);
+    if (!text || text == "") return;
+    local.font_size = Math.Clamp(Math.Int(height * 0.6), 12, 24);
+    local.image = fit_image(Image.Text(text, 0.88, 0.94, 1.0, 1, "Sans " + font_size),
+                            view.width * 0.88, height);
+    if (!image) return;
+    sprite.SetImage(image);
+    sprite.SetPosition(view.x - image.GetWidth() / 2, y - image.GetHeight() / 2, 100);
+    sprite.SetOpacity(1);
+}
+
+fun render_scene()
+{
+    local.image = fit_image(brand.original, Math.Min(192, view.width * 0.25), view.height * 0.25);
+    brand.sprite.SetOpacity(0);
+    if (image)
+    {
+        brand.sprite.SetImage(image);
+        brand.sprite.SetPosition(view.x - image.GetWidth() / 2,
+                                 view.y - view.height * 0.17 - image.GetHeight() / 2, 0);
+        brand.sprite.SetOpacity(1);
+    }
+    # Text fallback remains visible when the compact wordmark is unavailable.
+    title.sprite.SetOpacity(0);
+    if (!brand.wordmark)
+        draw_text(title.sprite, "REgenOS", view.y + view.height * 0.02, view.height * 0.07);
+    draw_text(hint.sprite, "Esc  ·  boot details", view.y + view.height * 0.46, view.height * 0.04);
+    draw_text(message.sprite, state.message, view.y + view.height * 0.35, view.height * 0.10);
+
+    prompt.sprite.SetOpacity(0);
+    answer.sprite.SetOpacity(0);
+    if (state.mode != "normal")
+    {
+        draw_text(prompt.sprite, state.prompt, view.y + view.height * 0.15, view.height * 0.11);
+        draw_text(answer.sprite, state.answer, view.y + view.height * 0.25, view.height * 0.07);
+    }
+    local.index;
+    for (index = 0; index < 3; index++)
+    {
+        if (dot.image)
+            dot.sprite[index].SetPosition(view.x + (index - 1) * 18 - dot.image.GetWidth() / 2,
+                                          view.y + view.height * 0.17, 10);
+        dot.sprite[index].SetOpacity(0);
+    }
+}
+
+fun update_layout(force)
+{
+    # Plymouth uses a shared centered canvas. Fit the smallest attached head,
+    # not just its maximum-size canvas; do not duplicate overlapping sprites.
+    local.width = Window.GetWidth();
+    local.height = Window.GetHeight();
+    if (width < 1 || height < 1) return;
+    local.x = Window.GetX() + width / 2;
+    local.y = Window.GetY() + height / 2;
+    local.index;
+    for (index = 0; index < 16 && Window.GetWidth(index); index++)
+    {
+        width = Math.Min(width, Window.GetWidth(index));
+        height = Math.Min(height, Window.GetHeight(index));
+    }
+    if (force || width != view.width || height != view.height || x != view.x || y != view.y)
+    {
+        global.view.width = width;
+        global.view.height = height;
+        global.view.x = x;
+        global.view.y = y;
+        render_scene();
+    }
+}
+
+fun refresh_callback()
+{
+    update_layout(0);
+    global.state.phase += 0.06;
+    if (state.phase > 6.28318) global.state.phase = 0;
+    local.index;
+    local.opacity;
+    for (index = 0; index < 3; index++)
+    {
+        opacity = 0;
+        if (state.mode == "normal" && dot.image)
+        {
+            opacity = 0.28 + 0.36 * (1 + Math.Sin(state.phase - index * 1.2)) / 2;
+            if (state.progress >= (index + 1) / 3) opacity = 0.88;
+        }
+        dot.sprite[index].SetOpacity(opacity);
+    }
+}
+
+fun display_normal_callback()
+{
+    global.state.mode = "normal";
+    global.state.prompt = "";
+    global.state.answer = "";
+    update_layout(1);
+}
+
+fun display_password_callback(text, bullets)
+{
+    global.state.mode = "password";
+    global.state.prompt = text;
+    if (!text || text == "") global.state.prompt = "Enter passphrase";
+    global.state.answer = "";
+    # Only the visual count is capped. Plymouth owns the actual input buffer.
+    local.count = Math.Clamp(Math.Int(bullets), 0, 64);
+    local.index;
+    for (index = 0; index < count; index++) global.state.answer += "*";
+    update_layout(1);
+}
+
+fun display_question_callback(text, entry)
+{
+    global.state.mode = "question";
+    global.state.prompt = text;
+    if (!text || text == "") global.state.prompt = "Input required";
+    global.state.answer = entry;
+    if (!entry || entry == "") global.state.answer = "_";
+    update_layout(1);
+}
+
+fun display_prompt_callback(text, entry, is_secret)
+{
+    # Newer Plymouth forwards prompts through this API as well. Never retain or
+    # render secret entry text: derive only its masked visual count.
+    if (is_secret)
+    {
+        local.count = 0;
+        if (entry) count = entry.Length();
+        display_password_callback(text, count);
+    }
+    else
+        display_question_callback(text, entry);
+}
+
+fun display_message_callback(text)
+{
+    global.state.message = text;
+    update_layout(1);
+}
+
+fun hide_message_callback(text)
+{
+    # Hiding an older message must not erase a newer failure/status message.
+    if (text == state.message)
+    {
+        global.state.message = "";
+        update_layout(1);
+    }
+}
+
+fun progress_callback(duration, progress)
+{
+    global.state.progress = Math.Clamp(progress, 0, 1);
+}
+
+fun system_update_callback(progress)
+{
+    global.state.progress = Math.Clamp(progress / 100, 0, 1);
+}
+
+fun hotplug_callback()
+{
+    update_layout(1);
+}
+
+fun quit_callback()
+{
+    # Drop displayed input and leave a still image while the next stage starts.
+    global.state.mode = "quit";
+    global.state.prompt = "";
+    global.state.answer = "";
+    global.state.message = "";
+    update_layout(1);
 }
 
 Plymouth.SetRefreshFunction(refresh_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayQuestionFunction(display_question_callback);
+Plymouth.SetDisplayPromptFunction(display_prompt_callback);
+Plymouth.SetDisplayMessageFunction(display_message_callback);
+Plymouth.SetHideMessageFunction(hide_message_callback);
+Plymouth.SetBootProgressFunction(progress_callback);
+Plymouth.SetSystemUpdateFunction(system_update_callback);
+Plymouth.SetDisplayHotplugFunction(hotplug_callback);
+Plymouth.SetQuitFunction(quit_callback);
+update_layout(1);

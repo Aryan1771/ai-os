@@ -183,6 +183,25 @@ def speech_mouth_frame(elapsed: float) -> int:
     return cadence[int(elapsed / 0.12) % len(cadence)]
 
 
+def project_hologram_particle(x: float, y: float, elapsed: float = 0.0) -> tuple[float, float, float, float]:
+    """Bounded perspective for the optional depth appearance, no scene/GPU state.
+
+    A deterministic shallow volume follows the existing persistent particles.
+    The camera moves gently; this does not infer geometry from topics or screens.
+    """
+    if not all(math.isfinite(value) for value in (x, y, elapsed)):
+        return 0.0, 0.0, 0.0, 1.0
+    x, y = max(-12, min(12, x)), max(-12, min(12, y))
+    depth = 2.2 * math.sin(x * .31 + y * .18) + .9 * math.cos(math.hypot(x, y) * .6)
+    yaw, pitch = .30 + .12 * math.sin(elapsed * .37), -.20 + .08 * math.sin(elapsed * .29)
+    horizontal = x * math.cos(yaw) + depth * math.sin(yaw)
+    rotated_depth = -x * math.sin(yaw) + depth * math.cos(yaw)
+    vertical = y * math.cos(pitch) - rotated_depth * math.sin(pitch)
+    rotated_depth = y * math.sin(pitch) + rotated_depth * math.cos(pitch)
+    scale = 64 / (64 - rotated_depth)
+    return horizontal * scale, vertical * scale, rotated_depth, scale
+
+
 def target_pixels(shape: str, levels: dict[str, float], custom: list[str] | None = None,
                   *, mouth_open: int | None = None):
     validated = validate_pixels(custom)

@@ -194,6 +194,8 @@ class ConversationWidget(QWidget):
         process.errorOccurred.connect(lambda error: self._failed_current(process, generation, error))
         process.started.connect(lambda: self._started_current(process, generation))
         self.process = process
+        self.worker_group = None
+        self._active_chat = None
 
     def _finished_current(self, process, generation, code, status):
         if process is self.process and generation == self.request_generation:
@@ -206,6 +208,7 @@ class ConversationWidget(QWidget):
     def _started_current(self, process, generation):
         if process is not self.process or generation != self.request_generation:
             return
+        self._remember_worker_group(process)
         self.cancelled = False
         self._request_started_wall = time.time()
         self._request_started_mono = time.monotonic()
@@ -216,6 +219,27 @@ class ConversationWidget(QWidget):
         self.activity_status.setText("Preparing request…")
         self.mic_button.setEnabled(False)
         self.activity_timer.start()
+
+    def _remember_worker_group(self, process):
+        if sys.platform != "linux":
+            return
+        pid = process.processId()
+        try:
+            if pid > 1 and pid != os.getpgrp() and os.getpgid(pid) == pid:
+                self.worker_group = pid
+        except (ProcessLookupError, PermissionError):
+            pass
+
+    def _signal_worker_group(self, signum):
+        if self.worker_group is None:
+            return False
+        try:
+            os.killpg(self.worker_group, signum)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            return False
+        return True
 
     def refresh_activity(self):
         if self.process.state() == QProcess.ProcessState.NotRunning:
@@ -267,11 +291,19 @@ class ConversationWidget(QWidget):
             self.status.setText("Enter 1–8000 characters to send or steer.")
             return False
         active = self.process.state() != QProcess.ProcessState.NotRunning
+        interrupted = None
+        previous = self._active_chat
+        if (active and previous and previous["generation"] == self.request_generation
+                and previous["session"] == (self.session.text() or "default")):
+            interrupted = previous["text"][:4000]
         if active:
             if not self.cancel():
                 return False
             self.history.appendPlainText("RE: Previous request stopped. Already completed actions and saved history remain.")
-        self.send()
+        if interrupted:
+            self.send(interrupted_context=interrupted)
+        else:
+            self.send()
         return True
 
     def load_history(self):
@@ -280,7 +312,7 @@ class ConversationWidget(QWidget):
             "\n\n".join(f"You: {row['user']}\nREgenOS: {row['assistant']}" for row in rows)
         )
 
-    def send(self):
+    def send(self, *, interrupted_context=None):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             self.status.setText("Request active. Ctrl+Enter sends this message as a correction after stopping it.")
             return
@@ -288,10 +320,20 @@ class ConversationWidget(QWidget):
         if not 1 <= len(text) <= 8000:
             self.status.setText("Enter 1–8000 characters.")
             return
+        if interrupted_context is not None and (
+            not isinstance(interrupted_context, str) or len(interrupted_context) > 4000
+        ):
+            self.status.setText("The interrupted-request reference is invalid; no new request was sent.")
+            return
         self.cancelled = False
-        request = json.dumps(
-            {"action": "chat", "text": text, "session": self.session.text() or "default"}
-        )
+        session = self.session.text() or "default"
+        payload = {"action": "chat", "text": text, "session": session}
+        if interrupted_context:
+            payload["interrupted_context"] = interrupted_context
+        request = json.dumps(payload)
+        # This is only the current explicit chat, never a voice transcript,
+        # approval, saved conversation, model reply or earlier steering chain.
+        self._active_chat = {"text": text, "session": session, "generation": self.request_generation}
         self.send_button.setEnabled(False)
         self.session.setEnabled(False)
         self.load_button.setEnabled(False)
@@ -307,6 +349,7 @@ class ConversationWidget(QWidget):
     def speak_once(self):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             return
+        self._active_chat = None
         config = load_raw_config(self.home)
         if config["always_listening_enabled"]:
             self.status.setText("Disable continuous listening in Voice before using Speak once.")
@@ -343,6 +386,10 @@ class ConversationWidget(QWidget):
             self.process.setProcessEnvironment(env)
 
     def finished(self, code, _status):
+        self._active_chat = None
+        # A completed desktop launch may deliberately leave its application
+        # running. Only an active cancellation owns descendant teardown.
+        self.worker_group = None
         self.timer.stop()
         self.activity_timer.stop()
         self.mic_button.setEnabled(True)
@@ -368,6 +415,9 @@ class ConversationWidget(QWidget):
                 self.history.appendPlainText("Heard: " + str(result["recognized_text"])[:8000])
             reply = result["response"]
             proposal = reply.get("result", {}).get("approval_required") if reply.get("type") == "tool_result" else None
+            if proposal and proposal.get("tool") == "power_action":
+                self.approve_power(proposal)
+                return
             if proposal and proposal.get("tool") == "cleanup_files":
                 self.approve_cleanup(proposal)
                 return
@@ -396,6 +446,7 @@ class ConversationWidget(QWidget):
             self.status.setText("The backend returned an invalid response.")
 
     def _start_reviewed_request(self, payload, status):
+        self._active_chat = None
         self.cancelled = False
         self.send_button.setEnabled(False)
         self.session.setEnabled(False)
@@ -439,7 +490,8 @@ class ConversationWidget(QWidget):
             self.refresh_pending_review()
             return False
         return {"cleanup_files": self.approve_cleanup, "research_topic": self.approve_research,
-                "run_terminal_command": self.approve_terminal_command}[pending["tool"]](pending)
+                "run_terminal_command": self.approve_terminal_command,
+                "power_action": self.approve_power}[pending["tool"]](pending)
 
     def approve_cleanup(self, proposal):
         if self.process.state() != QProcess.ProcessState.NotRunning:
@@ -464,14 +516,18 @@ class ConversationWidget(QWidget):
             return False
         from ai_os.research_reports import propose_research
         try:
-            topic = propose_research(**proposal["arguments"])["approval_required"]["arguments"]["topic"]
+            arguments = propose_research(**proposal["arguments"])["approval_required"]["arguments"]
+            topic, mode = arguments["topic"], arguments["mode"]
         except (KeyError, ValueError, TypeError):
             self.status.setText("Invalid research topic.")
             return False
         box = QMessageBox(self)
         box.setWindowTitle("Research this topic online?")
         box.setTextFormat(Qt.TextFormat.PlainText)
-        box.setText(f"Topic: {topic}\n\nOnly this topic and your network address go to Wikipedia and Crossref. No private history or accounts are uploaded. A cited source brief will be saved locally. Full papers are not read. Continue?")
+        behavior = ("A cited source report will be saved locally because report mode was explicitly requested."
+                    if mode == "report" else "Up to three relevant public source articles will be opened in your browser. No report/document will be created.")
+        box.setText(f"Topic: {topic}\n\nOnly this topic and your network address go to Wikipedia and Crossref. No private history or accounts are uploaded. "
+                    + behavior + " Full papers are not read or independently verified. Continue?")
         box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         box.setDefaultButton(QMessageBox.StandardButton.No)
         if box.exec() != QMessageBox.StandardButton.Yes:
@@ -479,7 +535,46 @@ class ConversationWidget(QWidget):
             self.discard_pending_review(proposal)
             return False
         self.discard_pending_review(proposal)
-        self._start_reviewed_request({"action": "approved_research", "topic": topic, "confirmed": True}, "Searching public sources and compiling the report…")
+        self._start_reviewed_request({"action": "approved_research", "topic": topic, "mode": mode, "confirmed": True},
+                                     "Searching public sources and opening articles…" if mode == "articles" else "Compiling the explicitly requested report…")
+        return True
+
+    def approve_power(self, proposal):
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            return False
+        from ai_os.power_actions import power_action, command_arguments
+        try:
+            arguments = power_action(**proposal["arguments"])["approval_required"]["arguments"]
+            action, minutes = arguments["action"], arguments["delay_minutes"]
+        except (KeyError, TypeError, ValueError):
+            self.status.setText("Invalid power request. Nothing was scheduled.")
+            return False
+        if action != "cancel" and minutes is None:
+            minutes, accepted = QInputDialog.getInt(self, "When should the computer power off or restart?",
+                "Delay in minutes (0 means immediately). Save your work before confirming.", 5, 0, 1440, 1)
+            if not accepted:
+                self.discard_pending_review(proposal)
+                self.status.setText("Power request cancelled. Nothing was scheduled.")
+                return False
+        argv = command_arguments(action, minutes)
+        box = QMessageBox(self)
+        box.setWindowTitle("Confirm system power action")
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        description = ("Cancel the system's pending shutdown/restart schedule, including one created outside REgenOS."
+                       if action == "cancel" else
+                       f"{'Power off' if action == 'poweroff' else 'Restart'} {'IMMEDIATELY' if minutes == 0 else 'in ' + str(minutes) + ' minute(s)'}. Save your work. Unsaved data may be lost.")
+        box.setText(description + "\n\nExact command: " + shlex.join(argv)
+                    + "\n\nThis is a system action. OS permissions and inhibitors still apply. Chat Stop will not cancel an accepted schedule. "
+                      "To cancel a future schedule, request Cancel scheduled shutdown. Confirm this exact action?")
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            self.discard_pending_review(proposal)
+            self.status.setText("Power action denied. Nothing was scheduled.")
+            return False
+        self.discard_pending_review(proposal)
+        self._start_reviewed_request({"action": "approved_power", "power_action": action,
+                                     "delay_minutes": minutes, "confirmed": True}, "Submitting the exact reviewed power request…")
         return True
 
     def approve_terminal_command(self, proposal):
@@ -537,6 +632,14 @@ class ConversationWidget(QWidget):
         assessment = assess_command(arguments.get("command", []))
         if assessment.risk == RiskLevel.PROHIBITED:
             return False
+        from ai_os.power_actions import command_proposal
+        try:
+            power = command_proposal(assessment.command)
+        except ValueError:
+            self.status.setText("Unsupported power flags. Ask for a reviewed shutdown/restart time instead.")
+            return False
+        if power is not None:
+            return self.approve_power(power["approval_required"])
         box = QMessageBox(self)
         box.setWindowTitle("Approve this command once")
         box.setTextFormat(Qt.TextFormat.PlainText)
@@ -692,6 +795,7 @@ class ConversationWidget(QWidget):
             self.confirm_grant()
 
     def failed(self, _error):
+        self._active_chat = None
         self.timer.stop()
         self.activity_timer.stop()
         if self.process.state() == QProcess.ProcessState.NotRunning:
@@ -705,6 +809,7 @@ class ConversationWidget(QWidget):
             self.activity_status.setText("Backend unavailable")
 
     def cancel(self):
+        self._active_chat = None
         self.cancelled = True
         self.timer.stop()
         self.activity_timer.stop()
@@ -713,27 +818,18 @@ class ConversationWidget(QWidget):
             # Block synchronous and already queued callbacks from the old request.
             # New requests get a separate QProcess and generation guard as well.
             process.blockSignals(True)
-            pid = process.processId()
-            sent = False
-            if sys.platform == "linux" and pid > 0:
-                try:
-                    os.killpg(pid, signal.SIGTERM)
-                    sent = True
-                except OSError:
-                    pass
-            if not sent:
+            self._remember_worker_group(process)
+            if not self._signal_worker_group(signal.SIGTERM):
                 process.terminate()
             if not process.waitForFinished(3000):
-                if sys.platform == "linux" and pid > 0:
-                    try:
-                        os.killpg(pid, signal.SIGKILL)
-                    except OSError:
-                        pass
+                self._signal_worker_group(signal.SIGKILL)
                 process.kill()
             if process.state() != QProcess.ProcessState.NotRunning and not process.waitForFinished(2000):
                 self.status.setText("The previous backend has not stopped. A new request was not started.")
                 self.activity_status.setText("Waiting for the previous backend to exit")
                 return False
+        self._signal_worker_group(signal.SIGKILL)
+        self.worker_group = None
         self.cleanup_voice()
         process.blockSignals(True)
         self._new_process()

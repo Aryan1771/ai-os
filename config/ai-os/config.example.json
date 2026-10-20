@@ -27,6 +27,7 @@
   "avatar_corner": "bottom-right",
   "avatar_scale": 100,
   "avatar_animation_enabled": true,
+  "avatar_render_mode": "2d",
   "avatar_accent": "#4de3a7",
   "avatar_motion": 65,
   "avatar_reactivity": 75,

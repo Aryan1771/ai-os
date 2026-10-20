@@ -1,14 +1,29 @@
 # REgenOS Feature Checklist
 
-Latest full regression checkpoint: **774 tests passed in 10.53s**, including the
-semantic-memory and registry-permission follow-up. Correctness lint, whitespace,
-installer shell syntax and Chat/Research desktop-file validation passed.
-The runtime follow-up adds memory pin/edit controls, accurate voice readiness,
-guided one-shot local voice checks, research abstracts/paragraph navigation and
-approved GNOME shortcut installation/readback. See [request status](REQUEST_STATUS.md).
-Live research returned seven cited sources; existing openWakeWord ONNX loads
-without a microphone. Hindi base still fails script consistency; the proposed
-small-model download awaits approval. No ISO/VM or universal-command claim follows.
+2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
+whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native
+nine-page greeting and six-page temporary onboarding previews passed; final UI
+greeting attempts were interrupted by window closure (not passed), while a
+current tool-free local core reply passed in 4.521s; no physical
+microphone, boot, installer or multi-monitor acceptance is inferred.
+
+Implemented: optional 2D/3D avatar and responsive opt-in sensor menus; placement/
+Stop/steering repairs; recipient-bound final privacy checks including revoked
+app-usage/OCR/accessibility consent; article-first research, optional saved reports
+and one-shot report navigation; website synonyms and bounded read-only argument
+repair; native reviewed power scheduling; Aurora Ridge branding and six-page
+post-install setup with completed/live gating. See [HANDOFF](HANDOFF.md),
+[request status](REQUEST_STATUS.md), [setup](FIRST_RUN_SETUP.md) and
+[branding proposal](REGENOS_BRANDING_PROPOSAL.md).
+
+Approved CUDA executable-only switch is applied with backup; base/model/language/
+profile/listening unchanged. Five-phrase comparison CPU 80.243s/CUDA 22.500s,
+sampled CUDA peak 961 MiB with Ollama unloaded. English exact; Hindi still inaccurate
+or rejected. No universal command, GPU support, sentience, training or finished-OS
+claim. Owner-approved restart of only `ai-os.service` passed active/running readback,
+with listening/wake/filter off and config unchanged. Owner-approved desktop/GDM artwork and defaults installed with private backups;
+source hashes, compiled databases and logo-key readback pass. Visual login is
+pending. No boot write, ISO build, VM test or publication.
 
 Legacy semantic-memory APIs now fail closed: they do not import Chroma, open
 existing vectors, fetch default embeddings or start telemetry. A trusted offline
@@ -16,8 +31,12 @@ embedding setup is not implemented; ordinary memory uses local SQLite/history,
 explicit preferences, notes and bounded reinforcement. Legacy read tools bind to
 the selected runtime and recheck memory and remote-sharing consent on each call.
 Existing stores are preserved; installing Chroma alone does not enable semantic
-retrieval. These guards are included in the final full run; successful semantic
+retrieval. These guards have regression coverage; successful semantic
 retrieval and independent security certification are not established by it.
+
+Earlier 2026-10-19 checkpoint: **774 tests passed in 10.53s**, with correctness
+lint, whitespace, native installer shell syntax and Chat/Research desktop-file
+validation. Counts below are historical and do not cover all current changes.
 
 Previous 2026-10-19 checkpoint: **603 tests pass**, correctness lint passes. [Compact chat, reports, cleanup rules, activity and mouth animation](RESEARCH_AND_CLEANUP.md)
 and [speaker enrollment/reply language](VOICE_IDENTITY_AND_VOICES.md) are source-tested.
@@ -35,7 +54,12 @@ queued hardware reactions and reinforcement-expiry repair are source-tested.
 Actual audio, model quality/latency and hotplug remain pending; cursor 64 desired,
 live 48. See [PERSONAL_INTERACTION](PERSONAL_INTERACTION.md).
 
-Avatar monitor transfer: cross-display drag, explicit display menu/selector and saved target implemented; synthetic regression tests pass, physical desktop acceptance pending. See [NATIVE_DESKTOP](NATIVE_DESKTOP.md#move-the-companion-between-displays).
+Avatar monitor transfer: cross-display drag, explicit display selector and saved
+target are implemented. The window clamps to usable display bounds, preserves
+manual placement during unrelated settings refreshes, and reports saved visibility
+and geometry with `regenos-companion --status` without activating/unhiding the
+overlay. Synthetic tests pass; physical desktop acceptance remains pending. See
+[NATIVE_DESKTOP](NATIVE_DESKTOP.md#move-the-companion-between-displays).
 
 Latest command/voice repair: [directory traversal, bounded runner and error diagnostics](COMMAND_ACCESS.md#2026-10-17-command-and-voice-error-repair). Live error reproduction remains pending.
 

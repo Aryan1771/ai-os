@@ -32,14 +32,28 @@ def main():
         window = SettingsWindow(home, launch_companion=False)
         overlay = AvatarOverlay(home)
         window.show()
-        outcome = {"ok": False}
+        outcome = {"ok": False, "finished": False}
 
-        def finish():
+        def snapshot():
             outcome.update(
-                ok=window.conversation.status.text().startswith("Reply received"),
                 pages=window.pages.count(), platform=app.platformName(),
                 companion_visible=overlay.isVisible(),
+                reply_received=window.conversation.status.text().startswith("Reply received"),
             )
+
+        def interrupted():
+            if not outcome["finished"]:
+                snapshot()
+                outcome["reason"] = "window_closed_before_check_completed"
+                window.conversation.cancel()
+
+        app.lastWindowClosed.connect(interrupted)
+
+        def finish():
+            if outcome["finished"]:
+                return
+            snapshot()
+            outcome.update(ok=outcome["reply_received"], finished=True)
             window.conversation.cancel()
             overlay.close()
             window.close()

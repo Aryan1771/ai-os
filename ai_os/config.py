@@ -102,6 +102,7 @@ DEFAULT_CONFIG = {
     "avatar_display": "",
     "avatar_scale": 100,
     "avatar_animation_enabled": True,
+    "avatar_render_mode": "2d",
     "avatar_accent": "#4daaff",
     "avatar_motion": 65,
     "avatar_reactivity": 75,
@@ -158,7 +159,6 @@ def ensure_runtime_tree(home: Path = AI_OS_HOME) -> None:
         home / "models",
         home / "data",
         home / "data" / "private",
-        Path("~/.local/share/ai_os/chroma").expanduser(),
     ]:
         path.mkdir(parents=True, exist_ok=True)
 

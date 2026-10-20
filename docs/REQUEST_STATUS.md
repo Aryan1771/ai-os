@@ -1,48 +1,45 @@
 # Requested work and remaining acceptance
 
-2026-10-19. This maps the owner's requests to actual implementation and remaining
+2026-10-20. This maps the owner's requests to actual implementation and remaining
 work. It is not a claim that all requests are complete. Older feature checkmarks
 and Windows tests do not establish physical acceptance.
 
 | Request | Existing implementation / current repair | Remaining evidence or boundary |
 | --- | --- | --- |
 | Native social companion and moods | Python/PySide6 chat, style preferences, simulated mood-to-tone guidance, first-person display reactions | Broader conversational quality needs owner evaluation; no consciousness or emotion-driven permission changes |
-| Blue rearranging avatar | Persistent blue holographic particles, rings, topic/custom forms and speaking waveform; resident reloaded | Owner visual, multi-monitor dragging, reconnect and compositor checks needed; arbitrary artwork quality is not guaranteed |
-| Avatar unhide/quit and application-menu access | Header Unhide, Companion controls, desktop entries; installed native launchers inspected | Owner menu/visibility acceptance needed; old resident apps must reopen to load UI changes |
+| Blue rearranging avatar | Persistent blue particles, optional 3D depth/orbits with 2D default, topic/custom forms and speaking waveform; window fits usable display bounds and preserves manual placement across unrelated preference refreshes | Owner visual, multi-monitor dragging, reconnect and compositor checks needed; arbitrary artwork quality is not guaranteed |
+| Avatar unhide/quit and application-menu access | Header Unhide, Companion controls, desktop entries and corrected native Settings launch; `regenos-companion --status` reads preferences/display geometry without activating or unhiding the overlay | Owner menu/visibility acceptance needed; status is not proof that a resident window is visible. Reopen native apps to load UI source changes |
 | Visible cursor | GNOME size 64 applied and read back | Owner visual/hotspot/scaling checks needed |
 | Open Brave/YouTube and discover programs | Installed desktop-entry discovery, direct URL/browser tools, model tool schemas | Real desktop launch and owner confirmation of the intended tab remain separate from a launch acknowledgement |
-| Run commands and traverse directories | Bounded metadata listing, shell-free argv/cwd commands, installed manuals, native review, timed ordinary-user grants, visible interactive jobs | Not universal arbitrary execution: privileged/system/disk/boot actions need separate approval; scripts/wrappers cannot bypass safeguards |
+| Run commands and traverse directories | Bounded metadata listing, shell-free argv/cwd commands, installed manuals, native review, timed ordinary-user grants, visible interactive jobs; actual model→fixed read-only `uname -r`→grounded reply passed in 4.643s with one execution and temporary memory off | Not universal arbitrary execution: privileged/system/disk/boot actions need separate approval; scripts/wrappers cannot bypass safeguards. One diagnostic is not broad task acceptance |
 | Permissions/full access | Discoverable native duration/scope grant and revoke, Bubblewrap required, background approval inbox | Same-account UI is not independent OS authorization; no model self-approval or blanket root/account grant |
 | Microphone, same-language voice and latency | One-shot/opt-in listening, saved selected/match modes, five-second ending pause, bounded workers, shared audio lease; specific failures now visible | Guided voice check requires explicit Record clicks; real input/reply correctness, echo, wake detection and accents need owner verification |
 | Speaker enrollment | Owner confirmed all five accepted after retries and profile saved; profile metadata preserved | Recognition accuracy, false admission/rejection and Hindi remain unmeasured; filter is separate opt-in and not authentication |
-| Better Hindi recognition | Invalid/mismatched transcription fails before action; precise diagnostics | Approval requested for official multilingual Whisper small comparison; no automatic model download or setting switch |
+| Better Hindi recognition | Approved official small verified; five-phrase CPU/CUDA comparison completed, English exact. Owner approved CUDA executable-only switch, applied with private backup; base/language/profile/listening preserved | Base rejects Hindi script; small is word-inaccurate on all four synthetic Hindi phrases. Hindi is not fixed; personal capture and concurrent LLM/STT memory budget pending |
 | Same cohesive bilingual voice / own voice pack | Existing separate English/Hindi Piper assets; researched candidate engines and private recording/training guidance | A new synthesis backend/weights needs reviewed compatibility, download/license approval and measured 8 GiB coexistence; enrollment is not cloning |
 | Short/long-term memory | Recent local sessions, explicit preferences/notes, repeated-statement reinforcement/decay; new inspected-user-statement pin/edit/remove controls | Explicit durable notes are available; semantic paraphrase consolidation/model training are not implemented. No silent whole-computer activity-content recording |
-| Memory consent and legacy semantic stores | Legacy read tools bind to the selected runtime and recheck memory/remote-sharing consent on each call. Semantic compatibility APIs fail closed without importing Chroma, opening existing vectors, downloading embeddings or starting telemetry; included in the final 774-test pass | Trusted offline semantic provisioning is not implemented; legacy stores are preserved. Enabling ordinary memory or installing Chroma does not enable semantic search |
+| Memory consent and legacy semantic stores | Legacy read tools bind to the selected runtime and recheck memory/remote-sharing consent on each call. Immediately before POST, prepared history/usage/legacy references recheck current consent against the actual unchanged recipient. Semantic APIs fail closed without importing Chroma, opening vectors, downloading embeddings or starting telemetry | Trusted offline semantic provisioning is not implemented; legacy stores are preserved. Enabling ordinary memory or installing Chroma does not enable semantic search |
 | App/screen understanding | Opt-in local screen OCR, AT-SPI supported-app text and bounded running-app metadata; separate app-name/time usage memory | Owner lock/revoke/app coverage tests needed. Hidden app content, arbitrary images/video and every program's internals are not universally accessible |
 | Spoken hardware reactions | Queued localized device/display reactions with current consent checks, shared speech ownership and bounded identity metadata | Owner attach/remove/monitor-spec tests needed; no automatic mounts or driver installation |
-| Cited research and spoken explanation | Local Markdown, real Wikipedia/Crossref links, short abstracts and evidence labels, en/hi structure, local tool-free explanation, paragraph picker/back/pause | Live source retrieval tested; owner audible walkthrough needed. Full papers, web-wide literature review and voice-controlled report navigation are incomplete |
+| Cited research and spoken explanation | Article-first native search/open-up-to-three confirmation; Markdown only on explicit report request; real source links, short abstracts/evidence labels, en/hi structure and local tool-free explanation. One-shot voice next/previous/repeat/pause/explain binds the visible report ID/revision/paragraph, expires, and rejects replay; 11 synthetic navigation tests pass | Live source retrieval tested; physical microphone/navigation/audible walkthrough pending. Each recording needs native approval, with saved language/filtering; no continuous report microphone or arbitrary-file access. Full-paper/web-wide review remains incomplete |
 | Recoverable learned cleanup | Exact regular-file previews, Trash, explicit narrow directory/pattern rules, expiry/revoke and change detection | Owner disposable-file test needed. Prior deletion is not blanket consent; arbitrary personal-file necessity/system harmlessness cannot be proven |
-| Compact typing and transparency | Enter send, Shift+Enter newline, Ctrl+Enter cancel/steer, public operation states, save/dirty feedback | Physical keyboard/stop interaction needs owner acceptance; progress is not hidden chain of thought |
+| Compact typing and transparency | Enter sends, Shift+Enter adds a line, Ctrl+Enter stops owned descendants and forwards only the active same-session original request as a bounded ephemeral reference beside the correction. Latest text alone drives direct intents/grants; consent/recipient rechecks protect remote sharing | Physical keyboard/stop interaction needs owner acceptance. Prior approvals/actions are not replayed; original reference is not copied into a saved user turn. Answers follow ordinary memory policy; progress is not hidden chain of thought |
 | GitHub access for Codex and REgenOS | Codex connector verified; pinned official MCP, exact repo opt-in, read-only result display, no auto-memory/actions | Account writes are not offered by the REgenOS adapter; explicit developer commit/push is separate |
 | GNOME desktop shortcuts | Session-specific review/apply/revert with conflict checks, private backup and stale/concurrent-change guards. Owner approved three Super+Alt shortcuts; actual application/readback passed | Owner physical Settings/Chat/Companion key checks remain; see DESKTOP_SHORTCUTS.md |
-| Boot/login/lock branding | Tracked branding and installer skeleton exist | Concrete boot-stack/rollback review and separate privileged approval required; no host boot changes authorized here |
+| Boot/login/lock branding | Owner photograph adopted as default, original Aurora Ridge SVG/PNG app/Plymouth/Calamares art, private metadata removed; native/per-user app icon updated with backup | GNOME/GDM inventory and exact staged rollback proposal written. Owner-run sanitized helper reports GRUB; this executor cannot share sudo authentication. Active entry/recovery remain unverified, with a referenced fallback absent from recognized listings. Owner-approved desktop/GDM stages installed; all nine source hashes and compiled logo/default readbacks pass. Visual login pending; no boot writes |
+| Native first-run setup | Six-page Qt wizard, edited conversation preferences and explicit Finish marker, read-only checks/app links, completed/live gating and installed-only autostart template; manual app-menu launcher installed | Clean installed-system/VM acceptance and Hindi font appearance pending; host autostart not installed. Onboarding is separate from Calamares disk installation |
+| Shutdown/restart reliability | Native time picker, exact final review, fixed bounded shutdown argv and separate cancellation; 36 mocked tests pass | No actual host power action executed. OS authorization/inhibitors remain; spoken yes and ordinary command grants cannot approve it |
 | Preview ISO and graphical installer | Archiso/Calamares source skeleton retained, expected clean target root contract documented | Runtime acceptance and approved Prompt F architecture required first; no clean root/package pipeline/final ISO hash or VM acceptance yet |
 
-The next gates are the microphone/desktop owner checks and the pending model
-download decision. Do not bypass these with a general project-wide authorization.
-Whisper base, English/Hindi Piper assets and GPU inference are already present
-and have limited synthetic evidence; missing assets or the historical NVIDIA
-version mismatch are not current blockers. Hindi recognition quality, personal
-voice accuracy and concurrent worst-case VRAM remain unverified. The final
-full regression run passed **774 tests in 10.53s**, including semantic-memory
-and per-call permission changes. Correctness lint, whitespace, installer shell
-syntax and Chat/Research desktop-file validation passed. Fresh readiness reports
-voice ready with no blockers, continuous listening/wake off; approved shortcut
-readback passes without conflicts. Readiness is not physical voice acceptance.
-The owner separately approved restarting only `ai-os.service` for these patches.
-It is active/running with exit status 0; listening, wake and speaker filtering
-remain off. No other service was changed.
+The next gates are owner microphone/desktop checks, Hindi quality, concurrent GPU
+measurement and source-theme/installer VM validation. Do not bypass them with a
+general project-wide authorization. Full regression suite: **1080 passed in 12.63s**;
+local model probe 11/11 with zero actions. Earlier native greeting and temporary six-page
+setup previews passed; final UI retries were interrupted, not passed. Current
+tool-free local core greeting passes separately in 4.521s. Fresh readiness reports voice ready/no blockers but is not
+physical voice acceptance. The owner approved restarting only `ai-os.service` after these repairs;
+active/running readback passed, config preserved and listening/wake/filter off. No universal command,
+consciousness, model-training or production-ready distribution claim is made.
 Follow `ARCH_HANDOFF.md` in dependency order; never expose host physical disks to
 VMs or copy personal configuration/models/memory into an image. Publication and
 signing require separate approval.

@@ -17,7 +17,7 @@ sudo pacman -S --needed libxkbcommon-x11 xcb-util-cursor libxcb fontconfig noto-
 "${RUNTIME_DIR}/venv/bin/python" -m pip install -e "${REPO_ROOT}[desktop]"
 mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/scalable/apps"
 install -m 0644 "${REPO_ROOT}/branding/regenos-mark.svg" "${HOME}/.local/share/icons/hicolor/scalable/apps/regenos.svg"
-for app in regenos-settings regenos-companion regenos-chat regenos-research; do
+for app in regenos-settings regenos-companion regenos-chat regenos-research regenos-setup; do
   target="${HOME}/.local/share/applications/${app}.desktop"
   install -m 0644 "${REPO_ROOT}/config/desktop/${app}.desktop" "${target}"
   launcher_exec="\"${RUNTIME_DIR}/venv/bin/${app}\""

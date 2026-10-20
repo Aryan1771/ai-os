@@ -18,6 +18,8 @@ class QuickChatWindow(QMainWindow):
         super().__init__()
         self.home = Path(home)
         self.setWindowTitle("REgenOS Chat")
+        from ai_os.brand_assets import brand_icon
+        self.setWindowIcon(brand_icon())
         self.resize(620, 740)
         self.setMinimumSize(520, 540)
         outer = QWidget()
@@ -79,8 +81,11 @@ class QuickChatWindow(QMainWindow):
         process.setProcessEnvironment(environment)
         process.setProgram(sys.executable)
         process.setArguments(["-m", "ai_os.native_settings"])
-        result = process.startDetached()
-        success = result[0] if isinstance(result, tuple) else result
+        try:
+            result = process.startDetached()
+            success = result[0] if isinstance(result, tuple) else result
+        except (OSError, RuntimeError):
+            success = False
         if not success:
             self.conversation.status.setText("Settings could not start. Run regenos-settings from your desktop terminal.")
         process.deleteLater()

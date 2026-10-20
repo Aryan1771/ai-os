@@ -1,0 +1,74 @@
+# Test-only graphics objects. The real upstream parser/interpreter executes
+# these mocks and the production theme; this does not emulate a boot renderer.
+mock.width[0] = 1920;
+mock.height[0] = 1080;
+mock.width[1] = 1280;
+mock.height[1] = 720;
+mock.x = 0;
+mock.y = 0;
+mock.missing_logo = 0;
+mock.missing_dot = 0;
+mock.secret_rendered = 0;
+
+Window.GetWidth = fun(window)
+{
+    if (window != NULL) return mock.width[window];
+    return Math.Max(mock.width[0], mock.width[1]);
+};
+Window.GetHeight = fun(window)
+{
+    if (window != NULL) return mock.height[window];
+    return Math.Max(mock.height[0], mock.height[1]);
+};
+Window.GetX = fun(window) { return mock.x; };
+Window.GetY = fun(window) { return mock.y; };
+Window.SetBackgroundTopColor = fun(red, green, blue) {};
+Window.SetBackgroundBottomColor = fun(red, green, blue) {};
+
+fun mock_image(width, height, text)
+{
+    local.image;
+    image.width = width;
+    image.height = height;
+    image.text = text;
+    image.GetWidth = fun() { return this.width; };
+    image.GetHeight = fun() { return this.height; };
+    image.Scale = fun(width, height) { return mock_image(width, height, this.text); };
+    return image;
+}
+Image.Text = fun(text, red, green, blue, alpha, font, align)
+{
+    if (text == "PUBLIC-SECRET-TEST") global.mock.secret_rendered = 1;
+    if (text == "•" && mock.missing_dot) return NULL;
+    if (!text) return NULL;
+    return mock_image(Math.Max(1, text.Length()) * 10, 24, text);
+};
+Image |= fun(filename)
+{
+    if (mock.missing_logo) return NULL;
+    if (filename == "regenos-wordmark.png") return mock_image(144, 48, "REgenOS wordmark");
+    return mock_image(512, 512, "logo");
+};
+Sprite.test_only = 1;
+Sprite |= fun(image)
+{
+    local.sprite;
+    sprite.image = image;
+    sprite.opacity = 1;
+    sprite.SetImage = fun(image) { this.image = image; };
+    sprite.SetOpacity = fun(value) { this.opacity = value; };
+    sprite.SetPosition = fun(x, y, z) { this.x = x; this.y = y; this.z = z; };
+    return sprite;
+};
+
+Plymouth.SetRefreshFunction = fun(callback) { global.on_refresh = callback; };
+Plymouth.SetDisplayNormalFunction = fun(callback) { global.on_normal = callback; };
+Plymouth.SetDisplayPasswordFunction = fun(callback) { global.on_password = callback; };
+Plymouth.SetDisplayQuestionFunction = fun(callback) { global.on_question = callback; };
+Plymouth.SetDisplayPromptFunction = fun(callback) { global.on_prompt = callback; };
+Plymouth.SetDisplayMessageFunction = fun(callback) { global.on_message = callback; };
+Plymouth.SetHideMessageFunction = fun(callback) { global.on_hide_message = callback; };
+Plymouth.SetBootProgressFunction = fun(callback) { global.on_progress = callback; };
+Plymouth.SetSystemUpdateFunction = fun(callback) { global.on_system_update = callback; };
+Plymouth.SetDisplayHotplugFunction = fun(callback) { global.on_hotplug = callback; };
+Plymouth.SetQuitFunction = fun(callback) { global.on_quit = callback; };

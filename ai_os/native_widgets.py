@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QW
 
 from ai_os.companion_state import EMOTIONS, emotion_levels
 from ai_os.config import DEFAULT_CONFIG
-from ai_os.pixel_engine import PixelEngine, speech_mouth_frame
+from ai_os.pixel_engine import PixelEngine, project_hologram_particle, speech_mouth_frame
 
 EMOTION_COLORS = {
     "joy": "#e8ba71",
@@ -227,6 +227,8 @@ class CompanionCanvas(QWidget):
         if state["phase"] == "speaking" and self.state["phase"] != "speaking":
             self.speech_elapsed = 0.0
         self.state, self.config = state, config
+        static = not config["avatar_animation_enabled"] or config["avatar_motion"] <= 0
+        self.timer.setInterval(200 if static else 42 if config.get("avatar_render_mode") == "3d" else 34)
         self.target_levels = emotion_levels(state, config)
         self.update_form()
 
@@ -266,6 +268,9 @@ class CompanionCanvas(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
         unit = min(self.width(), self.height()) / 27
+        depth_mode = self.config.get("avatar_render_mode", "2d") == "3d"
+        if depth_mode:
+            unit = min(self.width(), self.height()) / 31
         center = QPointF(self.width() / 2, self.height() / 2)
         colors = hologram_palette(self.config.get("avatar_accent"))
         pulse = (1 + .10 * (self.mouth_frame or 0)) if self.state["phase"] == "speaking" else 1
@@ -276,6 +281,17 @@ class CompanionCanvas(QWidget):
             aura.setColorAt(radius, shade)
         painter.setBrush(aura)
         painter.drawEllipse(center, unit * 12.6, unit * 12.6)
+        if depth_mode:
+            # A quiet off-centre light field gives the projected cloud volume
+            # without a GPU context, textures or an opaque desktop-sized disk.
+            light = center + QPointF(-unit * 3.4, -unit * 3.8)
+            volume = QRadialGradient(center, unit * 10.9, light)
+            for radius, alpha in ((0, 58), (.36, 30), (.76, 10), (1, 0)):
+                shade = QColor(colors["#"])
+                shade.setAlpha(alpha)
+                volume.setColorAt(radius, shade)
+            painter.setBrush(volume)
+            painter.drawEllipse(center, unit * 10.9, unit * 10.9)
 
         # Quiet technical scaffolding surrounds every form, so a morph reads as
         # one being rearranging itself rather than unrelated icons appearing.
@@ -285,8 +301,23 @@ class CompanionCanvas(QWidget):
         painter.setPen(QPen(halo_color, max(.6, unit * .11)))
         rotation = (self.engine.orbit_elapsed * 12) % 360
         halo = QRectF(center.x() - unit * 11.8, center.y() - unit * 11.8, unit * 23.6, unit * 23.6)
+        if depth_mode:
+            halo = QRectF(center.x() - unit * 12.8, center.y() - unit * 8.3, unit * 25.6, unit * 16.6)
+            painter.save()
+            painter.translate(center)
+            painter.rotate(-22)
+            painter.translate(-center)
         for angle in (18, 138, 258):
             painter.drawArc(halo, round((angle + rotation) * 16), 64 * 16)
+        if depth_mode:
+            painter.restore()
+            painter.save()
+            painter.translate(center)
+            painter.rotate(67)
+            halo_color.setAlpha(38)
+            painter.setPen(QPen(halo_color, max(.6, unit * .10)))
+            painter.drawEllipse(QRectF(-unit * 5.5, -unit * 12.7, unit * 11, unit * 25.4))
+            painter.restore()
         for angle in (0, math.pi / 2, math.pi, 3 * math.pi / 2):
             painter.drawLine(QLineF(
                 center + QPointF(math.cos(angle) * unit * 12, math.sin(angle) * unit * 12),
@@ -294,21 +325,37 @@ class CompanionCanvas(QWidget):
             ))
 
         painter.setPen(Qt.PenStyle.NoPen)
+        projected = []
         for pixel in self.engine.pixels:
+            if depth_mode:
+                elapsed = self.engine.orbit_elapsed if self.config["avatar_animation_enabled"] and self.config["avatar_motion"] > 0 else 0
+                px, py, depth, scale = project_hologram_particle(pixel.x, pixel.y, elapsed)
+            else:
+                px, py, depth, scale = pixel.x, pixel.y, 0, 1
+            projected.append((depth, pixel, px, py, scale))
+        if depth_mode:
+            projected.sort(key=lambda item: item[0])
+        for depth, pixel, px, py, scale in projected:
             if pixel.opacity < 0.01:
                 continue
             color = QColor(colors[pixel.material])
             alpha = max(0, min(1, pixel.opacity))
-            x, y = center.x() + pixel.x * unit, center.y() + pixel.y * unit
+            if depth_mode:
+                alpha *= max(.38, min(1, .72 + depth * .045))
+            x, y = center.x() + px * unit, center.y() + py * unit
             if pixel.material in {"+", "*"}:
                 color.setAlphaF(alpha * .13)
                 painter.setBrush(color)
-                glow = unit * (1.85 if pixel.material == "*" else 1.45)
+                glow = unit * scale * (1.85 if pixel.material == "*" else 1.45)
                 painter.drawEllipse(QRectF(x - glow / 2, y - glow / 2, glow, glow))
             color.setAlphaF(alpha)
             painter.setBrush(color)
-            side = unit * (.66 if pixel.material == "*" else .53)
-            painter.drawRoundedRect(QRectF(x - side / 2, y - side / 2, side, side), unit * .10, unit * .10)
+            side = unit * scale * (.66 if pixel.material == "*" else .53)
+            particle = QRectF(x - side / 2, y - side / 2, side, side)
+            if depth_mode:
+                painter.drawEllipse(particle)
+            else:
+                painter.drawRoundedRect(particle, unit * .10, unit * .10)
 
         if self.state["phase"] == "speaking":
             # This cadence is presentation only, not measured audio or lip sync.

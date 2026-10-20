@@ -1,5 +1,32 @@
 # REgenOS: installed runtime, latency and continuity
 
+2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
+whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native
+nine-page greeting and six-page temporary onboarding previews passed; final UI
+greeting attempts were interrupted by window closure (not passed), while a
+current tool-free local core reply passed in 4.521s; no physical
+microphone, boot, installer or multi-monitor acceptance is inferred.
+
+Implemented: optional 2D/3D avatar and responsive opt-in sensor menus; placement/
+Stop/steering repairs; recipient-bound final privacy checks including revoked
+app-usage/OCR/accessibility consent; article-first research, optional saved reports
+and one-shot report navigation; website synonyms and bounded read-only argument
+repair; native reviewed power scheduling; Aurora Ridge branding and six-page
+post-install setup with completed/live gating. See [HANDOFF](HANDOFF.md),
+[request status](REQUEST_STATUS.md), [setup](FIRST_RUN_SETUP.md) and
+[branding proposal](REGENOS_BRANDING_PROPOSAL.md).
+
+Approved CUDA executable-only switch is applied with backup; base/model/language/
+profile/listening unchanged. Five-phrase comparison CPU 80.243s/CUDA 22.500s,
+sampled CUDA peak 961 MiB with Ollama unloaded. English exact; Hindi still inaccurate
+or rejected. No universal command, GPU support, sentience, training or finished-OS
+claim. Owner-approved restart of only `ai-os.service` passed active/running readback,
+with listening/wake/filter off and config unchanged. Owner-approved desktop/GDM artwork and defaults installed with private backups;
+source hashes, compiled databases and logo-key readback pass. Visual login is
+pending. No boot write, ISO build, VM test or publication.
+
+Earlier runtime checkpoints follow; their counts and pending approvals are historical.
+
 2026-10-19 latest: **774 passed**, correctness lint clean. Current executor reaches
 PipeWire/Ollama/user bus; older denied-socket counts below are historical.
 See [HANDOFF](HANDOFF.md), [research/chat/cleanup](RESEARCH_AND_CLEANUP.md) and

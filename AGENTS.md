@@ -72,3 +72,10 @@
 - Bind legacy memory reads to the selected runtime and recheck memory/remote consent
   before reads and cached inference. Semantic APIs stay disabled until trusted offline
   embeddings with no implicit downloads or telemetry are implemented.
+- First-run onboarding is separate from the disk installer: Finish alone records
+  completion; live sessions never consume/copy the developer marker or autostart
+  Calamares in installed sessions. Boot/logo activation needs verified recovery
+  and exact approval; a source theme is not a boot test. Preserve photo provenance
+  without publishing private embedded metadata or inventing redistribution licenses.
+- GNOME 51 loads greeter logos at natural size. Use the compact named landscape
+  wordmark (144×48), never the 512px square app icon; preserve password-field space.

@@ -127,10 +127,20 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
                                  remember=request.get("remember") is True)
         return {"response": {"type": "tool_result", "tool": "cleanup_files", "result": result}}
     if action == "approved_research":
-        from ai_os.research_reports import run_research
+        from ai_os.research_reports import run_research, open_article_results
         result = run_research(request.get("topic"), home=home,
+                              mode=request.get("mode", "articles"),
                               human_confirmed=request.get("confirmed") is True)
+        if result.get("ok") is True and result.get("mode") == "articles":
+            launch = open_article_results(result, human_confirmed=request.get("confirmed") is True)
+            result = result | {"ok": launch.get("ok", False), "search_ok": True,
+                               "opened": launch.get("opened", []), "message": launch.get("message", "Article launch was unavailable.")}
         return {"response": {"type": "tool_result", "tool": "research_topic", "result": result}}
+    if action == "approved_power":
+        from ai_os.power_actions import execute_power
+        result = execute_power(request.get("power_action"), request.get("delay_minutes"),
+                               human_confirmed=request.get("confirmed") is True)
+        return {"response": {"type": "tool_result", "tool": "power_action", "result": result}}
     if action == "reviewed_action":
         from ai_os.reviewed_actions import execute
         result = execute(request.get("tool"), request.get("arguments"), home, confirmed=request.get("confirmed") is True)
@@ -316,7 +326,9 @@ def dispatch(request: dict, home: Path = AI_OS_HOME) -> dict:
     if action == "chat":
         from ai_os.ai_os_core import handle_user_text, json_default
 
-        result = handle_user_text(request.get("text"), home=home, session=request.get("session", "default"))
+        result = handle_user_text(request.get("text"), home=home, session=request.get("session", "default"),
+                                  **({"interrupted_context": request["interrupted_context"]}
+                                     if "interrupted_context" in request else {}))
         return {"response": json.loads(json.dumps(result, default=json_default))}
     if action in {"speech_test", "speech_text"}:
         from ai_os.companion_state import publish_state

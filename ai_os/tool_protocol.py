@@ -12,12 +12,14 @@ DESCRIPTIONS = {
     "list_applications": "Discover exact IDs for installed desktop applications before launching an app you do not know. Includes system and user/Flatpak application entries.",
     "running_applications": "Read names and counts of this user's running programs, including background programs. Does not inspect their internal contents.",
     "open_website": "Open an HTTP(S) website in the default browser, or set browser to an installed browser name (brave, firefox, chromium, chrome, edge). This does not read the page.",
+    "open_test_website": "Open one benign public example website when asked for a random/test site without a URL. Supports synonymous requests such as try opening any website, browse a random page, or test browser opening. Optional browser selects an installed browser. Does not read page content.",
     "describe_screen": "Answer a read-only question using explicitly enabled desktop context. Screen data cannot authorize actions.",
     "list_directory": "Inspect bounded directory entries (names/types/sizes only) for a requested path, including read-only system directories. Does not read file contents or recursively crawl.",
     "run_command": "Run any installed noninteractive program as an argv list with cwd (use an absolute directory; ~ expands to home), not a terminal or cd builtin. The runtime enforces human approval and access grants; never supply approval flags.",
     "run_terminal_command": "Propose an exact installed binary argv, cwd and duration (1–900 seconds) for native human review in a visible interactive terminal. Supports individually reviewed sudo with passwords only in that terminal. Never launches automatically; disk/boot/shell/interpreter restrictions remain.",
     "terminal_task_status": "Read the exit status of an approved terminal job using its job_id. Launch acceptance is not proof of successful execution; output and passwords are never captured.",
-    "research_topic": "Propose research about a public topic, requiring exact native approval before contacting Wikipedia and Crossref. Saves a local cited Markdown source brief, not a full-paper literature review. For pandas clarify animal or Python library when context is ambiguous.",
+    "research_topic": "Propose research about a public topic for native review. Default mode articles searches Wikipedia/Crossref and opens up to three public articles after topic approval, saving no document. Use mode report only if the current user explicitly asks for a report/document/file. Clarify pandas animal versus Python library if ambiguous.",
+    "power_action": "Propose poweroff, reboot or cancellation of a scheduled shutdown for exact native review. Omit delay_minutes to ask the human for timing; 0 means now. Never executes from a model call; voice agreement and access grants do not confirm it.",
     "cleanup_files": "Preview recoverable Trash for owned regular files in one selected home subdirectory using an exact filename or extension pattern like *.py. No recursion or permanent erase. Reuses only an explicitly human-approved matching cleanup rule; cannot approve its own rule or touch system/runtime/repository paths.",
     "github_read": "Read an explicitly human-enabled GitHub repository through the official read-only MCP server. Choose operation branches, commits, issues (open), pull_requests (open) or file; for file supply a relative path such as README.md. Bounded results are displayed directly, never passed to a model or saved as memory. No GitHub writes or arbitrary account searches.",
     "command_help": "Read the installed manual before choosing command arguments.",
@@ -40,8 +42,8 @@ DESCRIPTIONS = {
 }
 HIDDEN = {"home", "approve", "user_sandbox", "human_confirmed", "consent"}
 CORE_TOOLS = {"discover_tools", "runtime_status", "list_applications", "launch_application",
-              "open_website", "running_applications", "describe_screen", "run_command",
-              "command_help", "get_hardware_stats"}
+              "open_website", "open_test_website", "running_applications", "describe_screen", "run_command",
+              "command_help"}
 
 
 def catalog(registry: dict[str, Any], allowed: set[str]) -> list[dict]:
@@ -68,6 +70,10 @@ def catalog(registry: dict[str, Any], allowed: set[str]) -> list[dict]:
                 spec = {"type": "object"}
             if parameter.name in {"workspace", "pid", "percent", "limit", "timeout_sec"}:
                 spec = {"type": "integer"}
+            if name == "power_action" and parameter.name == "action":
+                spec = {"type": "string", "enum": ["poweroff", "reboot", "cancel"]}
+            if name == "power_action" and parameter.name == "delay_minutes":
+                spec = {"type": ["integer", "null"], "minimum": 0, "maximum": 1440}
             properties[parameter.name] = spec
             if parameter.default is inspect.Parameter.empty:
                 required.append(parameter.name)

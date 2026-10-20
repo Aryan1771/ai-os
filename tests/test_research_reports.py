@@ -27,13 +27,13 @@ def sources(url, params):
 @pytest.fixture
 def saved(tmp_path, monkeypatch):
     monkeypatch.setattr(research, "_fetch_json", sources)
-    return research.run_research("giant pandas", home=tmp_path, human_confirmed=True)
+    return research.run_research("giant pandas", home=tmp_path, mode="report", human_confirmed=True)
 
 
 def test_model_proposal_cannot_research_without_exact_human_approval(tmp_path, monkeypatch):
     monkeypatch.setattr(research, "_fetch_json", lambda *a: pytest.fail("Unapproved online request"))
     proposed = research.propose_research("giant pandas")
-    assert proposed["approval_required"]["arguments"] == {"topic": "giant pandas"}
+    assert proposed["approval_required"]["arguments"] == {"topic": "giant pandas", "mode": "articles"}
     for value in (False, 1, "true", None):
         assert research.run_research("giant pandas", home=tmp_path, human_confirmed=value)["ok"] is False
     assert not (tmp_path / "data").exists()
@@ -73,7 +73,7 @@ def test_real_api_limits_and_short_abstract_provenance(tmp_path, monkeypatch):
         ]}}
 
     monkeypatch.setattr(research, "_fetch_json", deposited)
-    saved = research.run_research("giant pandas", home=tmp_path, human_confirmed=True)
+    saved = research.run_research("giant pandas", home=tmp_path, mode="report", human_confirmed=True)
     assert len(calls) == 2
     assert saved["evidence_counts"] == {"encyclopedia": 1, "abstract": 1, "metadata": 1}
     report = research.read_report(saved["report_id"], home=tmp_path)
@@ -91,7 +91,7 @@ def test_real_api_limits_and_short_abstract_provenance(tmp_path, monkeypatch):
 def test_report_language_is_explicit_and_does_not_translate_or_invent_sources(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(research, "_fetch_json", lambda url, params: calls.append((url, params)) or sources(url, params))
-    saved = research.run_research("giant pandas", home=tmp_path, language="hi", human_confirmed=True)
+    saved = research.run_research("giant pandas", home=tmp_path, mode="report", language="hi", human_confirmed=True)
     report = research.read_report(saved["report_id"], home=tmp_path)
     assert report["language"] == "hi" and saved["language"] == "hi"
     assert "स्रोत विवरण" in report["markdown"]
@@ -101,7 +101,7 @@ def test_report_language_is_explicit_and_does_not_translate_or_invent_sources(tm
     calls.clear()
     for invalid in ("fr", [], True):
         with pytest.raises(ValueError, match="language"):
-            research.run_research("giant pandas", home=tmp_path, language=invalid, human_confirmed=True)
+            research.run_research("giant pandas", home=tmp_path, mode="report", language=invalid, human_confirmed=True)
     assert calls == []
 
 
@@ -265,8 +265,8 @@ def test_native_selected_report_language_is_in_exact_consent_and_request(app, tm
         return QMessageBox.StandardButton.Yes
 
     monkeypatch.setattr(QMessageBox, "exec", approve)
-    assert widget.research()
-    assert requests == [{"action": "research", "topic": "giant pandas", "language": "hi", "confirmed": True}]
+    assert widget.research(mode="report")
+    assert requests == [{"action": "research", "topic": "giant pandas", "language": "hi", "mode": "report", "confirmed": True}]
     widget.action = None
     widget.close()
 

@@ -32,7 +32,11 @@ def main():
     with tempfile.TemporaryDirectory(prefix="regenos-artwork-") as temporary:
         stage = Path(temporary)
         build_theme(repo/"Cool_cursor", stage/THEME)
-        run("magick", str(repo/"branding/wallpapers/default.svg"), str(stage/"wallpaper.png"))
+        photograph = repo/"branding/wallpapers/default.png"
+        if photograph.is_file():
+            shutil.copyfile(photograph, stage/"wallpaper.png")
+        else:
+            run("magick", str(repo/"branding/wallpapers/default.svg"), str(stage/"wallpaper.png"))
         icons = data/"icons"
         icons.mkdir(parents=True, exist_ok=True)
         target = icons/THEME

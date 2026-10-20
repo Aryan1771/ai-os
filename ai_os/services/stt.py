@@ -23,6 +23,20 @@ STT_ERRORS = {
 }
 
 
+def backend_selection(stderr: str) -> str:
+    """Return fixed evidence from upstream initialization lines, never raw logs."""
+    if not isinstance(stderr, str) or len(stderr) > 1_000_000:
+        return "unknown"
+    selected = set(re.findall(r"(?m)^whisper_backend_init_gpu:\s+using (CUDA\d+) backend\s*$", stderr))
+    failed = set(re.findall(r"(?m)^whisper_backend_init_gpu:\s+failed to initialize (CUDA\d+) backend\s*$", stderr))
+    buffers = re.findall(r"(?m)^whisper_model_load:\s+(CUDA\d+)\s+total size\s*=\s*(\d+(?:\.\d+)?) MB\s*$", stderr)
+    if any(device in selected - failed and float(size) > 0 for device, size in buffers):
+        return "cuda"
+    if re.search(r"(?m)^whisper_backend_init_gpu:\s+no GPU found\s*$", stderr):
+        return "cpu"
+    return "unknown"
+
+
 @dataclass(frozen=True)
 class TranscriptionResult:
     ok: bool
@@ -47,6 +61,7 @@ class WhisperCppTranscriber:
         self.detect_language = detect_language
         self.timeout_sec = max(1, min(180, timeout_sec))
         self.last_duration_sec = None
+        self.last_backend = "unknown"
 
     def availability(self) -> tuple[bool, str]:
         if (self.language == "hi" or self.detect_language) and ".en" in self.model.name:
@@ -59,6 +74,7 @@ class WhisperCppTranscriber:
 
     def transcribe_file(self, audio_file: Path) -> TranscriptionResult:
         self.last_duration_sec = None
+        self.last_backend = "unknown"
         ready, reason = self.availability()
         if not ready:
             return TranscriptionResult(False, "", reason, error_code="transcriber_unavailable")
@@ -94,6 +110,7 @@ class WhisperCppTranscriber:
                     return self.failure("transcription_failed")
                 if result.returncode != 0:
                     return self.failure("transcription_failed")
+                self.last_backend = backend_selection(result.stderr)
                 language = None
                 text = result.stdout.strip()
                 if self.detect_language:

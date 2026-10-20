@@ -1,4 +1,144 @@
-# REgenOS handoff — 2026-10-19
+# REgenOS handoff — 2026-10-20
+
+Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
+
+## 2026-10-20 runtime and graphical setup checkpoint
+
+Full regression suite: **1080 passed in 12.63s**, including six optional
+Plymouth interpreter tests using the reviewed external source subset; correctness
+Ruff and whitespace checks pass. Without that explicitly supplied subset the
+six checks skip; tests never download it automatically. Eleven fixed public local-model cases pass with zero tools executed.
+An earlier temporary nine-page xcb greeting smoke passed, companion visible.
+Two final attempts ended with window closure before the reply/check completed;
+the diagnostic now reports that interruption explicitly and does not count it as
+a pass. A separate current-source, tool-free local core greeting passed in 4.521s
+with temporary memory off. The six-page first-run preview passed without saving.
+These are limited checks, not physical voice, boot or installer acceptance.
+
+- Optional 3D blue particle presentation is selectable in Companion Settings and
+  the avatar menu; 2D remains default. Microphone/screen menu labels refresh from
+  saved state; starts require native opt-in, stops request immediate disable.
+  Geometry and owned-process cancellation repairs preserve manual placement and
+  launched apps. Physical cross-monitor dragging/reconnect remains unverified.
+- Current intent remains separate from bounded Ctrl+Enter interrupted context.
+  Immediately before POST, recipient drift, memory/remote consent, app-usage
+  consent and source-specific screen/accessibility revocation cancel prepared
+  context. Critical late review defects received synthetic regressions.
+- Research defaults to articles, with explicit native search/open-up-to-three
+  review. A document is created only on an explicit report request. Saved report
+  navigation offers separately approved one-shot en/hi commands, not continuous
+  recording. Website synonyms accept equivalent correct tool routes; malformed
+  read-only metadata arguments receive at most one repair, never action retries.
+- [Power actions](POWER_ACTIONS.md) have a native time picker and final default-No
+  review, fixed bounded shutdown argv, denial feedback and schedule cancellation.
+  Thirty-six mocked tests pass. **No power-off, restart, scheduling or cancellation
+  was executed on this host**; a spoken yes or a broad grant cannot self-approve it.
+- Approved official Whisper small download is size/SHA256 verified and preserved
+  alongside base. The pinned private CUDA build completed; after a separate owner
+  approval only `whisper_cli` changed, with a private config backup. Base, language,
+  profile and listening remain unchanged. CPU/CUDA fixed five-phrase comparison:
+  80.243s/22.500s, sampled CUDA peak 961 MiB with Ollama unloaded. English exact;
+  base Hindi rejected, small Hindi inaccurate on all four phrases. Hindi is **not
+  fixed**, and concurrent LLM/voice peak remains unmeasured. See
+  [VOICE_MODEL_COMPARISON](VOICE_MODEL_COMPARISON.md) for hashes/commands/rollback.
+- The owner's photo is now the tracked default with private provenance metadata
+  removed losslessly; the original is untouched. Matching Aurora Ridge SVG/PNG
+  replaces tracked native/Plymouth/Calamares logos. Native icon resolution uses
+  installed generic paths with a source fallback. Formal release rights still
+  need review; no invented CC license. See [branding](BRANDING_AND_ARCHISO.md).
+- [Native first-run setup](FIRST_RUN_SETUP.md) has six Qt pages, explicit static
+  checks, language/personality drafts, consent guidance and native app links.
+  Twenty-eight onboarding tests pass. The staged art/default/GDM installer now has
+  33 disposable-root backup/rollback tests, hash-bound plans and symlink refusal;
+  it never invokes package/service/boot commands. The owner separately approved
+  and executed desktop art/defaults and the GDM logo stages plus dconf update.
+  Fresh readback verifies all nine 0644 files against the reviewed source, compiled
+  regenos/GDM databases and the GDM logo key. The existing owner wallpaper is
+  preserved. Private rollback backups are outside Git; actual login appearance
+  awaits the next owner login. Boot activation remains separately gated.
+  Finish alone saves edited preferences/completion; Cancel writes nothing.
+  Completed/live-session gating and an installed-only autostart template are
+  source-tested. This is onboarding, not an OS disk installer. Existing venv's
+  editable metadata was refreshed offline with no dependency changes; the new
+  manual app-menu entry and per-user logo were installed with a private backup.
+  **No setup autostart was installed on this host.**
+
+The owner separately approved restarting only `ai-os.service` after tests.
+Restart/readback passed: active/running, zero restarts, exit status0; config bytes
+unchanged and listening/wake/speaker filtering all off. No other service changed. Runtime readiness reports voice ready, no blockers, microphone
+unmuted and local selected model present; it explicitly does not verify personal
+microphone/language accuracy. Listening/wake/filter remain off. The ordinary
+companion was gracefully reloaded again after tests, loading 3D/menu/branding
+source with config bytes unchanged. The actual first-run app was opened without
+Finish; its manual menu entry validates. A benign test-site launch through Brave
+was accepted; page-load correctness remains an owner check. Current Qt inventory
+sees only eDP-1, so no physical second-monitor transfer is claimed.
+
+The owner approved elevated **read-only** boot inspection. The executor cannot
+share the owner's terminal sudo cache. The first helper also detached from the
+terminal; it was fixed to preserve the session with an owned process group and
+received 33 focused regressions. The owner's rerun reports GRUB and the regular
+linux/zen kernel/UKI files, but no recognized fallback image; one preset references
+an unlisted fallback UKI. Menu-entry classes are absent from the partial report.
+This is not a verified recovery path. No boot write is authorized until exact
+active entries/output paths and usable recovery are established. See the branding
+proposal for sanitized evidence and limitations.
+
+No system package/driver/firewall/boot/initramfs/mount/disk operation occurred.
+Only the approved artwork/dconf files and compiled defaults were installed by
+the owner; only the approved user core service restarted. GDM was not restarted.
+**No ISO built, no VM tests, no publication.**
+
+Commands (existing venv, repository cwd):
+
+```bash
+REGENOS_PLYMOUTH_SOURCE_DIR=$HOME/.ai_os/build/plymouth-script-check-26.134.222 QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q --tb=short
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests scripts/render_branding.py
+git diff --check
+~/.ai_os/venv/bin/python -m ai_os.model_probe qwen2.5:7b-instruct-q4_K_M
+~/.ai_os/venv/bin/python scripts/verify_native_runtime.py
+~/.ai_os/venv/bin/python -m ai_os.avatar_overlay --status
+~/.ai_os/venv/bin/python scripts/render_branding.py --output /tmp/regenos-art-review
+~/.ai_os/venv/bin/python -m pip install --no-index --no-deps --no-build-isolation -e .
+desktop-file-validate config/desktop/regenos-setup.desktop config/autostart/regenos-setup.desktop
+bash -n scripts/install_native_desktop.sh
+```
+
+Next: owner microphone/speaker/echo/wake/Hindi checks; physically review avatar/menu/
+monitor transfer and first-run layout; obtain supported boot inspection before
+requesting boot writes; validate the source Plymouth theme in a VM. Keep ISO Prompt F
+architecture approval and asset-license checks ahead of packaging. The unrelated
+`:memory:.ses` remains untouched; no private models/configuration/logs are tracked.
+
+### Urgent login-layout correction after owner testing
+
+The owner physically reported that the 512×512 square GDM image obscured the
+password area. Installed GNOME 51.1 loads natural image dimensions and its CSS
+has no 48px cap; the prior generic documentation assumption was wrong. The source
+now provides a 144×48 landscape **REgenOS** wordmark, with Arch's approximately 3:1
+proportions, and keeps square app icons separate. GDM installation validates
+compact intrinsic SVG/PNG dimensions and rejects giant/square wordmarks.
+33 focused installer regressions pass. Source Plymouth/Calamares also prefer
+the named landscape artwork; this does not activate host boot branding.
+
+The reviewed four-file corrective GDM plan is
+`e26d1419c5cdd8ba7b68315478d3f183b2f541add69a22e423030830a336646e`.
+The owner requested the correction and already approved GDM branding; the exact
+copyable terminal command was provided. Execution/readback and a physical
+password-field recheck remain pending. No password masking/PAM behavior changes.
+See [LOGIN_LOGO_FIX](LOGIN_LOGO_FIX.md) and the complete
+[remaining task inventory](REMAINING_TASKS.md), covering A001–A100/new requests.
+
+The host rebooted between checkpoints (uptime 11minutes on reinspection).
+Core is active/running, zero restarts, exit 0; listening/wake/filter remain off.
+The old temporary Plymouth source subset vanished, causing six fixture errors
+when explicitly selected. No product assertion failed in that attempt. Restored
+22 official pinned sources/license/provenance/checksums under
+`~/.ai_os/build/plymouth-script-check-26.134.222` outside Git; all six interpreter
+checks and the final 1080-test suite pass. Source commit remains
+`d15928a8e06c217aad0f2e3579df23fec93dc009`; manifest SHA256
+`2ee30f0477c3f08cc97c859e9f00a371bc09c1c43a24c1dc1d146ccd4bc7a8eb`.
+No automatic test download or new service restart occurred after that reboot.
 
 ## Continued runtime completion checkpoint — 2026-10-19
 

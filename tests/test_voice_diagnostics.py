@@ -474,7 +474,7 @@ def _alive(pid):
     try:
         status = Path(f"/proc/{pid}/stat").read_text().split()
         return status[2] != "Z"
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
         return False
 
 

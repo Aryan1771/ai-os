@@ -109,3 +109,28 @@ def test_failed_retry_does_not_keep_previous_latency(transcriber, monkeypatch):
     audio.unlink()
     result = engine.transcribe_file(audio)
     assert result.error_code == "audio_missing" and engine.last_duration_sec is None
+
+
+@pytest.mark.parametrize("stderr, expected", [
+    ("ggml_cuda_init: found 1 CUDA devices\n", "unknown"),
+    ("whisper_backend_init_gpu: using CUDA0 backend\n", "unknown"),
+    ("whisper_backend_init_gpu: using CUDA0 backend\nwhisper_model_load: CUDA0 total size = 149.00 MB\n", "cuda"),
+    ("whisper_backend_init_gpu: using CUDA0 backend\nwhisper_model_load: CUDA0 total size = 149.00 MB\nwhisper_backend_init_gpu: failed to initialize CUDA0 backend\n", "unknown"),
+    ("whisper_backend_init_gpu: no GPU found\n", "cpu"),
+    ("A private transcript says using CUDA0 backend\n", "unknown"),
+])
+def test_backend_evidence_requires_known_selection_and_device_model_buffer(stderr, expected):
+    assert stt.backend_selection(stderr) == expected
+
+
+def test_backend_evidence_resets_before_failed_retry(transcriber, monkeypatch):
+    engine, audio = transcriber
+
+    def run(argv, **kwargs):
+        metadata(argv, "A synthetic question", language="en")
+        return subprocess.CompletedProcess(argv, 0, "", "whisper_backend_init_gpu: no GPU found\n")
+
+    monkeypatch.setattr(stt.subprocess, "run", run)
+    assert engine.transcribe_file(audio).ok and engine.last_backend == "cpu"
+    audio.unlink()
+    assert not engine.transcribe_file(audio).ok and engine.last_backend == "unknown"

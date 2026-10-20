@@ -70,6 +70,26 @@ shape. Companion → **Hologram blue** offers Sky, Ice and Electric shades; old
 non-blue colors render as Sky until explicitly changed. Existing blue preferences
 are retained. Animation and motion controls also stop ring movement.
 
+**Hologram appearance** offers the existing **2D particles** (default, lighter for
+older systems) or optional **3D depth appearance**. The same choice is available
+immediately from the avatar's right-click menu. The latter uses bounded perspective,
+shallow particle depth, back-to-front painting and layered rings with QPainter;
+it does not add OpenGL dependencies or infer a 3D world from a topic/screen. Both
+styles preserve the same particle identities, topic forms, blue shades and speech
+cadence. Updates are capped below 30 frames/s in 2D and 24 in 3D; motion-off/static
+updates run at five frames/s. Real CPU/battery performance remains unmeasured.
+
+The right-click menu rereads settings on every open and alternates **Start / Stop
+microphone** and **Start / Stop screen sharing**. Each Start requires a separate
+native default-No consent dialog; a changed configuration invalidates that approval.
+Microphone Start uses an already selected wake-word/conversation mode and does not
+start a service or silently choose continuous listening. Screen Start requests the
+desktop selector; only an explicitly selected screen is shared. Stops save the opt-in
+off immediately, with direct screen-reader shutdown; the running core observes the
+microphone change on its normal one-second supervision tick. Feedback distinguishes
+settings requested from verified capture readiness. No sensor was enabled by these
+implementation checks.
+
 Twelve supplied forms cover a heart, music, code, idea, cloud, gear, shield, folder,
 chip, search, clock and the holographic core. The same particles travel into these
 forms or a validated model-supplied grid up to 24×24 cells. This is a stylized 2D
@@ -170,3 +190,62 @@ QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_avata
 To close the companion independently of the core, use dashboard Companion → **Quit companion** or the avatar menu → **Quit companion**. For an already-running older version without that menu, run `~/.ai_os/venv/bin/python -m ai_os.companion_control` from the desktop terminal. This sends graceful termination only to the current user’s exact companion entry points. No forced kill is sent.
 
 The application-menu settings entry is searchable as **REgenOS Dashboard** (AI, assistant, settings and companion keywords). **REgenOS Companion** passes `--show` to reveal an avatar saved as hidden, including when a resident already exists. Startup without that flag preserves the saved visibility preference. The 2026-10-17 user-launcher repair passed desktop-file validation and Gio `should_show=true`; GNOME visual search remains unverified from the restricted session.
+
+## Recovery and steering follow-up — 2026-10-20
+
+Companion placement now clamps every corner to the selected display's usable
+area, including displays left/above the primary screen. A large avatar temporarily
+shrinks to fit a small work area; its saved size is unchanged and is restored on
+a larger display. Saving unrelated preferences no longer snaps a manually dragged
+avatar back to its corner. Companion and compact Chat Settings buttons preserve
+the selected runtime and display a sanitized launch failure.
+
+From a graphical desktop terminal, inspect saved visibility and currently available
+work areas without revealing, moving or starting the resident companion:
+
+```bash
+~/.ai_os/venv/bin/python -m ai_os.avatar_overlay --status
+```
+
+The report contains only display geometry and the saved avatar target/visibility.
+It does not establish that the resident window is drawn or visible. To recover it,
+explicitly use **Unhide avatar** or run:
+
+```bash
+~/.ai_os/venv/bin/python -m ai_os.avatar_overlay --show
+```
+
+Stop/Ctrl+Enter and proactive-speech cancellation now signal only a verified fresh
+worker process group, excluding PID 0, PID 1 and the desktop group. Cleanup also
+stops descendants that ignore TERM after their parent exits. Already opened apps,
+completed actions and independently detached programs are not undone.
+
+Ctrl+Enter preserves up to 4,000 characters of the interrupted active chat as a
+separate, ephemeral reference for the same session. The correction remains the sole
+new action request. The reference is never a permission, an execution result or a
+request to retry old actions; voice captures, approvals, saved history and earlier
+steering chains are excluded. It is discarded on completion/cancellation/fresh
+send. Local steering works with saved memory off. Remote providers require the
+separate approved remote-memory sharing setting before receiving this reference.
+Only the latest correction/reply follows the normal memory retention policy.
+
+Focused source/Qt checks, all using temporary runtimes and harmless processes:
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q \
+  tests/test_chat_steering_reference.py tests/test_native_companion_recovery.py \
+  tests/test_quick_chat.py tests/test_native_ui.py tests/test_avatar_displays.py \
+  tests/test_settings_recovery.py tests/test_steering_context.py
+# 70 passed
+```
+
+A read-only Qt inventory initially exposed two 1920×1080 xcb displays (eDP-1 and
+HDMI-1); a later `--status` check exposed only eDP-1, with usable geometry
+`[0, 32, 1920, 1048]`, and found its saved avatar target connected/visible-enabled.
+No screen capture, live avatar move/unhide, microphone operation or service change
+was performed by these checks. Physical acceptance remains: hide then explicitly
+unhide, drag/menu-select each connected display, reconnect a display, and confirm
+the remembered target after reopening the companion. In Chat, interrupt a harmless
+description with Ctrl+Enter and verify the correction uses context without retrying
+an earlier action. Actual compositor placement and visible behavior require the
+owner's observation.

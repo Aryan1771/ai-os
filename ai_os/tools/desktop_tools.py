@@ -2,6 +2,7 @@
 import os
 import configparser
 import re
+import secrets
 import subprocess
 import tempfile
 from urllib.parse import urlsplit, urlunsplit
@@ -38,6 +39,12 @@ SITE_ALIASES = {
     "wikipedia": "https://www.wikipedia.org",
     "netflix": "https://www.netflix.com",
 }
+TEST_WEBSITES = ("https://example.org", "https://example.com", "https://www.wikipedia.org")
+
+
+def open_test_website(browser: str = ""):
+    """Open one benign public example when the user asks for a random/test website."""
+    return open_website(secrets.choice(TEST_WEBSITES), browser)
 
 
 def list_applications(query: str = ""):
@@ -196,7 +203,7 @@ def website_intent(text):
     if not isinstance(text, str) or len(text) > 1000:
         return None
     match = re.fullmatch(
-        r"(?:(?:hey\s+re[,:]?|please|can you|could you|would you)\s+)*(?:please\s+)?(?:open|visit|go to|navigate to|load)\s+(?:the\s+)?(.+?)[.!?]?",
+        r"(?:(?:hey\s+re[,:]?|please|can you|could you|would you)\s+)*(?:please\s+)?(?:open|visit|go to|navigate to|load|browse to|bring up|take me to|show me)\s+(?:the\s+)?(.+?)[.!?]?",
         text.strip(), re.IGNORECASE,
     )
     if not match:
@@ -211,6 +218,9 @@ def website_intent(text):
     if browser_match:
         browser = browser_match.group(1).casefold()
         target = target[:browser_match.start()].strip()
+    test_target = re.sub(r"\s+(?:to (?:test|check|see)|for (?:testing|a test)|so (?:we|I) can test)\b.*$", "", target, flags=re.I).strip()
+    if re.fullmatch(r"(?:(?:a|an|any|some|one)\s+)?(?:(?:random|test|example)\s+)?(?:website|web site|webpage|web page|site|page)", test_target, re.I):
+        return {"url": secrets.choice(TEST_WEBSITES), "browser": browser}
     url = SITE_ALIASES.get(target.casefold())
     if url:
         return {"url": url, "browser": browser}

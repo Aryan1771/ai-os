@@ -9,7 +9,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from PySide6.QtCore import QProcess, QProcessEnvironment, Qt, QTimer
-from PySide6.QtGui import QFontMetrics, QIcon
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -58,6 +58,10 @@ class SettingsWindow(QMainWindow):
         root = QVBoxLayout(outer)
         root.setContentsMargins(22, 18, 22, 18)
         header = QHBoxLayout()
+        self.brand_mark = QLabel()
+        self.brand_mark.setFixedSize(40, 40)
+        self.brand_mark.setAccessibleName("REgenOS logo")
+        header.addWidget(self.brand_mark)
         brand = QLabel("REgenOS")
         self.brand = brand
         brand.setMaximumWidth(360)
@@ -271,6 +275,15 @@ class SettingsWindow(QMainWindow):
         screen_note.setWordWrap(True)
         form.addRow(screen_note)
         self.check(form, "avatar_animation_enabled", "Animate pixels")
+        self.choice(form, "avatar_render_mode", "Hologram appearance", [
+            ("2d", "2D particles — lighter, recommended for older systems"),
+            ("3d", "3D depth appearance — projected particles"),
+        ])
+        depth_note = QLabel("3D appearance adds depth, perspective and layered particles using native painting, "
+                            "without OpenGL or downloads. It is a stylized projection, not a 3D world model. "
+                            "2D stays the default. Motion off also freezes depth rotation.")
+        depth_note.setWordWrap(True)
+        form.addRow(depth_note)
         self.check(form, "avatar_topic_morphing", "Morph with topics and tasks")
         self.choice(
             form,
@@ -810,8 +823,10 @@ class SettingsWindow(QMainWindow):
         )
         self.brand.setToolTip(name)
         self.setWindowTitle(f"{name} Settings")
-        logo = self.saved["branding"]["logo_path"]
-        self.setWindowIcon(QIcon(logo) if logo and Path(logo).is_file() else QIcon())
+        from ai_os.brand_assets import brand_icon
+        icon = brand_icon(self.saved["branding"]["logo_path"])
+        self.setWindowIcon(icon)
+        self.brand_mark.setPixmap(icon.pixmap(36, 36))
 
     def collect(self) -> dict:
         data = deepcopy(self.saved)

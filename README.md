@@ -5,7 +5,14 @@ pack. See [cursor installation and ISO defaults](docs/CURSOR_THEME.md).
 
 Offline-first AI interface layer and Arch-based desktop product for a portable external NVMe install.
 
-![REgenOS pixel-cycle mark](branding/regenos-mark.svg)
+![REgenOS Aurora Ridge wordmark](branding/regenos-wordmark.svg)
+
+The owner's aurora photograph is the tracked default wallpaper. Matching app,
+installer and boot-theme source artwork uses the **Aurora Ridge** identity.
+[Native graphical setup](docs/FIRST_RUN_SETUP.md) (`python -m ai_os.first_run`)
+guides post-install runtime preferences without enabling sensors or changing boot.
+Host boot/login activation and an installable ISO remain separately gated; see
+the [branding inventory and rollback proposal](docs/REGENOS_BRANDING_PROPOSAL.md).
 
 The supported desktop applications are Python/PySide6 Qt Widgets Settings and the
 pixel Companion. `regenos-settings` launches the Python settings window; no browser,
@@ -41,7 +48,9 @@ Current follow-up adds explicit memory pin/edit controls, improved research sour
 evidence, a [guided voice check](docs/VOICE_DIAGNOSTICS.md), and reviewed
 [GNOME shortcuts with rollback](docs/DESKTOP_SHORTCUTS.md).
 [Requested work versus remaining acceptance](docs/REQUEST_STATUS.md) tracks the
-unfinished voice, hardware, security and preview-ISO gates.
+unfinished voice, hardware, security and preview-ISO gates. The complete
+[remaining task list](docs/REMAINING_TASKS.md) covers every audit item and the
+[compact login-logo correction](docs/LOGIN_LOGO_FIX.md).
 
 Native chat can open supported applications such as Brave, inspect installed
 command manuals and request per-command approval through the optional full
