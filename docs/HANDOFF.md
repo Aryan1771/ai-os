@@ -2,6 +2,27 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-20 incremental checkpoint: listener recovery
+
+After source baseline `4ec0150`, a rejected transcription no longer terminates
+the continuous-listener worker and incurs its supervisor's 15-second retry wait.
+The narrow capture-only recovery preserves public error reporting, wake mode,
+backlog removal and fatal handling of broken recorder transports. Rejected or
+unfinished text never reaches the conversation or commands. See
+[VOICE_LISTENER_RECOVERY](VOICE_LISTENER_RECOVERY.md).
+
+Independent focused run: **39 passed in 0.23s**, including 14 new synthetic PCM
+regressions. No recording, model inference, private data/config changes or service
+restart occurred. This is a source checkpoint, not improved Hindi accuracy or
+physical listener acceptance; existing resident processes have not been reloaded.
+
+The already approved compact GDM correction remains **not installed**: its native
+authentication dialog timed out, and fresh readback found neither the compact
+asset nor its selected key. The exact copyable terminal command was supplied
+again. An owner's acknowledgment alone is not execution evidence. No GDM restart,
+forced lock/logout or boot write occurred. Follow the
+[checkpoint ledger](CHECKPOINT_PROGRESS.md) for remaining owner/approval gates.
+
 ## 2026-10-20 runtime and graphical setup checkpoint
 
 Full regression suite: **1080 passed in 12.63s**, including six optional

@@ -177,7 +177,15 @@ class AlwaysListeningService:
                             else speech_frames >= 3)
                 if detected:
                     self.on_activity("listening")
-                    transcript = self._capture_and_transcribe(b"".join(preroll), chunk_bytes)
+                    from ai_os.services.voice_errors import VoicePipelineError
+                    try:
+                        transcript = self._capture_and_transcribe(b"".join(preroll), chunk_bytes)
+                    except VoicePipelineError as exc:
+                        # A rejected/unfinished utterance is not a failed recorder.
+                        # Report it through the same bounded path as speaker
+                        # rejection, discard its backlog, then re-arm normally.
+                        self.last_capture_error = exc
+                        transcript = ""
                     if transcript and not self._stop.is_set():
                         self.on_transcript(transcript)
                     elif self.last_capture_error is not None and not self._stop.is_set():
