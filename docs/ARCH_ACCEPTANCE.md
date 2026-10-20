@@ -6,14 +6,15 @@ remains a preview prototype; no ISO/VM or production readiness claim follows.
 
 | Check | Actual result | Status |
 | --- | --- | --- |
-| Boot/login/ISO/VM | Owner-run helper reports GRUB; referenced fallback unlisted, recovery unverified. Approved desktop/GDM artwork/defaults installed; nine file hashes, compiled DBs and logo-key readback pass; GDM not restarted | Visual login/lock/boot pending; no boot writes, ISO or VM tests |
+| Boot/login/ISO/VM | Elevated owner report supplies current UKI evidence and confirms known fallback UKI not found; custom GRUB/current entry and recovery unverified. Compact 144×48 GDM correction: all four files and compiled key pass readback; GDM not restarted | Physical login/lock/boot pending; no boot writes, ISO or VM tests |
 | CUDA STT comparison | CPU 80.243s/CUDA 22.500s, sampled peak 961 MiB with LLM unloaded; English exact, Hindi poor | Limited synthetic comparison; personal/concurrent acceptance pending |
-| Complete Python/Qt suite | 1080 passed in 12.63s, including new setup/privacy/3D/power/article checks | Automated suite passed |
+| Complete Python/Qt suite | 1150 passed in 11.92s, including optional pinned Plymouth interpreter checks, listener recovery and stage timings | Local suite passed; hosted Qt teardown exit139 under investigation |
+| Approved core reload | Owner approved only ai-os.service restart; active/running, exit0, NRestarts0, config bytes unchanged; listening/wake/filter off | Installed service check passed; no microphone test |
 | Focused voice/context/memory/hardware/grant regressions | 134 passed; silence endpointing, current-turn/language routing, speech ownership, expiry, busy hotplug delivery and prior permission/context controls covered | Locally tested |
 | Correctness Ruff E4/E7/E9/F | All checks passed | Locally tested |
 | Existing venv dependency audit | pip check still reports openwakeword 0.6.0 requires missing tflite-runtime | Unresolved pre-existing optional-backend gap; selected RE/Whisper wake path separate |
 | Existing ONNX wake backend | Bounded isolated child loaded local openWakeWord ONNX backend/assets in 1.7s, no microphone | Backend loading passed; detection accuracy not tested |
-| Guided voice diagnostic | 53 synthetic regressions; actual native window opened with consent unchecked; no agent mic capture | Source-tested; owner capture/relevance/audibility pending |
+| Guided voice diagnostic | 119 focused voice/diagnostic tests, including 28 new stage-timing cases; numeric reached-stage timings only, no persistent timing log | Source-tested; owner capture/relevance/audibility/real timing pending |
 | Native memory curation | Explicit user-only pin, selected-note edit/remove and stale revision/session/expiry guards | Synthetic tests; no private memory inspection |
 | Legacy memory boundaries | 60 regressions for runtime paths, opt-out, remote consent and cached-result revocation; vector APIs disabled without trusted offline setup | Source tested; no private stores inspected or changed |
 | GNOME shortcuts | Owner approved three Super+Alt+A/C/R bindings; apply/fresh readback passed, no conflicts; private backup | Applied; physical key presses pending |

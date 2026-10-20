@@ -2,6 +2,27 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-20 checkpoint: owner boot evidence and approved core reload
+
+The owner ran the improved elevated read-only helper. It reports a current stub
+at `/EFI/Linux/arch-linux.efi` and loader path `/boot/EFI/Linux/arch-linux.efi`;
+the known on-disk UKI is a readable regular file, 154340352 bytes. The reported
+loader product is GRUB, but the single parsed custom/unknown GRUB declaration
+does not establish that this configuration controls the current boot. The known
+fallback UKI and plain linux initramfs now explicitly report **not found**, not
+permission denied. Zen's existing initramfs and both kernel files are readable;
+their recovery bootability is untested. Only default presets are enabled.
+The existing 1GiB vfat `/boot` has 712892416 bytes available at inspection time;
+hooks contain no Plymouth. Current boot flags omit splash/quiet/BOOT_IMAGE.
+No active-entry or independently bootable recovery claim follows.
+
+The owner separately approved restarting only `ai-os.service` for the tested
+listener repairs. Restart/fresh readback passed: active/running, exit status 0,
+NRestarts 0; config bytes unchanged and continuous listening/wake/speaker filtering
+all off. No other service changed; no microphone was enabled. The full 1150-test
+source run preceded this installed check. Normal-login logo appearance and real
+English/Hindi guided checks remain owner acceptance. No boot write/ISO/VM occurred.
+
 ## 2026-10-20 checkpoint: guided voice latency measurements
 
 Guided checks now return separate numeric detection-wait, capture, ending-silence,

@@ -1,5 +1,16 @@
 # REgenOS implementation and Arch verification audit
 
+Latest 2026-10-20 incremental evidence: **1150 local tests passed in 11.92s**;
+listener rejection recovery and privacy-safe guided stage timings are implemented.
+Separately approved core restart passes with unchanged config/listening off.
+The owner installed the compact 144×48 GDM logo; file/key readback passes, physical
+appearance remains pending. Elevated inspection reports current UKI evidence and
+the missing known fallback path, not a verified recovery boot. Hosted assertions
+pass but Qt shutdown exits 139; controlled diagnostics remain unresolved. These
+results close no untested hardware/security/ISO acceptance item. See
+[CHECKPOINT_PROGRESS](CHECKPOINT_PROGRESS.md) for current gates; counts below are
+historical.
+
 2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
 whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native
 nine-page greeting and six-page temporary onboarding previews passed; final UI

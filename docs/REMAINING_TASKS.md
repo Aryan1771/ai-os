@@ -6,16 +6,16 @@
 below. An open acceptance item does not mean its implementation is missing.
 Historical C++ requirements are superseded by the supported Python/PySide6 apps.
 
-The preceding source checkpoint passed **1070 tests** and 11/11 fixed local model
-probes with no probe actions. This does not accept later changes, real microphone
+The latest incremental source checkpoint passed **1150 tests**; the earlier 11/11
+fixed local model probes executed no probe actions. This does not accept real microphone
 quality, login appearance, recovery, an installer or a distribution. There is
 **no built/accepted preview ISO, final ISO path/hash or VM installation result**.
 
 ## First priorities
 
 1. **Restore a usable login layout.** The owner reports the installed square GDM
-   logo is oversized and hides the password field. A landscape wordmark repair
-   is in progress; the owner must confirm login controls remain visible at the
+   logo was oversized and hid the password field. The approved 144×48 landscape
+   repair is installed with four-file/compiled-key readback; the owner must confirm login controls remain visible at the
    actual resolutions/scales. Installed hashes/dconf readback did not pass this
    visual check. See [branding and rollback](REGENOS_BRANDING_PROPOSAL.md).
 2. **Accept the real voice loop and improve Hindi.** CUDA Whisper is selected with
@@ -28,10 +28,11 @@ quality, login appearance, recovery, an installer or a distribution. There is
 4. **Close runtime/privacy/security gaps.** Measure concurrent LLM/STT/TTS VRAM;
    exercise denial/revocation/lock behavior; finish bounded memory/planning work
    and the chosen confinement design. Passing unit tests is not an independent audit.
-5. **Establish boot recovery before splash work.** Owner inventory identifies GRUB
-   but not the active entry or a bootable recovery path. A referenced fallback UKI
-   was not in recognized listings. Do not call it absent solely from a partial
-   allowlisted inventory. Plymouth is not installed; no host boot writes occurred.
+5. **Establish boot recovery before splash work.** The newer elevated owner report
+   provides current-UKI evidence and confirms the known fallback UKI path is not
+   found. Reported GRUB product/custom menu alone does not identify the active
+   entry. Existing Zen files are not a boot-tested recovery path. Plymouth is
+   absent; no host boot writes occurred. Unknown custom recovery remains unknown.
 6. **Agree the preview architecture, then implement packaging/installer and VM
    acceptance.** Complete the release gates below in order; do not jump to a build.
 
