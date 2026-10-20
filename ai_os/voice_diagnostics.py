@@ -15,6 +15,7 @@ from urllib.parse import urlsplit, urlunsplit
 import requests
 
 from ai_os.config import AI_OS_HOME, load_config, load_raw_config
+from ai_os.voice_timings import elapsed_timing, public_timings, record_timing
 
 PHRASES = {
     "en": "Hello. Your REgenOS voice check is ready.",
@@ -123,7 +124,7 @@ def local_reply(text, language, home, *, metrics=None):
     return reply.strip()
 
 
-def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False):
+def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, metrics=None):
     """Trusted local UI only. A microphone click is not permission for any tool."""
     if human_confirmed is not True:
         raise PermissionError("Explicit local approval is required for each voice check.")
@@ -151,9 +152,11 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False):
             raise VoicePipelineError(
                 "voice_busy", "Another voice interaction is active. Try again when it finishes."
             )
+        timings = metrics if type(metrics) is dict else {}
+        timings.clear()
         phase = "listening"
         try:
-            transcript, timings = "", {}
+            transcript = ""
             actual_language = "en" if language == "auto" else language
             if action == "record":
                 config = replace(
@@ -163,7 +166,11 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False):
                     voice_command_seconds=8,
                     voice_max_utterance_seconds=20,
                 )
-                recognized = capture_once(config, return_result=True)
+                capture_started = time.monotonic()
+                try:
+                    recognized = capture_once(config, return_result=True, metrics=timings)
+                finally:
+                    elapsed_timing(timings, "capture_and_stt_seconds", capture_started)
                 actual_language = recognized.detected_language if language == "auto" else language
                 if actual_language not in PHRASES or not recognized.ok:
                     raise VoicePipelineError(
@@ -171,14 +178,16 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False):
                         "Could not identify English or Hindi clearly. No action was submitted.",
                     )
                 transcript = recognized.text
-                timings["capture_and_stt_seconds"] = round(time.monotonic() - started, 3)
                 publish_state("thinking", home=home)
                 phase = "thinking"
                 model_started = time.monotonic()
                 model_metrics = {}
-                reply = local_reply(transcript, actual_language, home, metrics=model_metrics)
-                timings["model_seconds"] = round(time.monotonic() - model_started, 3)
-                timings.update({"model_" + key: value for key, value in model_metrics.items()})
+                try:
+                    reply = local_reply(transcript, actual_language, home, metrics=model_metrics)
+                finally:
+                    elapsed_timing(timings, "model_seconds", model_started)
+                    for key in ("load_seconds", "prompt_eval_seconds", "eval_seconds"):
+                        record_timing(timings, "model_" + key, model_metrics.get(key))
             else:
                 reply = PHRASES[actual_language]
             # Re-read revocation before output; explicit playback-only tests are
@@ -188,20 +197,19 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False):
             publish_state("speaking", home=home)
             phase = "speaking"
             playback_started = time.monotonic()
-            SpeechQueue(
-                config.piper_model,
-                hindi_model=config.piper_hindi_model,
-                length_scale=config.piper_length_scale,
-            ).speak_text(reply)
-            timings["synthesis_and_playback_seconds"] = round(
-                time.monotonic() - playback_started, 3
-            )
-            return {
+            try:
+                SpeechQueue(
+                    config.piper_model,
+                    hindi_model=config.piper_hindi_model,
+                    length_scale=config.piper_length_scale,
+                ).speak_text(reply, metrics=timings)
+            finally:
+                elapsed_timing(timings, "synthesis_and_playback_seconds", playback_started)
+            result = {
                 "ok": True,
                 "transcript": transcript,
                 "reply": reply,
                 "language": actual_language,
-                "timings": {**timings, "total_seconds": round(time.monotonic() - started, 3)},
                 "message": "Playback completed. Only you can confirm audibility and whether the reply matched what you said.",
             }
         except Exception as exc:
@@ -210,7 +218,12 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False):
             code, message = diagnostic(exc, phase)
             raise VoicePipelineError(code, message) from None
         finally:
+            elapsed_timing(timings, "total_seconds", started)
+            sanitized = public_timings(timings)
+            timings.clear()
+            timings.update(sanitized)
             publish_state("idle", home=home)
+    return {**result, "timings": public_timings(timings)}
 
 
 def create_dialog(home=AI_OS_HOME, parent=None):
@@ -391,14 +404,21 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                 if not isinstance(result, dict):
                     raise ValueError()
                 if code == 0 and result.get("ok"):
-                    self.details.setPlainText(
+                    details = (
                         "You: "
                         + str(result.get("transcript", ""))[:8000]
                         + "\n\nRE: "
                         + str(result.get("reply", ""))[:2000]
-                        + "\n\n"
-                        + json.dumps(result.get("timings", {}), ensure_ascii=False)
                     )
+                else:
+                    details = ""
+                timings = public_timings(result.get("timings"))
+                if timings:
+                    details += (
+                        "\n\nTiming in seconds. Audio durations overlap capture; do not add them to wall time.\n"
+                        + json.dumps(timings, ensure_ascii=True)
+                    )
+                self.details.setPlainText(details.strip())
                 self.status.setText(
                     str(result.get("message", "Voice check did not complete."))[:400]
                 )
@@ -461,8 +481,9 @@ def main():
     args = parser.parse_args()
     if args.worker:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
+        timings = {}
         try:
-            result = check_voice(args.worker, args.language, human_confirmed=args.confirmed)
+            result = check_voice(args.worker, args.language, human_confirmed=args.confirmed, metrics=timings)
         except Exception as exc:
             from ai_os.services.voice_errors import diagnostic
 
@@ -474,7 +495,7 @@ def main():
                     "voice_check_unavailable",
                     "Check saved local voice settings, spoken replies and language. Disable continuous listening before a separate microphone test. No tools were run.",
                 )
-            result = {"ok": False, "code": code, "message": message}
+            result = {"ok": False, "code": code, "message": message, "timings": public_timings(timings)}
         print(json.dumps(result, ensure_ascii=True, allow_nan=False))
         return 0 if result["ok"] else 1
     from PySide6.QtWidgets import QApplication

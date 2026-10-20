@@ -2,6 +2,28 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-20 checkpoint: guided voice latency measurements
+
+Guided checks now return separate numeric detection-wait, capture, ending-silence,
+speaker-filter, STT, synthesis and playback measurements. Existing combined and
+model counters remain. PCM durations overlap wall timings and must not be added
+as extra delay. Only explicitly requested diagnostics use a temporary collector;
+resident/default calls do not persist timings. Valid completed stages can be
+displayed after failure without its transcript, backend output or private paths.
+See [VOICE_STAGE_TIMINGS](VOICE_STAGE_TIMINGS.md).
+
+Final frozen-source regression run: **1150 passed in 11.92s**, including the six
+optional interpreter checks with the pinned external Plymouth subset. The focused
+voice suite passes 119 tests (28 new); correctness Ruff, full new-file Ruff and
+whitespace checks pass. No actual recording, model inference, audible playback,
+saved setting or service change occurred for this checkpoint. Hindi accuracy and
+real latency remain pending. This instruments latency; it does not claim a speedup.
+
+Hosted Python 3.12 assertions now pass but Qt teardown still exits 139. A strict
+6.11.2/6.12.0 CI-only comparison with faulthandler is in progress; no crash is
+ignored and no production version pin was inferred. ISO release work remains
+blocked on critical runtime/security and recovery acceptance.
+
 ## 2026-10-20 checkpoint: bounded boot/recovery inspection
 
 The helper now separates permission-denied from missing files, literal enabled

@@ -8,10 +8,13 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import wave
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
+
+from ai_os.voice_timings import elapsed_timing
 
 
 def emotional_pace(base: float, avatar: dict | None) -> float:
@@ -89,7 +92,7 @@ class SpeechQueue:
             if chunk:
                 yield chunk
 
-    def speak_text(self, text: str, *, avatar: dict | None = None) -> None:
+    def speak_text(self, text: str, *, avatar: dict | None = None, metrics=None) -> None:
         model = self.hindi_model if re.search(r"[\u0900-\u097f]", text) else self.piper_model
         if not model or not model.is_file():
             raise RuntimeError("Piper voice model for the requested language is missing.")
@@ -106,22 +109,26 @@ class SpeechQueue:
         # WAV metadata supplies each voice's real sample rate; no fixed raw PCM rate.
         with tempfile.TemporaryDirectory(prefix="regenos-speech-", dir=os.environ.get("AI_OS_VOICE_TMP")) as directory:
             output = Path(directory) / "speech.wav"
-            subprocess.run(
-                [
-                    piper,
-                    "--model",
-                    str(model),
-                    "--output_file",
-                    str(output),
-                    "--length_scale",
-                    str(emotional_pace(self.length_scale, avatar) if self.emotion_enabled and avatar else self.length_scale),
-                ],
-                input=re.sub(r"\bRE\b", "R E", text).encode("utf-8"),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                timeout=60,
-                check=True,
-            )
+            synthesis_started = time.monotonic() if metrics is not None else None
+            try:
+                subprocess.run(
+                    [
+                        piper,
+                        "--model",
+                        str(model),
+                        "--output_file",
+                        str(output),
+                        "--length_scale",
+                        str(emotional_pace(self.length_scale, avatar) if self.emotion_enabled and avatar else self.length_scale),
+                    ],
+                    input=re.sub(r"\bRE\b", "R E", text).encode("utf-8"),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    timeout=60,
+                    check=True,
+                )
+            finally:
+                elapsed_timing(metrics, "synthesis_seconds", synthesis_started, accumulate=True)
             with wave.open(str(output), "rb") as wav:
                 if not wav.getnframes() or not 8000 <= wav.getframerate() <= 192000:
                     raise ValueError("Piper generated an invalid or empty WAV.")
@@ -129,13 +136,17 @@ class SpeechQueue:
                 if duration > 180:
                     raise ValueError("Speech output exceeds the playback duration limit.")
             if not self._stop.is_set():
-                subprocess.run(
-                    [player, str(output)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.PIPE,
-                    timeout=duration + 10,
-                    check=True,
-                )
+                playback_started = time.monotonic() if metrics is not None else None
+                try:
+                    subprocess.run(
+                        [player, str(output)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.PIPE,
+                        timeout=duration + 10,
+                        check=True,
+                    )
+                finally:
+                    elapsed_timing(metrics, "playback_seconds", playback_started, accumulate=True)
 
     def run_forever(self) -> None:
         while not self._stop.is_set():

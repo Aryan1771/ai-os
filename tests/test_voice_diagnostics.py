@@ -46,7 +46,7 @@ def fake_loop(tmp_path, monkeypatch):
                   tmp_path, human_confirmed=True)
     observed = {"capture": [], "model": [], "speech": [], "phases": []}
 
-    def capture(config, *, return_result=False):
+    def capture(config, *, return_result=False, metrics=None):
         observed["capture"].append((config, return_result))
         return TranscriptionResult(True, "A synthetic current utterance", detected_language="hi")
 
@@ -58,7 +58,7 @@ def fake_loop(tmp_path, monkeypatch):
         def __init__(self, *_args, **_kwargs):
             pass
 
-        def speak_text(self, text):
+        def speak_text(self, text, *, metrics=None):
             observed["speech"].append(text)
 
     monkeypatch.setattr("ai_os.services.voice_input.capture_once", capture)

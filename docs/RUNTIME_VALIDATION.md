@@ -1,5 +1,18 @@
 # REgenOS: installed runtime, latency and continuity
 
+2026-10-20 incremental source checkpoints: **1150 passed in 11.92s**, including
+the six explicitly supplied pinned Plymouth interpreter checks. Rejected voice
+utterances now recover without killing the listener; guided checks expose
+temporary, numeric per-stage timings. No new actual recording/model/playback or
+service restart was performed for these changes. See
+[listener recovery](VOICE_LISTENER_RECOVERY.md) and [timing definitions](VOICE_STAGE_TIMINGS.md).
+Hosted Python assertions pass but interpreter teardown exits 139; the CI-only
+PySide comparison remains unresolved, not a passed remote run.
+
+Owner-executed compact GDM replacement plus dconf update passes four-file source/
+hash/mode and compiled key readback. PNG is 144×48. Physical password-field/scaling
+acceptance remains pending; no GDM restart or forced lock/logout was performed.
+
 2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
 whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native
 nine-page greeting and six-page temporary onboarding previews passed; final UI

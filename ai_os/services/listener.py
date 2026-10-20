@@ -17,6 +17,7 @@ import numpy as np
 
 from ai_os.services.stt import WhisperCppTranscriber
 from ai_os.services.wakeword import WakeWordService, ReWhisperWakeWord
+from ai_os.voice_timings import elapsed_timing, record_timing
 
 
 class AlwaysListeningService:
@@ -210,7 +211,7 @@ class AlwaysListeningService:
         finally:
             self.stop()
 
-    def _capture_and_transcribe(self, first_chunk: bytes, chunk_bytes: int) -> str:
+    def _capture_and_transcribe(self, first_chunk: bytes, chunk_bytes: int, *, metrics=None) -> str:
         self.last_transcription_language = None
         self.last_capture_error = None
         if self._process is None or self._process.stdout is None:
@@ -221,28 +222,35 @@ class AlwaysListeningService:
         # The initial speech wait and the spoken utterance have separate bounds.
         # Count PCM samples for endpointing: recorder scheduling must not turn a
         # brief human pause into the end of a sentence or extend an utterance.
-        deadline = time.monotonic() + self.max_utterance_seconds
+        capture_started = time.monotonic()
+        deadline = capture_started + self.max_utterance_seconds
         max_samples = self.sample_rate * self.max_utterance_seconds
         captured_samples = len(first_chunk) // 2
         silence_samples = math.ceil(self.sample_rate * self.silence_seconds)
         silent_samples = 0
         endpoint_reached = False
-        while (time.monotonic() < deadline and captured_samples < max_samples
-               and not self._stop.is_set()):
-            audio = self._read_audio(min(chunk_bytes, (max_samples - captured_samples) * 2))
-            if not audio:
-                break
-            # A separately requested voice test or announcement can win the
-            # output turn while recording. Never submit its sound as a command.
-            if self.playback_active():
-                return ""
-            chunks.append(audio)
-            samples = len(audio) // 2
-            captured_samples += samples
-            silent_samples = 0 if self.has_speech(audio) else silent_samples + samples
-            if silent_samples >= silence_samples:
-                endpoint_reached = True
-                break
+        try:
+            while (time.monotonic() < deadline and captured_samples < max_samples
+                   and not self._stop.is_set()):
+                audio = self._read_audio(min(chunk_bytes, (max_samples - captured_samples) * 2))
+                if not audio:
+                    break
+                # A separately requested voice test or announcement can win the
+                # output turn while recording. Never submit its sound as a command.
+                if self.playback_active():
+                    return ""
+                chunks.append(audio)
+                samples = len(audio) // 2
+                captured_samples += samples
+                silent_samples = 0 if self.has_speech(audio) else silent_samples + samples
+                if silent_samples >= silence_samples:
+                    endpoint_reached = True
+                    break
+        finally:
+            elapsed_timing(metrics, "capture_seconds", capture_started)
+            record_timing(metrics, "captured_audio_seconds", captured_samples / self.sample_rate)
+            if endpoint_reached:
+                record_timing(metrics, "ending_silence_audio_seconds", silent_samples / self.sample_rate)
 
         if self._stop.is_set():
             return ""
@@ -270,17 +278,24 @@ class AlwaysListeningService:
             if self.speaker_filter is not None:
                 from ai_os.services.voice_errors import VoicePipelineError, VOICE_MESSAGES
                 from ai_os.speaker_filter import MESSAGES
+                filter_started = time.monotonic() if metrics is not None else None
                 try:
                     allowed, reason = self.speaker_filter(audio_path)
                 except Exception:
                     allowed, reason = False, MESSAGES["speaker_unavailable"]
+                finally:
+                    elapsed_timing(metrics, "speaker_filter_seconds", filter_started)
                 if not allowed:
                     code = next((key for key in ("speaker_rejected", "speaker_unavailable", "speaker_timeout")
                                  if reason == MESSAGES[key]), "speaker_rejected")
                     self.last_capture_error = VoicePipelineError(code, VOICE_MESSAGES[code])
                     return ""
             self.on_activity("transcribing")
-            result = self.transcriber.transcribe_file(audio_path)
+            stt_started = time.monotonic() if metrics is not None else None
+            try:
+                result = self.transcriber.transcribe_file(audio_path)
+            finally:
+                elapsed_timing(metrics, "stt_seconds", stt_started)
             if not result.ok:
                 from ai_os.services.stt import STT_ERRORS
                 from ai_os.services.voice_errors import VoicePipelineError

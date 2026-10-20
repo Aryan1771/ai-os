@@ -9,9 +9,10 @@ from pathlib import Path
 from ai_os.companion_state import publish_state
 from ai_os.services.listener import AlwaysListeningService
 from ai_os.services.stt import TranscriptionResult, WhisperCppTranscriber
+from ai_os.voice_timings import elapsed_timing
 
 
-def capture_once(config, *, return_result=False):
+def capture_once(config, *, return_result=False, metrics=None):
     from ai_os.speaker_filter import filter_utterance
     match_language = getattr(config, "reply_language_mode", "selected") == "match"
     transcriber = WhisperCppTranscriber(config.whisper_cli, config.whisper_model,
@@ -34,9 +35,11 @@ def capture_once(config, *, return_result=False):
              "--channels", "1", "-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL, bufsize=0, shell=False,
         )
-        deadline = time.monotonic() + config.voice_command_seconds
+        waiting_started = time.monotonic()
+        deadline = waiting_started + config.voice_command_seconds
         preroll = deque(maxlen=5)
         speech_frames = 0
+        waiting = True
         try:
             publish_state("listening", home=config.home)
             while time.monotonic() < deadline:
@@ -46,7 +49,12 @@ def capture_once(config, *, return_result=False):
                 preroll.append(audio)
                 speech_frames = speech_frames + 1 if listener.has_speech(audio) else 0
                 if speech_frames >= 3:
-                    text = listener._capture_and_transcribe(b"".join(preroll), 2560).strip()
+                    elapsed_timing(metrics, "speech_detection_wait_seconds", waiting_started)
+                    waiting = False
+                    text = listener._capture_and_transcribe(
+                        b"".join(preroll), 2560,
+                        **({"metrics": metrics} if metrics is not None else {}),
+                    ).strip()
                     if text:
                         return (TranscriptionResult(True, text, detected_language=getattr(
                             listener, "last_transcription_language", None
@@ -56,4 +64,6 @@ def capture_once(config, *, return_result=False):
                     break
             raise RuntimeError("No speech recognized. Check input level and selected language.")
         finally:
+            if waiting:
+                elapsed_timing(metrics, "speech_detection_wait_seconds", waiting_started)
             listener.stop()

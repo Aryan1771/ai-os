@@ -1,5 +1,13 @@
 # REgenOS Feature Checklist
 
+Latest incremental source suite: **1150 passed in 11.92s**, including six optional
+Plymouth interpreter checks using the pinned external source subset. Guided voice
+diagnostics now separate ending-pause/capture/STT/filter/synthesis/playback timing
+without persistent logs or changing saved preferences. No physical voice test or
+latency improvement is claimed. Hosted assertions pass but Qt teardown exits 139;
+the controlled version-comparison CI run is pending. See
+[VOICE_STAGE_TIMINGS](VOICE_STAGE_TIMINGS.md) and [CI_VALIDATION](CI_VALIDATION.md).
+
 Incremental listener recovery after `4ec0150`: **39 focused synthetic tests pass**,
 including 14 new regressions. Expected capture/transcription rejection now re-arms
 the existing listener without a supervisor restart; broken transports still fail
