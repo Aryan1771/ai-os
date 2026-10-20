@@ -31,6 +31,30 @@ cause. No exception suppression, forced successful exit, speculative Qt lifetime
 change or production workaround was added. A successful Python 3.12 hosted rerun
 is still needed before calling the remote CI checkpoint complete.
 
+### Hosted follow-up: assertions fixed; interpreter crash remains
+
+- [Run 39471797121](https://github.com/Aryan1771/ai-os/actions/runs/39471797121),
+  revision `6aa38d7510284e1bd1e3e14a7f7b07636d429449`: **1089 passed, 6 skipped
+  in 20.47s**, then SIGSEGV / exit 139.
+- [Run 39471870621](https://github.com/Aryan1771/ai-os/actions/runs/39471870621),
+  revision `9f698d26eaa4decc68c45103c5ddb7383f240200`: **1116 passed, 6 skipped
+  in 21.58s**, then SIGSEGV / exit 139.
+
+Both used Python 3.12.15. Installation logs show PySide6-Essentials and shiboken6
+**6.12.0**, whereas the developer host has 6.11.2. This dependency difference is
+a lead, not proof of a Qt version regression. In both hosted runs the C++ and
+installer syntax stages were skipped because the Python process failed.
+
+The workflow now enables `PYTHONFAULTHANDLER=1` and runs independent Python 3.12
+matrix jobs with PySide6-Essentials **6.11.2** and **6.12.0**, each installed in the
+same pip transaction as the editable desktop/dev requirements. Matrix fail-fast
+is disabled so a failure in one version cannot hide the other result. Both retain
+the existing C++ and installer syntax stages. The comparison changes only hosted
+CI dependencies; production dependency bounds and the developer venv are intact.
+It does not ignore crashes or force a successful result. There has been no host
+package, service or boot change. ISO release work remains blocked by this critical
+unresolved test-process crash until the comparison establishes a recovery path.
+
 ## Reproduction and local evidence
 
 Read-only remote inspection used:

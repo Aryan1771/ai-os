@@ -6,10 +6,16 @@ permissions:
   contents: read
 jobs:
   linux-software-tests:
+    name: linux-software-tests (PySide6 ${{ matrix.pyside6 }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        pyside6: ["6.11.2", "6.12.0"]
     env:
       QT_QPA_PLATFORM: offscreen
       REGENOS_HUB_NO_COMPANION: "1"
+      PYTHONFAULTHANDLER: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,7 +25,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build qt6-base-dev libegl1 libopengl0 libxkbcommon0 libmagickwand-dev
-          python -m pip install -e '.[desktop,dev]' win2xcur==0.1.2
+          python -m pip install -e '.[desktop,dev]' win2xcur==0.1.2 "PySide6-Essentials==${{ matrix.pyside6 }}"
       - name: Python tests including cursor conversion
         run: python -m pytest -q
       - name: Build and test native C++ hub
