@@ -1,6 +1,6 @@
 # REgenOS: installed runtime, latency and continuity
 
-2026-10-21 frozen combined source: **1321 passed in 16.57s**, normal exit,
+2026-10-21 frozen combined source: **1352 passed in 16.66s**, normal exit,
 including six explicitly supplied pinned Plymouth interpreter checks. Input
 selection/enrollment is asynchronous and no-fallback; planner dispatch respects
 its original deadline; the broad-command bootstrap excludes cwd/PYTHONPATH.
@@ -15,6 +15,19 @@ adds 31 cases. A literal-ampersand caption correction passes the 31-case suite
 again in 0.28s. A fresh diagnostic is open with no automatic recording; correct
 transcription, relevant audible reply and the reported blank area remain owner
 acceptance. Progress identifies recording versus processing without user text.
+
+The latest private current-status reader exposes fixed action/phase/error codes
+and numeric timings only; 31 new cases cover privacy, freshness and unsafe storage.
+It writes no transcript/history and starts no capture. Both existing dialogs
+publish on their next explicitly requested check. Initial live read is unavailable;
+owner recording outcome remains unaccepted. Subsequent explicit Record metadata
+shows 16.48s PCM and a speech-energy trigger after 0.601s, then cancellation before
+the completed pause/STT; no private audio/text was read. This proves stream
+liveness, not recognized words or an audible relevant reply. Read safely with:
+
+```bash
+~/.ai_os/venv/bin/python -m ai_os.voice_check_status
+```
 
 After the earlier 1290-test run, the native xcb smoke passes nine Settings pages,
 visible temporary companion and a local Ollama reply. The owner-approved restart

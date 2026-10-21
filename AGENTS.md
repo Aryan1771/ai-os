@@ -68,6 +68,8 @@
 - Guided voice diagnostics require each explicit Record click, remain local and
   tool-free, and save no conversation. Group cancellation must never signal PID 0
   or the desktop group; verify the task's fresh process group before signalling.
+  Latest-check status is private, schema-only metadata; never add transcripts,
+  audio, arbitrary errors or paths to it, and never turn it into a history log.
 - GNOME shortcut changes need exact native approval, private backups and readback.
   Preserve unrelated/custom concurrent changes and refuse rollback over later edits.
 - Bind legacy memory reads to the selected runtime and recheck memory/remote consent

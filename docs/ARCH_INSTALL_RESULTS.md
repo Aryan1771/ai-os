@@ -1,6 +1,6 @@
 # Current runtime inspection — 2026-10-16
 
-2026-10-21 current checkpoint: **1321 frozen tests pass in 16.57s**, with normal
+2026-10-21 current checkpoint: **1352 frozen tests pass in 16.66s**, with normal
 exit; correctness lint/whitespace pass. Native xcb check passes nine Settings
 pages, visible temporary companion and a local Ollama greeting. Owner-approved
 restart of only `ai-os.service` loads the microphone-routing, planner-deadline and

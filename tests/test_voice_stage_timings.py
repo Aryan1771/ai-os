@@ -338,7 +338,8 @@ def test_playback_only_has_no_capture_or_model_metrics(tmp_path, monkeypatch, cl
     assert set(result["timings"]) == {"synthesis_seconds", "playback_seconds", "synthesis_and_playback_seconds", "total_seconds"}
 
 
-def test_worker_failure_json_contains_only_public_error_and_allowed_numbers(monkeypatch, capsys):
+def test_worker_failure_json_contains_only_public_error_and_allowed_numbers(monkeypatch, capsys, tmp_path):
+    monkeypatch.setenv("AI_OS_HOME", str(tmp_path))
     def fail(*_args, metrics=None, **_kwargs):
         metrics.update({"stt_seconds": 2.123456, "model_seconds": float("nan"),
                         "SYNTHETIC_PRIVATE_PATH": "SYNTHETIC_PRIVATE_TRANSCRIPT"})

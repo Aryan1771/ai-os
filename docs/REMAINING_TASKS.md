@@ -6,7 +6,7 @@
 below. An open acceptance item does not mean its implementation is missing.
 Historical C++ requirements are superseded by the supported Python/PySide6 apps.
 
-The latest frozen source checkpoint passed **1321 tests in 16.57s**, normal exit;
+The latest frozen source checkpoint passed **1352 tests in 16.66s**, normal exit;
 native Settings/temporary-companion/local-reply smoke and the approved core reload
 pass with unchanged config/listening off. The earlier 11/11 fixed local model
 probes executed no probe actions. This does not accept real microphone

@@ -209,7 +209,8 @@ def test_continuous_endpoint_does_not_stop_its_recorder_while_transcribing(tmp_p
 
 
 @pytest.mark.parametrize("enabled", [False, True])
-def test_worker_cli_preserves_final_json_and_only_opted_in_phase_lines(monkeypatch, capsys, enabled):
+def test_worker_cli_preserves_final_json_and_only_opted_in_phase_lines(monkeypatch, capsys, tmp_path, enabled):
+    monkeypatch.setenv("AI_OS_HOME", str(tmp_path))
     def check(*_args, on_progress=None, **_kwargs):
         if on_progress:
             on_progress({"event": "voice_progress", "phase": "transcribing"})

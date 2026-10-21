@@ -7,6 +7,7 @@ from dataclasses import replace
 import json
 import os
 import signal
+from pathlib import Path
 import sys
 import tempfile
 import time
@@ -520,13 +521,23 @@ def main():
     if args.worker:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
         timings = {}
+        from ai_os.voice_check_status import VoiceCheckStatus
+        status = (VoiceCheckStatus(Path(os.environ.get("AI_OS_HOME", str(AI_OS_HOME))).expanduser(), args.worker)
+                  if args.confirmed is True else None)
         def emit_progress(event):
             event = public_progress(event)
             if event is not None:
-                print(json.dumps(event, ensure_ascii=True, allow_nan=False), flush=True)
+                if status is not None:
+                    status.progress(event)
+                if args.progress:
+                    print(json.dumps(event, ensure_ascii=True, allow_nan=False), flush=True)
         try:
             result = check_voice(args.worker, args.language, human_confirmed=args.confirmed, metrics=timings,
-                                 **({"on_progress": emit_progress} if args.progress else {}))
+                                 **({"on_progress": emit_progress} if args.progress or status is not None else {}))
+        except SystemExit:
+            if status is not None:
+                status.publish("cancelled", code="cancelled", timings=timings)
+            raise
         except Exception as exc:
             from ai_os.services.voice_errors import diagnostic
 
@@ -539,6 +550,9 @@ def main():
                     "Check saved local voice settings, spoken replies and language. Disable continuous listening before a separate microphone test. No tools were run.",
                 )
             result = {"ok": False, "code": code, "message": message, "timings": public_timings(timings)}
+        if status is not None:
+            status.publish("completed" if result["ok"] else "failed", code=result.get("code", ""),
+                           timings=result.get("timings", timings))
         print(json.dumps(result, ensure_ascii=True, allow_nan=False))
         return 0 if result["ok"] else 1
     from PySide6.QtWidgets import QApplication

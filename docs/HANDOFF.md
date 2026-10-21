@@ -2,6 +2,40 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 latest checkpoint: private diagnostic status
+
+The owner still reports no result and cannot identify a visible status message.
+Source tests are not microphone acceptance. All explicitly confirmed diagnostic
+workers now publish only the latest fixed action/phase/error code, numeric
+timings and timestamps under `run/private/voice-check-status.json` (0600). No
+speech, transcript, reply, model/device name, raw error or path enters it.
+Existing public runtime-directory modes are preserved; the private child and
+descriptor-relative guarded writes refuse unsafe paths/files. Failed publication
+does not block voice. Superseded workers cannot replace newer-check status.
+
+`~/.ai_os/venv/bin/python -m ai_os.voice_check_status` is read-only and returns
+fresh whitelisted metadata, stale or unavailable. No GUI/service restart is
+needed: both old/new dialogs load this in their next explicitly requested worker.
+Legacy single-JSON stdout remains. See [VOICE_CHECK_PROGRESS](VOICE_CHECK_PROGRESS.md).
+
+Root frozen suite: **1352 passed in 16.66s**, normal exit; correctness lint and
+whitespace pass. The focused suite has 250 tests, including 31 new metadata
+cases; independent review found no blocking issue. Initial real read was
+unavailable; after the owner's explicit Record click, sanitized metadata reports
+waiting → capturing → **cancelled**. Speech detection waited 0.601s, captured PCM
+duration was 16.48s, capture wall time 16.025s and total 16.634s. No ending-pause
+or STT/model stage completed. This establishes capture-stream liveness, not that
+the correct microphone/words were recognized. No speech or transcript was read.
+The required quiet pause was not reached before cancellation; the cancellation's
+initiator is not established. Owner was asked whether Stop was used to finish.
+Actual English/Hindi recognition/reply remains pending. No service, setting,
+model or boot change.
+
+A separate 35-second read-only sample observed 40 GPU samples, peak 13 MiB of
+8188 MiB; a diagnostic worker appeared in 22 samples, with no GPU-resident Ollama
+model or worker/model overlap. This is not concurrent-voice or worst-case VRAM
+acceptance. It started no recording/inference and proves no microphone permission.
+
 ## 2026-10-21 checkpoint: disabled primary controls
 
 Synthetic rendering demonstrated that the primary-button ID selector overrode

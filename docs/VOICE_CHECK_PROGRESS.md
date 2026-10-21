@@ -86,3 +86,75 @@ Automated validation started no actual microphone, playback or model request,
 and changed no user preference or service.
 Personal English/Hindi accuracy, reply relevance, audibility and measured latency
 remain owner acceptance.
+
+Root's frozen combined validation after the latest-status addition passes
+**1352 tests in 16.66s**, normal exit, with correctness lint/whitespace clean.
+The read-only live reader initially reports `unavailable`; no new explicitly
+requested check had populated it. This is not a failed recording or voice pass.
+
+The owner's next explicit Record produced sanitized phases waiting → capturing
+→ cancelled. Metrics: speech-detection wait 0.601s, captured PCM 16.48s, capture
+wall time 16.025s, total 16.634s. No completed ending-pause, STT or model stage was
+reported. The input stream worked and crossed the speech-energy threshold; this
+does not identify the source or verify spoken words. The check was cancelled
+before a completed quiet pause, with no recording/transcript read by the agent.
+Whether Stop/close caused that cancellation remains an owner question. Stop
+currently cancels/discards; it is not an explicit finish-and-transcribe control.
+
+## Latest check metadata without reading a recording or window
+
+Every explicitly confirmed diagnostic worker now replaces one sanitized current
+snapshot at `~/.ai_os/run/private/voice-check-status.json`. This applies to both
+older final-JSON-only dialogs and newer phase-progress dialogs on their **next
+explicit Record or Play click**; it does not require another GUI/service restart.
+Opening a dialog or enabling its consent checkbox creates no worker/snapshot.
+Legacy worker stdout remains a single final JSON object unless `--progress` is
+explicitly requested.
+
+The safe, read-only command is:
+
+```bash
+~/.ai_os/venv/bin/python -m ai_os.voice_check_status
+```
+
+It returns `fresh`, `stale` or `unavailable`. Fresh metadata contains only version,
+the `play`/`record` action, a fixed phase, fixed error code, bounded numeric stage
+timings, and start/update timestamps. Terminal phases are `completed`, `failed`
+or best-effort `cancelled`; `utterance_too_long`, for example, distinguishes a
+missing ending pause from transcription/model errors. There are no messages,
+transcripts, replies, RMS, device/account identifiers, process IDs, paths or model
+arguments in the snapshot. Raw files or private subprocess logs are unnecessary.
+
+An existing 0755 runtime/run directory stays unchanged. The private child must
+be owned and 0700; snapshot and its fixed lock must be owned private regular files
+with one link. Directory-descriptor operations, no-follow opens, bounded schema/
+size checks and atomic replacement reject unsafe existing paths without chmod or
+following links. Only the latest check is retained; a superseded worker cannot
+overwrite its successor, even when wall-clock readings are equal. No history or
+audio log is created. Missing/unsafe storage makes this optional metadata
+unavailable while ordinary explicitly requested diagnostic behavior is preserved.
+
+The reader creates nothing, never returns malformed/raw content, and omits stale
+records after 180 seconds. A fresh phase identifies the latest recorded stage;
+it does not prove that a worker is still alive, microphone access is allowed,
+audio was useful or playback was heard. Forced SIGKILL/power loss can leave the
+last phase until it expires. Normal TERM cancellation publishes `cancelled` where
+the worker can unwind safely. Timestamps help distinguish the latest click from
+an earlier result. Reader errors print only `unavailable`.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_voice_check_status.py tests/test_voice_progress.py tests/test_voice_stage_timings.py --tb=short
+env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q tests/test_voice_check_status.py tests/test_voice_progress.py tests/test_voice_diagnostics.py tests/test_voice_endpointing.py tests/test_voice_stage_timings.py tests/test_listener.py tests/test_voice_listener_recovery.py tests/test_audio_input.py tests/test_native_ui.py --tb=short
+~/.ai_os/venv/bin/python -m ruff check ai_os/voice_check_status.py tests/test_voice_check_status.py
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os/voice_diagnostics.py tests/test_voice_progress.py tests/test_voice_stage_timings.py
+git diff --check
+```
+
+The focused run passes **90 tests in 0.48s**, including 31 new metadata cases:
+schema/privacy omission, freshness, concurrency, unsafe permissions/owners,
+symlink/hardlink/FIFO/size/read failures, confirmed old/new UI paths, cancellation
+and unconfirmed-worker denial. Existing worker tests now explicitly isolate their
+metadata homes in temporary directories. No personal runtime status, recording,
+configuration or log was read; no microphone/playback/model/service was started.
+The final combined nine-module headless run passes **250 tests in 5.13s**, normal
+exit; new-file Ruff, edited-file correctness lint and whitespace checks pass.
