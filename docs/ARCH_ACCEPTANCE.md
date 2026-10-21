@@ -1,15 +1,18 @@
 # Interaction acceptance — current source checkpoint
 
-2026-10-20. Current Arch tests can access local sockets/services. Temporary synthetic
+2026-10-21. Current Arch tests can access local sockets/services. Temporary synthetic
 runtimes separate regression evidence from personal/hardware acceptance. The project
 remains a preview prototype; no ISO/VM or production readiness claim follows.
 
 | Check | Actual result | Status |
 | --- | --- | --- |
-| Boot/login/ISO/VM | Elevated owner report supplies current UKI evidence and confirms known fallback UKI not found; custom GRUB/current entry and recovery unverified. Compact 144×48 GDM correction: all four files and compiled key pass readback; GDM not restarted | Physical login/lock/boot pending; no boot writes, ISO or VM tests |
+| Boot/login/ISO/VM | Owner UKI evidence confirms missing known fallback; active route/recovery unverified. Compact 144×48 GDM correction passes file/key readback and owner-confirmed usable password-field layout. | Reported login layout accepted; other scales/lock/boot pending. No boot writes, ISO or VM tests |
 | CUDA STT comparison | CPU 80.243s/CUDA 22.500s, sampled peak 961 MiB with LLM unloaded; English exact, Hindi poor | Limited synthetic comparison; personal/concurrent acceptance pending |
-| Complete Python/Qt suite | 1150 passed in 11.92s, including optional pinned Plymouth interpreter checks, listener recovery and stage timings | Local suite passed; hosted Qt teardown exit139 under investigation |
-| Approved core reload | Owner approved only ai-os.service restart; active/running, exit0, NRestarts0, config bytes unchanged; listening/wake/filter off | Installed service check passed; no microphone test |
+| Complete Python/Qt suite | 1290 passed in 16.64s, normal exit, including six optional pinned Plymouth interpreter checks and new routing/deadline/bootstrap/artwork tests | Local frozen suite passed; supported hosted fixture-repair revision succeeds; distinct excluded Qt6.12 issue unresolved |
+| Approved core reload | Owner approved only ai-os.service restart for routing/deadline/bootstrap fixes; active/running, exit0, NRestarts0, config bytes unchanged; listening/wake/filter off; voice readiness unblocked | Installed service check passed; no microphone test |
+| Explicit input routing | Protected async selector and enrollment precheck; 223 focused tests, no automatic fallback or implicit recording | Source-tested; physical selected/default/reconnect/noise acceptance pending |
+| Command bootstrap isolation | Cwd/PYTHONPATH shadowing reproduced with fakes and metadata; isolated interpreter repair passes 79 regressions | Loaded by approved restart; broad actual grant/revoke/confinement acceptance remains |
+| Static UKI artwork | 20 artifact tests, 566×167 BMP/manifest, decoded/visual preview; known boot file untouched | Source artwork only; VM/firmware/recovery/activation pending |
 | Focused voice/context/memory/hardware/grant regressions | 134 passed; silence endpointing, current-turn/language routing, speech ownership, expiry, busy hotplug delivery and prior permission/context controls covered | Locally tested |
 | Correctness Ruff E4/E7/E9/F | All checks passed | Locally tested |
 | Existing venv dependency audit | pip check still reports openwakeword 0.6.0 requires missing tflite-runtime | Unresolved pre-existing optional-backend gap; selected RE/Whisper wake path separate |
@@ -21,7 +24,7 @@ remains a preview prototype; no ISO/VM or production readiness claim follows.
 | Whitespace | git diff --check passed | Locally tested |
 | Harmless namespace diagnostic | no_new_privs true, root read-only, physical NVMe node and D-Bus paths absent | Limited local smoke |
 | Existing source/venv provenance | Editable checkout, installed Qt, four native entry points/desktop launchers confirmed | Locally inspected |
-| Native blue hologram | Earlier temporary nine-page xcb greeting passed; final retries interrupted by window closure before reply, not counted as passes. Separate tool-free core greeting passed in 4.521s. Companion visible in temporary Qt status. Ordinary resident companion gracefully reloaded with saved blue preference | Limited native smoke; physical appearance/monitor acceptance pending |
+| Native blue hologram | Fresh temporary nine-page xcb greeting passes after the frozen 1290-test run: companion visible and reply received. Earlier interrupted attempts remain historical failures to complete. | Limited native smoke; resident appearance/monitor acceptance pending |
 | NVIDIA memory | RTX 4060 Laptop, driver 615.78.08, 8188 MiB total; 4707 MiB max observed in 25 samples during one native greeting | Sampled workload only; concurrent voice/peak budget pending |
 | GitHub MCP | Verified official v2.0.2; exact ai-os repo opt-in. Protocol reads and local model-to-read smoke passed in 2.00s; existing Codex connector metadata read passed | Read-only, ephemeral; write capability not implemented |
 | Model style/language | Local synthetic display reaction follows persona; explicit consciousness question answered honestly; en/hi replies tested | Limited model smoke; broad quality/latency/GPU peak pending |

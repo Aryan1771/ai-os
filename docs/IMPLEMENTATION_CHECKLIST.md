@@ -1,12 +1,18 @@
 # REgenOS implementation and Arch verification audit
 
-Latest 2026-10-20 incremental evidence: **1150 local tests passed in 11.92s**;
-listener rejection recovery and privacy-safe guided stage timings are implemented.
-Separately approved core restart passes with unchanged config/listening off.
-The owner installed the compact 144×48 GDM logo; file/key readback passes, physical
-appearance remains pending. Elevated inspection reports current UKI evidence and
-the missing known fallback path, not a verified recovery boot. Hosted assertions
-pass but Qt shutdown exits 139; controlled diagnostics remain unresolved. These
+Latest 2026-10-21 evidence: **1290 local tests passed in 16.64s**, normal exit;
+protected no-fallback input routing, cancellable enrollment checks, original
+planner deadlines and isolated command bootstrap are implemented. Test-only Qt
+deferred ownership is repaired; supported hosted CI for `3132e4a` succeeds.
+Native nine-page Settings/temporary-companion/local-reply smoke passes.
+Separately approved core restart loads these repairs with unchanged config and
+listening/wake/filter off; voice readiness has no blockers.
+The owner installed the compact 144×48 GDM logo; file/key readback passes and the
+owner confirms the password-field layout is usable. Other display/scaling cases
+are untested. Elevated inspection reports current UKI evidence and
+the missing known fallback path, not a verified recovery boot. The matching-size
+static UKI BMP/manifest passes 20 source tests; no host boot image changed.
+The excluded Qt 6.12 teardown interaction remains unresolved. These
 results close no untested hardware/security/ISO acceptance item. See
 [CHECKPOINT_PROGRESS](CHECKPOINT_PROGRESS.md) for current gates; counts below are
 historical.

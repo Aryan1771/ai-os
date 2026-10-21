@@ -1,12 +1,19 @@
 # REgenOS Feature Checklist
 
-Latest incremental source suite: **1150 passed in 11.92s**, including six optional
-Plymouth interpreter checks using the pinned external source subset. Guided voice
-diagnostics now separate ending-pause/capture/STT/filter/synthesis/playback timing
-without persistent logs or changing saved preferences. No physical voice test or
-latency improvement is claimed. Hosted assertions pass but Qt teardown exits 139;
-the controlled version-comparison CI run is pending. See
-[VOICE_STAGE_TIMINGS](VOICE_STAGE_TIMINGS.md) and [CI_VALIDATION](CI_VALIDATION.md).
+Latest frozen source suite (2026-10-21): **1290 passed in 16.64s**, normal exit,
+including six optional pinned Plymouth interpreter checks. New protected input
+routing, cancellable enrollment discovery, planner deadlines and isolated command
+bootstrap are source-tested and loaded by the separately approved core restart.
+Config bytes remain unchanged and listening/wake/filter remain off. Native xcb
+Settings/temporary-companion/local-reply smoke passes. Supported hosted CI passes
+the Qt test-fixture repair `3132e4a` and artwork revision `7d5b138`.
+No physical voice accuracy or latency improvement is claimed. See
+[CHECKPOINT_PROGRESS](CHECKPOINT_PROGRESS.md) and [CI_VALIDATION](CI_VALIDATION.md).
+
+Static landscape UKI artwork and manifest generation pass 20 isolated-process
+tests and a decoded preview. The existing boot UKI is untouched; active route,
+recovery, firmware rendering and activation approval remain pending. Real voice,
+Hindi, hardware, context/confinement and ISO acceptance are still separate gates.
 
 Incremental listener recovery after `4ec0150`: **39 focused synthetic tests pass**,
 including 14 new regressions. Expected capture/transcription rejection now re-arms
@@ -14,7 +21,8 @@ the existing listener without a supervisor restart; broken transports still fail
 closed. No microphone, model/configuration or service change occurred. This does
 not fix Hindi accuracy. The owner has now applied the compact GDM correction:
 four files, 144×48 PNG/hash and compiled GDM logo-key readback pass, as do 33 installer
-regressions. Physical password-field/scaling acceptance is still pending. See
+regressions. The owner confirms the corrected password-field layout is usable;
+additional display/scaling cases remain untested. See
 [checkpoint progress](CHECKPOINT_PROGRESS.md).
 
 2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and

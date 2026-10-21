@@ -162,10 +162,13 @@ The 33 installer regressions pass. An earlier invocation used the nonexistent
 `tests/test_branding_installer.py`; no tests ran until the filename was corrected.
 Earlier unattended/native authentication attempts made no changes.
 
-On the next owner-initiated normal login, verify the password field,
-masked input, error/retry text, recovery/accessibility controls and compact logo
-remain visible. Repeat on the relevant displays at the saved normal/high-DPI
-scales. Source checks and file hashes cannot substitute for this physical result.
-Record the owner's result, including failures, before marking login appearance
-accepted. Boot still displaying Arch is a separate pending Plymouth/boot-stack
-integration task; this correction makes no initramfs, bootloader or disk change.
+On 2026-10-21 the owner answered **“Yes, the layout is usable”** when asked
+whether the compact logo leaves the password field unobstructed. This accepts
+that reported layout on the tested login configuration, separately from the
+source/hash readback. No password, screenshot or private login data was collected,
+and no logout or GDM restart was forced.
+
+Other displays/high-DPI scales, error/retry and recovery/accessibility controls
+have not received separate physical acceptance. Boot still displaying Arch is a
+separate pending UKI/boot-stack integration task; this correction makes no
+initramfs, bootloader or disk change. See [UKI_SPLASH_PROPOSAL](UKI_SPLASH_PROPOSAL.md).

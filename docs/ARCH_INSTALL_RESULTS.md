@@ -1,5 +1,21 @@
 # Current runtime inspection — 2026-10-16
 
+2026-10-21 current checkpoint: **1290 frozen tests pass in 16.64s**, with normal
+exit; correctness lint/whitespace pass. Native xcb check passes nine Settings
+pages, visible temporary companion and a local Ollama greeting. Owner-approved
+restart of only `ai-os.service` loads the microphone-routing, planner-deadline and
+command-bootstrap fixes: active/running, exit0, NRestarts0, configuration bytes
+unchanged; listening/wake/filter off and voice readiness unblocked. No microphone
+or screen capture occurred. Supported hosted fixture-repair CI passes.
+
+Landscape UKI artwork is generated/decoded only in temporary staging; no host
+boot image changed. Owner UKI metadata/preset evidence and the missing known
+fallback do not establish independent recovery. Exact current commands and
+remaining physical/approval gates are in [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md)
+and [CHECKPOINT_PROGRESS](CHECKPOINT_PROGRESS.md). No reinstall, ISO build, VM,
+disk write, artifact signing or release publication occurred. Earlier records
+below retain their original dates and limitations.
+
 2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
 whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native
 nine-page greeting and six-page temporary onboarding previews passed; final UI

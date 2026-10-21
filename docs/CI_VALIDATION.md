@@ -130,7 +130,17 @@ cleanup. Both reduced sequences pass after correction. A final frozen-source
 suite passes **1290 tests in 16.64s**, with normal exit, including six explicitly
 supplied pinned Plymouth interpreter tests and the following boot-artwork source
 checkpoint. Correctness lint and whitespace checks pass. A hosted rerun must
-still establish the repaired revision's remote acceptance.
+still establish later revisions' remote acceptance.
+
+[Run 39606303461](https://github.com/Aryan1771/ai-os/actions/runs/39606303461)
+for the fixture repair `3132e4a` completes successfully under Python 3.12 /
+PySide6 6.11.2. Its Python, historical C++ and installer syntax steps all pass.
+This closes the demonstrated fixture regression for that revision; it does not
+resolve the distinct excluded-6.12 interaction or accept later source changes.
+
+The subsequent source-artwork revision `7d5b138` also completes successfully:
+[run 39606763037](https://github.com/Aryan1771/ai-os/actions/runs/39606763037).
+This is required hosted source validation, not a host boot or VM test.
 
 ## Reproduction and local evidence
 

@@ -6,18 +6,20 @@
 below. An open acceptance item does not mean its implementation is missing.
 Historical C++ requirements are superseded by the supported Python/PySide6 apps.
 
-The latest incremental source checkpoint passed **1150 tests**; the earlier 11/11
-fixed local model probes executed no probe actions. This does not accept real microphone
+The latest frozen source checkpoint passed **1290 tests in 16.64s**, normal exit;
+native Settings/temporary-companion/local-reply smoke and the approved core reload
+pass with unchanged config/listening off. The earlier 11/11 fixed local model
+probes executed no probe actions. This does not accept real microphone
 quality, login appearance, recovery, an installer or a distribution. There is
 **no built/accepted preview ISO, final ISO path/hash or VM installation result**.
 
 ## First priorities
 
-1. **Restore a usable login layout.** The owner reports the installed square GDM
-   logo was oversized and hid the password field. The approved 144×48 landscape
-   repair is installed with four-file/compiled-key readback; the owner must confirm login controls remain visible at the
-   actual resolutions/scales. Installed hashes/dconf readback did not pass this
-   visual check. See [branding and rollback](REGENOS_BRANDING_PROPOSAL.md).
+1. **Retain the accepted compact login layout.** The approved 144×48 landscape
+   repair passes four-file/key readback and the owner now confirms that the
+   password field is unobstructed and layout usable. Other display/scaling,
+   error/retry and accessibility cases remain untested. See
+   [LOGIN_LOGO_FIX](LOGIN_LOGO_FIX.md).
 2. **Accept the real voice loop and improve Hindi.** CUDA Whisper is selected with
    backup, but the saved base model rejects Hindi and small remains inaccurate
    on four synthetic Hindi sentences. Use explicit guided Record checks, measure
@@ -123,7 +125,7 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A066, A067 | Hardening/AppArmor/firewall/scanner templates exist; reviewed installed enforcement, denied-write tests and rollback remain, not blanket script execution. | Source, Approval |
 | A068 | Bounded data-only avatar rendering/native UI exists; retain hostile-input/privacy review and ensure no future model code/URL renderer is introduced. | Source |
 | A069 | Independent daemon/settings/approval/user-data trust separation is absent; design authenticated IPC, identities and a threat model. | Source, Approval |
-| A070, A071 | Exact diagnostics and Bubblewrap-backed broad grants are implemented. Cwd/interpreter-environment bootstrap shadowing is repaired and passes 79 focused regressions; resident reload is pending. Broader independent argument-policy/confinement/adversarial audit remains. Same-user access is not isolation from private files. | Source, Owner |
+| A070, A071 | Exact diagnostics and Bubblewrap-backed broad grants are implemented. Cwd/interpreter-environment bootstrap shadowing is repaired, passes 79 focused regressions and is loaded by the approved restart. Broader independent argument-policy/confinement/adversarial audit remains. Same-user access is not isolation from private files. | Source, Owner |
 | A072 | System-wide domain-only egress is absent. Choose and review a real enforcement design; UFW's generic HTTPS allowance is not it. Preserve the development connection/recovery. | Source, Approval |
 | A073 | Audited active AppArmor, seccomp, dedicated identity and secure secrets integration are incomplete; templates are not installed proof. | Source, Approval |
 | A074 | Verified noexec temporary/cache policy is absent; propose exact compatible changes and rollback before any mount policy change. | Approval, Owner |
@@ -139,8 +141,8 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A080 | Cooperative job state exists; a durable daemon scheduler/recovery system does not. | Source |
 | A081 | Optional Hyprland listing/typing exists; GNOME is the real session. Validate only explicitly selected compositor adapters; do not imply general UI control. | Owner; Source for supported adapters |
 | A082 | Three owner-approved GNOME Super+Alt shortcuts passed readback; physically test Settings/Chat/Companion and conflicts. Other desktop bindings need per-session acceptance/explicit scope. | Owner; Approval for additional changes |
-| A083 | Source art/photo exists; resolve oversized login logo first, verify small/large readability and document redistribution permission/licenses for every bundled asset. | Source, Owner |
-| A084 | Approved desktop/GDM stages installed nine files with matching hashes and compiled defaults. Visual login failed owner acceptance; wallpaper/lock/scaling/new-user checks remain. Do not restart GDM to preview. | Owner; Approval for changes outside approved repair |
+| A083 | Source art/photo and compact wordmark exist; owner accepts corrected login password-field layout. Other small/large readability and redistribution permission/licenses for every bundled asset remain. | Source, Owner |
+| A084 | Approved desktop/GDM payloads match source and compiled defaults. Corrected login layout is owner-accepted; wallpaper/lock/additional scaling/new-user checks remain. Do not restart GDM to preview. | Owner; Approval for changes outside approved repair |
 | A085 | Boot theme/helper and source-only landscape UKI BMP/manifest exist; 20 artifact tests and decoded preview pass. Owner metadata/preset evidence supports Arch's embedded splash as the startup image. Active boot route/recovery, disposable-VM build/render and exact host generation/copy/activation approval remain. Static UKI artwork does not require Plymouth. | Source, Owner, Approval |
 | A086 | Opt-in localized device speech is implemented; physically test first/repeated/improved monitor reactions. Autonomous AI job scheduling is still missing. | Owner; Source for scheduling |
 | A087 | Opt-in OCR/AT-SPI/application metadata exist; arbitrary visual/UI navigation, hidden-program understanding and a full vision/action pipeline do not. Any future adapter needs explicit sensors, lock/revoke checks and bounded actions. | Source, Owner; broad promise Deferred |
@@ -155,7 +157,7 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A091, A092 | Staged scripts and native installation exist; validate fresh supported target installation/upgrades with production paths and no Hyprland dependency. | Source; VM acceptance |
 | A093, A094 | Archiso additions/Calamares skeleton are not a maintained image pipeline or installer. Complete the architecture and implementation gates below first. | Source, Approval |
 | A095 | Current Python tests supersede historical Windows/C++ counts; run final applicable native/cursor/installation checks. Upstream Plymouth fixture tests require reviewed pinned source and are not real graphics/boot tests. | Source, Owner |
-| A096 | Supported Python 3.12/PySide6 6.11.2 hosted CI passes through `945f3fc`, including normal teardown. Later changes need their own result; excluded 6.12 interaction remains unresolved. Historical C++ CI is not hardware acceptance. | Source |
+| A096 | Supported Python 3.12/PySide6 6.11.2 hosted CI passes through `7d5b138`, including the enrollment-fixture correction and normal teardown. Later changes need their own result; excluded 6.12 interaction remains unresolved. Historical C++ CI is not hardware acceptance. | Source |
 | A097 | Pinned reviewed Calamares package/modules, clean target root, runtime packages, live-only launcher and complete version-sensitive integration are missing/unvalidated. | Source, Approval; VM acceptance |
 | A098 | Reproducible preview/build manifest, installed target, boot/Secure Boot scope, update/rollback and recovery plan are incomplete. A release is not yet produced. | Source, Approval; VM acceptance |
 | A099 | Complete the final-hash disposable-VM failure/partition/encryption/boot matrix below. Historical spare-drive wording authorizes no physical-disk writes; current scope is disposable virtual disks only. | Source; approved VM resources; Owner for nondestructive hardware checks |

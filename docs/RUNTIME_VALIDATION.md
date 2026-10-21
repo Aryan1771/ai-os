@@ -1,17 +1,36 @@
 # REgenOS: installed runtime, latency and continuity
 
-2026-10-20 incremental source checkpoints: **1150 passed in 11.92s**, including
-the six explicitly supplied pinned Plymouth interpreter checks. Rejected voice
-utterances now recover without killing the listener; guided checks expose
-temporary, numeric per-stage timings. No new actual recording/model/playback or
-service restart was performed for these changes. See
-[listener recovery](VOICE_LISTENER_RECOVERY.md) and [timing definitions](VOICE_STAGE_TIMINGS.md).
-Hosted Python assertions pass but interpreter teardown exits 139; the CI-only
-PySide comparison remains unresolved, not a passed remote run.
+2026-10-21 frozen combined source: **1290 passed in 16.64s**, normal exit,
+including six explicitly supplied pinned Plymouth interpreter checks. Input
+selection/enrollment is asynchronous and no-fallback; planner dispatch respects
+its original deadline; the broad-command bootstrap excludes cwd/PYTHONPATH.
+Correctness lint and whitespace pass. A test-only deferred-Qt-owner crash was
+reproduced and fixed; hosted supported-version run for `3132e4a` succeeds.
+The excluded 6.12 teardown interaction remains unresolved. See
+[input routing](AUDIO_INPUT_SELECTION.md), [deadlines](PLANNER_DEADLINES.md),
+[command bootstrap](COMMAND_CONFINEMENT.md) and [CI evidence](CI_VALIDATION.md).
+
+After automated checks, the native xcb smoke passes nine Settings pages,
+visible temporary companion and a local Ollama reply. The owner-approved restart
+of only `ai-os.service` loads the new runtime: active/running, exit0, NRestarts0,
+config bytes unchanged; listening/wake/filter off and voice readiness unblocked.
+No microphone, screen capture or audible speech check was performed.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 REGENOS_PLYMOUTH_SOURCE_DIR="$HOME/.ai_os/build/plymouth-script-check-26.134.222" ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q --tb=short
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os tests scripts/render_branding.py scripts/inspect_boot_branding.py
+git diff --check
+~/.ai_os/venv/bin/python scripts/verify_native_runtime.py
+```
+
+The optional external interpreter fixture must already be explicitly provisioned;
+tests never fetch it. The native check opens temporary windows and requests one
+local synthetic greeting; it is not a real voice or resident-appearance test.
 
 Owner-executed compact GDM replacement plus dconf update passes four-file source/
-hash/mode and compiled key readback. PNG is 144×48. Physical password-field/scaling
-acceptance remains pending; no GDM restart or forced lock/logout was performed.
+hash/mode and compiled key readback. PNG is 144×48. The owner confirms the
+password-field layout is usable on the reported configuration; additional
+display/scaling cases remain untested. No GDM restart or forced lock/logout occurred.
 
 2026-10-20 source checkpoint: **1080 passed in 12.63s**, correctness lint and
 whitespace clean. Local fixed model checks **11/11**, zero tools executed. Earlier native

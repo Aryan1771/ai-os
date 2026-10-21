@@ -1,12 +1,12 @@
 # REgenOS preview ISO acceptance
 
-2026-10-20: **No ISO built or accepted.** There is no final artifact path/SHA256,
+2026-10-21: **No ISO built or accepted.** There is no final artifact path/SHA256,
 build manifest or VM result. Runtime source tests and graphical setup previews
 are not installer or distribution acceptance.
 
 | Gate | Status |
 | --- | --- |
-| Runtime quality/security | 1080 automated regressions pass (six use separately reviewed upstream Plymouth source); Hindi, personal voice and physical interaction acceptance remain open |
+| Runtime quality/security | 1290 automated regressions pass with normal exit (six use separately reviewed upstream Plymouth source); limited native reply and approved core restart pass. Hindi, personal voice, broader confinement/context and physical interaction acceptance remain open |
 | Release architecture (ARCH_HANDOFF Prompt F) | Awaiting concrete reviewed proposal and owner approval before impactful packaging |
 | Clean target root and pinned package source/signing | Not implemented/validated |
 | Calamares exact package/modules and rootfs image | Skeleton only; no install-rootfs.squashfs |

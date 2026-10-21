@@ -1,6 +1,32 @@
-# REgenOS handoff — 2026-10-20
+# REgenOS handoff — 2026-10-21
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
+
+## 2026-10-21 current runtime acceptance
+
+After final frozen automated checks (**1290 passed in 16.64s**, normal exit;
+correctness lint/whitespace clean), `scripts/verify_native_runtime.py` passed:
+nine Settings pages, xcb, visible temporary companion and completed local Ollama
+reply. It used temporary settings/history with speech/listening off. No personal
+microphone, screen capture, saved preference or private conversation was used.
+
+The owner then explicitly approved restarting only `ai-os.service` for the new
+input-routing, deadline and command-bootstrap fixes. Approved restart/fresh
+readback passed: active/running, ExecMainStatus 0, NRestarts 0, configuration bytes
+unchanged. Listening, wake activation and speaker filtering remain false; voice
+readiness has no blockers. This supersedes earlier pending-reload wording below.
+No other service changed. Readiness is not personal microphone/language acceptance.
+
+Hosted CI for the Qt fixture repair `3132e4a` and artwork `7d5b138` completes
+successfully, including normal Python exit. Boot artwork is prepared, not installed.
+The owner confirms the compact login layout is usable and the password field is
+unobstructed; other scale/display cases are untested. Owner English guided voice
+remains **not accepted**: controls are now visible in the separately launched
+diagnostic, but no correct-transcript/audible-reply result has been confirmed.
+An accurately staged diagnostic UI/early recorder-close repair is in progress.
+Hindi, concurrent VRAM, real grant/revoke,
+context lock/revoke and monitor/hardware acceptance remain open. Recovery is not
+boot-tested. No ISO build, VM installation, artifact signing or release occurred.
 
 ## 2026-10-21 checkpoint: staged UKI artwork
 
