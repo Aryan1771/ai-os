@@ -2,6 +2,23 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: explicit microphone routing
+
+Native Voice settings now has a protected input selector and explicit asynchronous
+Refresh. Stable selected inputs are shared by continuous, one-shot/guided and
+enrollment capture; missing inputs fail visibly without automatic fallback.
+Enrollment's selected-input check remains cancellable and rechecks consent and
+configuration before capture, with no second blocking scan on the GUI thread.
+The default microphone path, 16 kHz mono and five-second ending pause remain.
+
+Root independently verified **223 focused regressions in 1.70s** and correctness
+lint after reviewing the final source. The new suite has 64 fake-only cases,
+including pending-event-loop, cancel, target/configuration drift and failure
+coverage. No actual capture, input inventory, personal setting, model, service or
+system-audio change occurred. Resident core has not been restarted for this or
+the deadline repair. See [AUDIO_INPUT_SELECTION](AUDIO_INPUT_SELECTION.md).
+Calibration/noise/VAD and physical routing/reconnect acceptance remain open.
+
 ## 2026-10-21 checkpoint: owner UKI report and hosted results
 
 The owner supplied the focused elevated read-only UKI report. The fixed known

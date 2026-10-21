@@ -22,6 +22,7 @@
   "voice_command_seconds": 8,
   "voice_silence_seconds": 5,
   "voice_max_utterance_seconds": 120,
+  "voice_input_target": "",
   "sandbox_lock_settings": true,
   "avatar_enabled": true,
   "avatar_corner": "bottom-right",

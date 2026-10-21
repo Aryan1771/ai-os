@@ -81,7 +81,7 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A030 | User daemon lifecycle and approved restart pass; daily-use restart/recovery/offline behavior still need acceptance. | Owner; Approval for new service changes |
 | A031, A032 | Read-only hardware/process reports and volume/brightness adapters exist; validate actual supported devices and intended effects through native controls. | Owner |
 | A033, A034, A035 | Bounded shell-free commands and fail-closed consent exist; continue hostile argument/race testing and independent review, including background denial and process termination. | Source, Owner |
-| A036 | Three-step result-grounded loop, limited argument repair, cancellation and steering exist. Durable recovery, general retry policy, better context/token budgeting and broad task acceptance remain incomplete. | Source, Owner |
+| A036 | Three-step result-grounded loop, limited argument repair, cancellation and steering exist. Original-deadline checks now prevent stale new dispatch and preserve completed results. Durable recovery, general retry policy, better context/token budgeting and broad task acceptance remain incomplete. | Source, Owner |
 | A037 | Python chat/history/speech replaces the historical C++ conversation claim; accept keyboard, current-turn steering, long replies and actual spoken interaction. | Owner; Source for stale docs |
 | A038 | Exact native review and expiring background inbox exist. A separate trusted privileged broker/identity is not implemented; same-account dialogs are not OS-level authorization. | Source, Approval |
 | A039 | Proprietary noncompatible provider adapters are absent and require separate scope. | Deferred |
@@ -96,7 +96,7 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A044 | Temporary audio cleanup exists; verify cancellation/error paths leave no recordings during real use without publishing private samples. | Owner, Source |
 | A045, A046, A047 | Piper queue, speaking animation and feedback suppression exist; accept audible current-turn replies, mouth/waveform timing, no self-trigger and coordinated hardware speech. | Owner |
 | A048 | Native asset/listening/service controls exist; accept path errors, responsiveness and useful failures. Service changes remain explicitly approved actions. | Owner, Approval |
-| A049 | Explicit device selection/calibration, hotplug/noise recovery and laptop-specific VAD are incomplete. | Source, Owner |
+| A049 | Protected explicit input selection, cancellable metadata checks and shared no-fallback capture routing pass 223 focused tests. Calibration, physical hotplug/noise recovery and laptop-specific VAD remain incomplete. | Source, Owner |
 | A050 | Full acoustic echo cancellation, reliable barge-in and streaming STT/TTS are absent; speaking-flag suppression is not AEC. | Source, Owner; scope decision |
 | A051 | Existing approved assets are preserved; a verified offline asset manifest/provisioning/download manager with licenses, retries and missing-asset handling is absent. | Source; separate download approval |
 | A052, A053 | Sample-rate-aware bounded playback, custom wake-file controls and local tests exist; real voice quality, custom wake thresholds, timeout/stall handling and audibility need acceptance. Custom phrases need actual trained models. | Owner, Source |
@@ -155,7 +155,7 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A091, A092 | Staged scripts and native installation exist; validate fresh supported target installation/upgrades with production paths and no Hyprland dependency. | Source; VM acceptance |
 | A093, A094 | Archiso additions/Calamares skeleton are not a maintained image pipeline or installer. Complete the architecture and implementation gates below first. | Source, Approval |
 | A095 | Current Python tests supersede historical Windows/C++ counts; run final applicable native/cursor/installation checks. Upstream Plymouth fixture tests require reviewed pinned source and are not real graphics/boot tests. | Source, Owner |
-| A096 | CI sources exist; obtain current remote CI results and maintain checks for the supported Python runtime. Historical C++ CI is not hardware acceptance. | Source |
+| A096 | Supported Python 3.12/PySide6 6.11.2 hosted CI passes through `945f3fc`, including normal teardown. Later changes need their own result; excluded 6.12 interaction remains unresolved. Historical C++ CI is not hardware acceptance. | Source |
 | A097 | Pinned reviewed Calamares package/modules, clean target root, runtime packages, live-only launcher and complete version-sensitive integration are missing/unvalidated. | Source, Approval; VM acceptance |
 | A098 | Reproducible preview/build manifest, installed target, boot/Secure Boot scope, update/rollback and recovery plan are incomplete. A release is not yet produced. | Source, Approval; VM acceptance |
 | A099 | Complete the final-hash disposable-VM failure/partition/encryption/boot matrix below. Historical spare-drive wording authorizes no physical-disk writes; current scope is disposable virtual disks only. | Source; approved VM resources; Owner for nondestructive hardware checks |

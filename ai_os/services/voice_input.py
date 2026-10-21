@@ -13,6 +13,7 @@ from ai_os.voice_timings import elapsed_timing
 
 
 def capture_once(config, *, return_result=False, metrics=None):
+    from ai_os.audio_input import recorder_arguments
     from ai_os.speaker_filter import filter_utterance
     match_language = getattr(config, "reply_language_mode", "selected") == "match"
     transcriber = WhisperCppTranscriber(config.whisper_cli, config.whisper_model,
@@ -31,8 +32,8 @@ def capture_once(config, *, return_result=False, metrics=None):
             speaker_filter=lambda path: filter_utterance(path, config.home),
         )
         listener._process = subprocess.Popen(
-            ["/usr/bin/pw-record", "--raw", "--format", "s16", "--rate", "16000",
-             "--channels", "1", "-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            ["/usr/bin/pw-record", *recorder_arguments(getattr(config, "voice_input_target", ""))],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL, bufsize=0, shell=False,
         )
         waiting_started = time.monotonic()

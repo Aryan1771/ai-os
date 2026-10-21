@@ -71,6 +71,9 @@ def report(home: Path = AI_OS_HOME):
         "screen_sharing_enabled": raw["screen_context_enabled"],
         "app_usage_memory_enabled": raw["activity_memory_enabled"],
         "pipewire_source_query": "unavailable",
+        "microphone_selection": "explicit" if config.voice_input_target else "system_default",
+        "selected_input_status": "not_checked" if config.voice_input_target else "system_default",
+        "microphone_mute_check": "not_checked",
         "core_service": "unavailable",
         "local_model_endpoint": "unavailable",
     }
@@ -91,6 +94,17 @@ def report(home: Path = AI_OS_HOME):
         ("pipewire_source_query", ["/usr/bin/wpctl", "get-volume", "@DEFAULT_AUDIO_SOURCE@"]),
         ("core_service", ["/usr/bin/systemctl", "--user", "is-active", "ai-os.service"]),
     ):
+        if key == "pipewire_source_query" and config.voice_input_target:
+            from ai_os.audio_input import AudioInputError, discover_input_devices, validate_input_target
+            try:
+                selected = validate_input_target(config.voice_input_target)
+                present = selected in {item.target for item in discover_input_devices()}
+                result[key] = "ready" if present else "unavailable"
+                result["selected_input_status"] = "present" if present else "unavailable"
+            except (ValueError, AudioInputError):
+                result["selected_input_status"] = "unavailable"
+            result["microphone_mute_check"] = "not_checked_for_explicit_input"
+            continue
         try:
             process = subprocess.run(command, capture_output=True, text=True,
                                      timeout=2, shell=False, stdin=subprocess.DEVNULL)
@@ -100,6 +114,7 @@ def report(home: Path = AI_OS_HOME):
                 result[key] = "ready" if process.returncode == 0 else "unavailable"
                 if process.returncode == 0:
                     result["microphone_muted"] = "[MUTED]" in process.stdout
+                    result["microphone_mute_check"] = "default_source_only"
         except (OSError, subprocess.SubprocessError):
             pass
     try:

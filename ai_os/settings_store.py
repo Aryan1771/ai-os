@@ -15,8 +15,9 @@ from ai_os.config import AI_OS_HOME, DEFAULT_CONFIG, atomic_json, load_raw_confi
 from ai_os.cursor_theme import apply_preferences
 
 EDITABLE_KEYS = set(DEFAULT_CONFIG)
-ALWAYS_CONFIRM_KEYS = {"command_access", "speaker_recognition_enabled", "speaker_model", "speaker_threshold"}
+ALWAYS_CONFIRM_KEYS = {"command_access", "speaker_recognition_enabled", "speaker_model", "speaker_threshold", "voice_input_target"}
 PROTECTED_KEYS = {
+    "voice_input_target",
     "speaker_recognition_enabled",
     "speaker_model",
     "speaker_threshold",
@@ -103,6 +104,9 @@ def validate_setting(key: str, value: Any) -> Any:
     if key not in EDITABLE_KEYS:
         raise ValueError(f"Unsupported setting: {key}")
     default = DEFAULT_CONFIG[key]
+    if key == "voice_input_target":
+        from ai_os.audio_input import validate_input_target
+        return validate_input_target(value)
     if isinstance(default, bool):
         if type(value) is not bool:
             raise ValueError(f"{key} must be a checkbox value.")

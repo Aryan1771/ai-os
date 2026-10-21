@@ -41,6 +41,7 @@ class AlwaysListeningService:
         require_wake_word: bool = True,
         speaker_filter: Callable[[Path], tuple[bool, str]] | None = None,
         on_error: Callable[[Exception], None] | None = None,
+        input_target: str = "",
     ) -> None:
         self.run_dir = run_dir
         self.require_wake_word = require_wake_word
@@ -59,6 +60,7 @@ class AlwaysListeningService:
         self.silence_seconds = max(1.0, min(10.0, float(silence_seconds)))
         self.max_utterance_seconds = max(10, min(120, int(max_utterance_seconds)))
         self.sample_rate = sample_rate
+        self.input_target = input_target
         self.on_activity = on_activity or (lambda _phase: None)
         self.playback_active = playback_active or (lambda: False)
         self._stop = threading.Event()
@@ -126,18 +128,10 @@ class AlwaysListeningService:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         chunk_samples = 1_280
         chunk_bytes = chunk_samples * 2
+        from ai_os.audio_input import recorder_arguments
         self._process = subprocess.Popen(
-            [
-                "pw-record",
-                "--raw",
-                "--format",
-                "s16",
-                "--rate",
-                str(self.sample_rate),
-                "--channels",
-                "1",
-                "-",
-            ],
+            ["pw-record", *recorder_arguments(self.input_target, sample_rate=self.sample_rate)],
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             bufsize=0,

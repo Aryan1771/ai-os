@@ -48,6 +48,8 @@ class SpeakerSetupDialog(QDialog):
         self.temporary = None
         self.audio_path = None
         self.speech_guard = None
+        self.pending_input_config = None
+        self.input_check_bytes = 0
         self.setWindowTitle("REgenOS — local voice enrollment")
         self.resize(680, 580)
         root = QVBoxLayout(self)
@@ -112,6 +114,9 @@ class SpeakerSetupDialog(QDialog):
         self.worker_timer = QTimer(self)
         self.worker_timer.setSingleShot(True)
         self.worker_timer.timeout.connect(self.worker_timeout)
+        self.input_check_timer = QTimer(self)
+        self.input_check_timer.setSingleShot(True)
+        self.input_check_timer.timeout.connect(self.input_check_timeout)
         self.restart()
 
     def restart(self):
@@ -175,6 +180,100 @@ class SpeakerSetupDialog(QDialog):
         self.speech_guard = guard
         self.raw.clear()
         self.capture_failed = False
+        try:
+            from ai_os.audio_input import recorder_arguments, validate_input_target
+            config = load_raw_config(self.home)
+            target = validate_input_target(config["voice_input_target"])
+            if target:
+                self.pending_input_config = self.input_config_signature(config)
+                self.start_input_check()
+            else:
+                self.start_capture(recorder_arguments())
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.status.setText(str(exc) if getattr(exc, "code", "") == "input_unavailable" else
+                                "Could not prepare microphone recording. Recording is stopped; no profile was changed. Check local runtime permissions, then retry.")
+            self.cleanup()
+            self.update_controls()
+
+    @staticmethod
+    def input_config_signature(config):
+        return tuple(config[key] for key in (
+            "voice_input_target", "speaker_model", "speaker_threshold",
+            "speaker_recognition_enabled", "always_listening_enabled",
+            "wake_word_enabled", "conversation_listening_enabled",
+        ))
+
+    def start_input_check(self):
+        from ai_os.audio_input import DISCOVERY_SECONDS, DUMP_ARGUMENTS, DUMP_PROGRAM
+        self.phase = "input_check"
+        self.output.clear()
+        self.input_check_bytes = 0
+        process = QProcess(self)
+        self.process = process
+        process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        process.readyReadStandardOutput.connect(lambda: self.read_input_check(process))
+        process.readyReadStandardError.connect(lambda: self.read_input_check(process, stderr=True))
+        process.errorOccurred.connect(lambda _error: self.fail_input_check(
+            process, "The selected microphone could not be checked. No recording started; no profile was changed."))
+        process.finished.connect(lambda code, status: self.input_check_finished(process, code, status))
+        self.status.setText("Checking the selected microphone… Microphone off. Cancel stops this check; no sample is recorded yet.")
+        self.input_check_timer.start(DISCOVERY_SECONDS * 1000)
+        self.update_controls()
+        process.start(DUMP_PROGRAM, DUMP_ARGUMENTS)
+
+    def read_input_check(self, process, *, stderr=False):
+        from ai_os.audio_input import MAX_DUMP_BYTES
+        if process is not self.process or self.phase != "input_check":
+            return
+        data = bytes(process.readAllStandardError() if stderr else process.readAllStandardOutput())
+        self.input_check_bytes += len(data)
+        if self.input_check_bytes > MAX_DUMP_BYTES:
+            self.fail_input_check(process, "Microphone discovery exceeded its size limit. No recording started; no profile was changed.")
+        elif not stderr:
+            self.output.extend(data)
+
+    def fail_input_check(self, process, message):
+        if process is not self.process or self.phase != "input_check":
+            return
+        self.status.setText(message)
+        self.cleanup()
+        self.update_controls()
+
+    def input_check_timeout(self):
+        if self.phase == "input_check" and self.process is not None:
+            self.fail_input_check(self.process,
+                                  "Microphone discovery timed out. No recording started; no profile was changed.")
+
+    def input_check_finished(self, process, code, exit_status):
+        from ai_os.audio_input import AudioInputError, parse_input_devices, recorder_arguments
+        if process is not self.process or self.phase != "input_check":
+            return
+        self.read_input_check(process)
+        self.read_input_check(process, stderr=True)
+        if process is not self.process:
+            return
+        self.input_check_timer.stop()
+        self.process = None
+        process.deleteLater()
+        try:
+            if code != 0 or exit_status != QProcess.ExitStatus.NormalExit:
+                raise AudioInputError("The selected microphone could not be checked. No recording started; no profile was changed.")
+            config = load_raw_config(self.home)
+            if (not self.consent.isChecked()
+                    or self.input_config_signature(config) != self.pending_input_config
+                    or self.signature() != self.model_signature):
+                raise AudioInputError("Voice settings or consent changed during the check. No recording started; review the settings, then press Record again.")
+            devices = parse_input_devices(bytes(self.output))
+            arguments = recorder_arguments(config["voice_input_target"], checked_inputs=devices)
+            self.output.clear()
+            self.start_capture(arguments)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.status.setText(str(exc) if isinstance(exc, AudioInputError) else
+                                "The selected microphone could not be checked. No recording started; no profile was changed.")
+            self.cleanup()
+            self.update_controls()
+
+    def start_capture(self, arguments):
         self.phase = "capture"
         try:
             self.temporary = tempfile.TemporaryDirectory(prefix="regenos-speaker-")
@@ -189,9 +288,10 @@ class SpeakerSetupDialog(QDialog):
             process.finished.connect(self.process_finished)
             self.status.setText("● Microphone recording — speak now. Recording stops in seven seconds. Cancel stops immediately.")
             process.start(shutil.which("pw-record") or "/usr/bin/pw-record",
-                          ["--raw", "--format", "s16", "--rate", "16000", "--channels", "1", "-"])
-        except (OSError, RuntimeError):
-            self.status.setText("Could not prepare microphone recording. Recording is stopped; no profile was changed. Check local runtime permissions, then retry.")
+                          arguments)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.status.setText(str(exc) if getattr(exc, "code", "") == "input_unavailable" else
+                                "Could not prepare microphone recording. Recording is stopped; no profile was changed. Check local runtime permissions, then retry.")
             self.cleanup()
             self.update_controls()
             return
@@ -248,6 +348,7 @@ class SpeakerSetupDialog(QDialog):
         self.capture_timer.stop()
         self.kill_timer.stop()
         self.worker_timer.stop()
+        self.input_check_timer.stop()
         if phase in ("capture", "capture_stopping"):
             if phase != "capture_stopping" or self.capture_failed or not 32000 <= len(self.raw) <= MAX_CAPTURE_BYTES:
                 self.status.setText("Microphone capture failed or ended too early. Check the input and retry.")
@@ -355,6 +456,7 @@ class SpeakerSetupDialog(QDialog):
         self.capture_timer.stop()
         self.kill_timer.stop()
         self.worker_timer.stop()
+        self.input_check_timer.stop()
         if self.process is not None:
             process = self.process
             self.process = None
@@ -364,6 +466,8 @@ class SpeakerSetupDialog(QDialog):
             process.deleteLater()
         self.raw.clear()
         self.output.clear()
+        self.pending_input_config = None
+        self.input_check_bytes = 0
         if self.temporary is not None:
             self.temporary.cleanup()
             self.temporary = None

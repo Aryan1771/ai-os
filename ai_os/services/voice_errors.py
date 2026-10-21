@@ -13,6 +13,7 @@ VOICE_MESSAGES = {
     "speaker_unavailable": "Speaker verification unavailable; no request submitted. Check local enrollment.",
     "speaker_timeout": "Speaker verification timed out; no request submitted. Check the local speaker model.",
     "voice_busy": "Another voice interaction is active. Please try again after it finishes.",
+    "input_unavailable": "The selected microphone is unavailable or cannot be checked. Reconnect it or use Refresh inputs in Voice settings. No request was submitted and no fallback microphone was selected.",
     "utterance_too_long": "Speech exceeded the maximum utterance duration before the ending pause. No request was submitted; please repeat in shorter parts.",
     "model_timeout": "Model reply timed out. Check local model load and context size.",
     "model_connection": "Cannot reach the configured model service. Check AI connection readiness.",

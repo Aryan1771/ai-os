@@ -40,6 +40,7 @@ class AiOsConfig:
     voice_command_seconds: int
     voice_silence_seconds: int
     voice_max_utterance_seconds: int
+    voice_input_target: str
     sandbox_lock_settings: bool
     avatar_enabled: bool
     avatar_corner: str
@@ -96,6 +97,7 @@ DEFAULT_CONFIG = {
     "voice_command_seconds": 8,
     "voice_silence_seconds": 5,
     "voice_max_utterance_seconds": 120,
+    "voice_input_target": "",
     "sandbox_lock_settings": True,
     "avatar_enabled": True,
     "avatar_corner": "bottom-right",
@@ -228,6 +230,7 @@ def load_config(home: Path = AI_OS_HOME) -> AiOsConfig:
         voice_command_seconds=max(2, min(30, int(raw["voice_command_seconds"]))),
         voice_silence_seconds=max(1, min(10, int(raw["voice_silence_seconds"]))),
         voice_max_utterance_seconds=max(10, min(120, int(raw["voice_max_utterance_seconds"]))),
+        voice_input_target=raw["voice_input_target"],
         sandbox_lock_settings=bool(raw["sandbox_lock_settings"]),
         avatar_enabled=bool(raw["avatar_enabled"]),
         avatar_corner=str(raw["avatar_corner"]),

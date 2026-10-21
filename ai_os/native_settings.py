@@ -8,7 +8,7 @@ import time
 from copy import deepcopy
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, QProcessEnvironment, Qt, QTimer
+from PySide6.QtCore import QProcess, QProcessEnvironment, QSignalBlocker, Qt, QTimer
 from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import (
     QApplication,
@@ -50,6 +50,14 @@ class SettingsWindow(QMainWindow):
         self.saved = load_raw_config(home)
         self.fields = {}
         self.service_process = None
+        self.input_scan_process = None
+        self.input_scan_timer = QTimer(self)
+        self.input_scan_timer.setSingleShot(True)
+        self.input_scan_timer.timeout.connect(self.audio_input_scan_timeout)
+        self.input_scan_output = bytearray()
+        self.input_scan_bytes = 0
+        self.input_scan_error = ""
+        self.discovered_input_targets = None
         self.setWindowTitle("REgenOS Settings")
         self.resize(1030, 760)
         self.setMinimumSize(780, 570)
@@ -425,6 +433,19 @@ class SettingsWindow(QMainWindow):
         identity_note = QLabel("Setup records only when you press Record and keeps a local speaker profile. Recordings are deleted after processing. Voice matching can be fooled by recordings or synthesis: it cannot approve commands, sudo, or login. Missing models or enrollment block requests while this filter is enabled.")
         identity_note.setWordWrap(True)
         form.addRow(identity_note)
+        choices = [("", "System default microphone")]
+        if self.saved["voice_input_target"]:
+            choices.append((self.saved["voice_input_target"], "Saved microphone — refresh to check"))
+        self.choice(form, "voice_input_target", "Microphone input", choices)
+        inputs = QHBoxLayout()
+        self.refresh_inputs_button = self.button(
+            "Refresh inputs", QStyle.StandardPixmap.SP_BrowserReload, self.refresh_audio_inputs)
+        inputs.addWidget(self.refresh_inputs_button)
+        self.input_device_status = QLabel("Inputs have not been checked. Refresh reads local device metadata only; it does not record or change the system default.")
+        self.input_device_status.setWordWrap(True)
+        self.input_device_status.setTextFormat(Qt.TextFormat.PlainText)
+        inputs.addWidget(self.input_device_status, 1)
+        form.addRow(inputs)
         self.check(form, "always_listening_enabled", "Enable microphone listening")
         self.check(form, "wake_word_enabled", "Require wake word")
         self.check(form, "conversation_listening_enabled", "Conversation listening without a wake word (captures nearby speech)")
@@ -803,6 +824,8 @@ class SettingsWindow(QMainWindow):
             if isinstance(control, QCheckBox):
                 control.setChecked(value)
             elif isinstance(control, QComboBox):
+                if key == "voice_input_target" and control.findData(value) < 0:
+                    control.addItem("Saved microphone — refresh to check", value)
                 control.setCurrentIndex(max(0, control.findData(value)))
             elif isinstance(control, (QSpinBox, QDoubleSpinBox)):
                 control.setValue(value)
@@ -949,6 +972,99 @@ class SettingsWindow(QMainWindow):
         self.status.style().unpolish(self.status)
         self.status.style().polish(self.status)
         return True
+
+    def refresh_audio_inputs(self):
+        """Explicit asynchronous metadata scan; opening Settings never runs it."""
+        from ai_os.audio_input import DISCOVERY_SECONDS, DUMP_ARGUMENTS, DUMP_PROGRAM
+        if self.input_scan_process is not None:
+            return
+        process = QProcess(self)
+        self.input_scan_process = process
+        self.input_scan_output.clear()
+        self.input_scan_bytes = 0
+        self.input_scan_error = ""
+        self.refresh_inputs_button.setEnabled(False)
+        self.input_device_status.setText("Checking microphone inputs… No recording is started.")
+        process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        process.readyReadStandardOutput.connect(lambda: self.read_audio_input_scan(process))
+        process.readyReadStandardError.connect(lambda: self.read_audio_input_scan(process, stderr=True))
+        process.finished.connect(lambda code, status: self.finish_audio_input_scan(process, code, status))
+        process.errorOccurred.connect(lambda _error: self.fail_audio_input_scan(
+            process, "Microphone inputs could not be read. Check PipeWire and try Refresh inputs again."))
+        self.input_scan_timer.start(DISCOVERY_SECONDS * 1000)
+        process.start(DUMP_PROGRAM, DUMP_ARGUMENTS)
+
+    def read_audio_input_scan(self, process, *, stderr=False):
+        from ai_os.audio_input import MAX_DUMP_BYTES
+        if process is not self.input_scan_process:
+            return
+        if self.input_scan_error:
+            return
+        data = bytes(process.readAllStandardError() if stderr else process.readAllStandardOutput())
+        self.input_scan_bytes += len(data)
+        if self.input_scan_bytes > MAX_DUMP_BYTES:
+            self.fail_audio_input_scan(process, "Microphone input discovery exceeded its size limit. No selection was changed.")
+        elif not stderr:
+            self.input_scan_output.extend(data)
+
+    def fail_audio_input_scan(self, process, message):
+        if process is not self.input_scan_process:
+            return
+        self.input_scan_error = self.input_scan_error or message
+        self.input_scan_timer.stop()
+        self.input_device_status.setText(self.input_scan_error)
+        if process.state() == QProcess.ProcessState.NotRunning:
+            self.finish_audio_input_scan(process, -1, QProcess.ExitStatus.CrashExit)
+        else:
+            process.kill()
+
+    def audio_input_scan_timeout(self):
+        if self.input_scan_process is not None:
+            self.fail_audio_input_scan(self.input_scan_process,
+                                       "Microphone input discovery timed out. No selection was changed.")
+
+    def finish_audio_input_scan(self, process, code, exit_status):
+        from ai_os.audio_input import AudioInputError, parse_input_devices
+        if process is not self.input_scan_process:
+            return
+        self.read_audio_input_scan(process)
+        self.read_audio_input_scan(process, stderr=True)
+        # FailedToStart or a size error can finish synchronously while draining.
+        if process is not self.input_scan_process:
+            return
+        try:
+            if self.input_scan_error:
+                return
+            if code != 0 or exit_status != QProcess.ExitStatus.NormalExit:
+                self.input_device_status.setText("Microphone inputs could not be read. Check PipeWire and try Refresh inputs again.")
+                return
+            devices = parse_input_devices(bytes(self.input_scan_output))
+            control = self.fields["voice_input_target"]
+            selected = control.currentData()
+            self.discovered_input_targets = {item.target for item in devices}
+            with QSignalBlocker(control):
+                control.clear()
+                control.addItem("System default microphone", "")
+                for item in devices:
+                    control.addItem(item.label, item.target)
+                    control.setItemData(control.count() - 1, item.target, Qt.ItemDataRole.ToolTipRole)
+                if selected and selected not in self.discovered_input_targets:
+                    control.addItem("Selected microphone unavailable — no fallback", selected)
+                control.setCurrentIndex(max(0, control.findData(selected)))
+            if selected and selected not in self.discovered_input_targets:
+                self.input_device_status.setText("Selected microphone is unavailable. Reconnect it or select another input and save. Recording will not fall back to another microphone.")
+            else:
+                self.input_device_status.setText(f"Found {len(devices)} microphone inputs. Choose an input and Save changes; recording and the system default remain unchanged.")
+            self.mark_unsaved()
+        except AudioInputError as exc:
+            self.input_device_status.setText(str(exc))
+        finally:
+            self.input_scan_timer.stop()
+            self.input_scan_process = None
+            self.input_scan_output.clear()
+            self.input_scan_bytes = 0
+            self.refresh_inputs_button.setEnabled(True)
+            process.deleteLater()
 
     def guided_voice_check(self):
         from ai_os.voice_diagnostics import create_dialog
@@ -1149,6 +1265,14 @@ class SettingsWindow(QMainWindow):
                 event.ignore()
                 return
         self.conversation.cancel()
+        self.input_scan_timer.stop()
+        if self.input_scan_process is not None:
+            process, self.input_scan_process = self.input_scan_process, None
+            process.blockSignals(True)
+            process.kill()
+            process.waitForFinished(500)
+            process.deleteLater()
+            self.input_scan_output.clear()
         event.accept()
 
 
