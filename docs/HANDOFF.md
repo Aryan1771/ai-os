@@ -2,6 +2,23 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: owner UKI report and hosted results
+
+The owner supplied the focused elevated read-only UKI report. The fixed known
+file has Arch OS-family metadata, kernel version `7.2.10-arch1-1` matching the
+running release, an embedded command line without quiet/splash/Plymouth-disable
+flags, and a **378,226-byte `.splash` section**. Its pixels/rendering, the exact
+booted disk-file identity, selected entry and independent recovery remain
+unverified. No image extraction/rebuild, boot write, mount, package/service change
+or reboot occurred. See [BOOT_RECOVERY_INVENTORY](BOOT_RECOVERY_INVENTORY.md).
+
+Read-only GitHub checks confirm complete supported-version CI success for
+`6a7f6ee`, `82e89b2` and `945f3fc`, including normal Python exit, historical C++
+tests and installer syntax. [CI_VALIDATION](CI_VALIDATION.md) links each run.
+This supersedes the pending-run wording in the earlier historical entries below;
+the excluded 6.12 teardown interaction itself remains unresolved. No host package
+changed, and these runs are not physical or ISO acceptance.
+
 ## 2026-10-21 checkpoint: planner dispatch deadline
 
 The original 120-second planning deadline now reaches the initial model request
@@ -26,7 +43,7 @@ OS family, bounded version/match and presentation flags, never embedded root
 arguments, IDs, raw command lines or image contents. Unknown/truncated formats
 stay unknown. Default inventory reads remain unchanged; no extraction, objcopy,
 rewrite or mount is used. Root independently verified **95 mocked tests in 0.06s**
-and correctness lint. No actual privileged image inspection has run for this mode.
+and correctness lint. The owner's subsequent real inspection is recorded above.
 See [BOOT_RECOVERY_INVENTORY](BOOT_RECOVERY_INVENTORY.md) for the owner command.
 
 The owner's earlier full report remains useful current-stub evidence, not proof

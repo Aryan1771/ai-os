@@ -91,6 +91,22 @@ after a controlled full suite, native UI smoke and interpreter teardown succeed;
 matching test assertions alone are insufficient. A fresh required hosted run
 must verify the final bounded revision before the CI checkpoint is closed.
 
+### Supported hosted checkpoint verified — 2026-10-21
+
+Read-only `gh run view`/`gh run list` checks confirm complete successful runs,
+including normal Python process exit, historical C++ tests and installer syntax:
+
+| Source revision | Required hosted run | Result |
+| --- | --- | --- |
+| `6a7f6ee` (paired supported dependency bounds) | [39598212234](https://github.com/Aryan1771/ai-os/actions/runs/39598212234) | Success |
+| `82e89b2` (fixed UKI metadata inspection) | [39599110437](https://github.com/Aryan1771/ai-os/actions/runs/39599110437) | Success |
+| `945f3fc` (planner dispatch deadline) | [39600496127](https://github.com/Aryan1771/ai-os/actions/runs/39600496127) | Success |
+
+The required supported-version CI checkpoint is complete for these revisions.
+The excluded 6.12 teardown interaction remains unresolved; this does not turn its
+earlier failures into passes. Later source changes require their own results.
+Hosted checks are not physical microphone, GPU, desktop, boot or ISO acceptance.
+
 ## Reproduction and local evidence
 
 Read-only remote inspection used:

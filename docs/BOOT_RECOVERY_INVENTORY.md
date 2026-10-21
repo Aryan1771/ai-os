@@ -115,8 +115,27 @@ unknown sections, authentication denial, failed reads with partial output,
 global-budget stops and fixed opt-in CLI dispatch. Exact verification commands
 are in the source checkpoint below. No actual privileged UKI inspection, host
 boot write, package/service change, download or disk operation was run for this
-source checkpoint. The host's embedded metadata and splash remain unverified
-until the separately reviewed read-only command returns an owner report.
+source checkpoint. The owner subsequently supplied the focused report below.
+
+### Owner's focused UKI report — 2026-10-21
+
+The owner ran the separately approved `--sudo --uki` command in their terminal.
+All three fixed reads completed. Sanitized results establish:
+
+- The known file is recognized as a UKI with Arch OS-family metadata and an
+  embedded command line. Its kernel version, `7.2.10-arch1-1`, matches the running
+  release; embedded `quiet`, `splash` and Plymouth-disable flags are all false.
+- A `.splash` section is present, **378,226 bytes**. This establishes embedded
+  splash data, not the pixels it contains or whether firmware displayed them.
+- Active entry, exact identity of the booted disk file and independent recovery
+  remain unverified. A version match alone cannot establish any of those.
+
+This is owner-provided hardware inspection evidence, separate from mocked tests.
+No raw boot arguments, device identifiers or image contents are retained. There
+was no image extraction, rebuild, boot write, mount, package/service change or
+reboot. Embedded splash artwork is a supported candidate for the reported startup
+logo; changing GDM does not replace it. A concrete recovery and activation plan
+and separate boot approval are still required before any host image changes.
 
 ## Source checkpoint and nonprivileged result
 
