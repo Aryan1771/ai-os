@@ -46,8 +46,9 @@ The dialog retains its 110-second overall stop timer, explicit consent and Recor
 click, speech lease, verified owned-process-group cancellation and temporary-data
 cleanup. Progress does not extend that deadline. It can expire before a slower
 stage's separate maximum; that is an overall cancellation, not a successful check.
-No transcript appears until the whole diagnostic completes. An empty-results
-placeholder now explains this, and the status has a named, minimum-height area.
+At this checkpoint the transcript appeared only after the whole diagnostic
+completed. The early-text follow-up below supersedes that behavior. The status
+has a named, minimum-height area.
 
 An independent isolated audit checked 20 theme/size/font combinations and did not
 reproduce missing status/details. New graphite/light tests at 680×540 and 480×320
@@ -98,8 +99,15 @@ wall time 16.025s, total 16.634s. No completed ending-pause, STT or model stage 
 reported. The input stream worked and crossed the speech-energy threshold; this
 does not identify the source or verify spoken words. The check was cancelled
 before a completed quiet pause, with no recording/transcript read by the agent.
-Whether Stop/close caused that cancellation remains an owner question. Stop
-currently cancels/discards; it is not an explicit finish-and-transcribe control.
+Whether the then-labelled Stop button or closing caused that cancellation was
+not established. The control is now named **Cancel check** and cancels/discards;
+it is not an explicit finish-and-transcribe control.
+
+A later, separate owner check completed in 22.224s: ending quiet 5.04s, STT
+4.626s, model 2.384s, synthesis 1.313s and playback 6.339s. The owner heard a reply
+but reported no transcript, motivating the early private-text display below.
+The earlier cancelled result does not describe this completed attempt. No owner
+words or recording were read by the agent.
 
 ## Latest check metadata without reading a recording or window
 
@@ -158,3 +166,66 @@ metadata homes in temporary directories. No personal runtime status, recording,
 configuration or log was read; no microphone/playback/model/service was started.
 The final combined nine-module headless run passes **250 tests in 5.13s**, normal
 exit; new-file Ruff, edited-file correctness lint and whitespace checks pass.
+
+## Early private transcript and reply display
+
+The owner subsequently completed a real recording and heard a reply, but reported
+no visible transcript. That establishes a display concern rather than proof of
+missing microphone permission. Earlier source displayed all text only after
+playback ended, and closing the dialog cleared it. No owner transcript or private
+audio was read to investigate.
+
+The native dialog now requests a separate `--ui-text` channel. Recognized words
+appear immediately after successful STT/language validation; the local reply
+appears after model processing, **before Piper/playback starts**. These private
+events have a separately named `on_ui_text` callback and strict `voice_ui_text`
+schema. They never enter the public phase callback, current-status snapshot,
+history, logs or remote providers. Ordinary worker invocations retain their prior
+single final JSON response; the GUI-specific final summary omits duplicate text.
+
+The plain native result box retains already validated text if speech fails or
+the owner chooses **Cancel check**. Starting another check clears it, and closing
+clears both the widget and its private text/timing fields. Cancel still discards
+the ongoing operation; it is not a manual ending-pause command. No manual Finish
+recording action was added. The 110-second overall bound, per-Record consent,
+tool-free processing, speech lease and owned-group cancellation are unchanged.
+
+Only `transcript`/`reply` events with exactly the defined fields are accepted.
+Transcript limits are 8000 characters and 16384 UTF-8/serialized-JSON text bytes;
+reply limits are 2000 characters and 8192 such bytes. JSON escape expansion counts
+toward those budgets. UTF-8 framing avoids multiplying Hindi text into ASCII
+escape sequences. Each kind is emitted once; the two text events leave room for
+the bounded diagnostic phase updates and final summary within the existing
+64 KiB stream cap. Fragmented UTF-8 and coalesced lines are supported; invalid,
+oversized, unknown-field or duplicate events stop without displaying rejected
+content. Text uses `setPlainText`, with no HTML or executable interpretation.
+
+Worker stdout/finish/start/error callbacks are bound to their specific QProcess;
+late events from a cancelled worker cannot write into or finish its successor.
+An early private callback failure aborts before later model/speech stages, and
+unrecognized language never emits unverified words. Reached valid text remains
+visible on cancellation or final-result failure, until the next check/close.
+
+```bash
+QT_QPA_PLATFORM=offscreen ~/.ai_os/venv/bin/python -m pytest -q tests/test_voice_ui_text.py --tb=short
+env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q tests/test_voice_ui_text.py tests/test_voice_check_status.py tests/test_voice_progress.py tests/test_voice_diagnostics.py tests/test_voice_endpointing.py tests/test_voice_stage_timings.py tests/test_listener.py tests/test_voice_listener_recovery.py tests/test_audio_input.py tests/test_native_ui.py --tb=short
+~/.ai_os/venv/bin/python -m ruff check ai_os/voice_ui_text.py tests/test_voice_ui_text.py
+~/.ai_os/venv/bin/python -m ruff check --select E4,E7,E9,F ai_os/voice_diagnostics.py
+git diff --check
+```
+
+Synthetic tests cover stage ordering, private/public separation, unchanged legacy
+output, byte/escape limits, split/coalesced framing, speech errors, cancellation,
+late callbacks, close cleanup and plain-text rendering. Independent read-only
+review additionally checked eight encoding-boundary examples. No actual
+recording, playback, model request, owner window or private data was used.
+The final combined ten-module headless run passes **286 tests in 5.22s**, including
+36 new private-text cases; new-file Ruff, edited-file correctness lint and
+whitespace checks pass, with normal interpreter exit.
+Fresh native-window transcript visibility and spoken-word correctness still
+require owner acceptance after the automated checks.
+
+Root's frozen full-suite command from [RUNTIME_VALIDATION](RUNTIME_VALIDATION.md)
+passes **1388 tests in 16.86s**, normal exit, including the six explicitly supplied
+pinned Plymouth interpreter checks. Correctness lint and whitespace pass. A new
+dialog loads the early-text code; no resident-service restart is required.

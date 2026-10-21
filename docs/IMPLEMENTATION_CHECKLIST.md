@@ -1,6 +1,6 @@
 # REgenOS implementation and Arch verification audit
 
-Latest 2026-10-21 evidence: **1352 local tests passed in 16.66s**, normal exit;
+Latest 2026-10-21 evidence: **1388 local tests passed in 16.86s**, normal exit;
 protected no-fallback input routing, cancellable enrollment checks, original
 planner deadlines and isolated command bootstrap are implemented. Test-only Qt
 deferred ownership is repaired; supported hosted CI for `3132e4a` succeeds.
@@ -8,11 +8,13 @@ Native nine-page Settings/temporary-companion/local-reply smoke passes.
 Separately approved core restart loads these repairs with unchanged config and
 listening/wake/filter off; voice readiness has no blockers.
 Guided voice now shows bounded phase-only progress and closes/reaps one-shot
-recording before processing. Its 31 new tests pass; owner recognition/reply/
-audibility and reported blank area remain pending, not accepted.
+recording before processing. Private UI events now show transcript after STT and
+reply before playback; 286 focused cases include 36 new text/lifecycle/privacy
+tests. A later owner attempt completed in 22.224s and was audible, but no transcript
+was visible. Fresh-window display and words/relevance/language remain pending.
 Thirty-one additional cases cover a private current-status reader containing
-only fixed stages/codes and numeric metadata. The owner is asked for one explicit
-test; no speech or private log is read and no live voice pass is inferred.
+only fixed stages/codes and numeric metadata. No speech or private log is read;
+one completed attempt is limited pipeline evidence, not broad voice acceptance.
 The owner installed the compact 144×48 GDM logo; file/key readback passes and the
 owner confirms the password-field layout is usable. Other display/scaling cases
 are untested. Elevated inspection reports current UKI evidence and

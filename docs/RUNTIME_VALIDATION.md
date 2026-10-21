@@ -1,6 +1,6 @@
 # REgenOS: installed runtime, latency and continuity
 
-2026-10-21 frozen combined source: **1352 passed in 16.66s**, normal exit,
+2026-10-21 frozen combined source: **1388 passed in 16.86s**, normal exit,
 including six explicitly supplied pinned Plymouth interpreter checks. Input
 selection/enrollment is asynchronous and no-fallback; planner dispatch respects
 its original deadline; the broad-command bootstrap excludes cwd/PYTHONPATH.
@@ -10,20 +10,27 @@ The excluded 6.12 teardown interaction remains unresolved. See
 [input routing](AUDIO_INPUT_SELECTION.md), [deadlines](PLANNER_DEADLINES.md),
 [command bootstrap](COMMAND_CONFINEMENT.md) and [CI evidence](CI_VALIDATION.md).
 
-The latest [guided progress/early recorder-close repair](VOICE_CHECK_PROGRESS.md)
+The [guided progress/early recorder-close repair](VOICE_CHECK_PROGRESS.md)
 adds 31 cases. A literal-ampersand caption correction passes the 31-case suite
-again in 0.28s. A fresh diagnostic is open with no automatic recording; correct
-transcription, relevant audible reply and the reported blank area remain owner
-acceptance. Progress identifies recording versus processing without user text.
+again in 0.28s. Progress identifies recording versus processing without user text.
 
 The latest private current-status reader exposes fixed action/phase/error codes
 and numeric timings only; 31 new cases cover privacy, freshness and unsafe storage.
 It writes no transcript/history and starts no capture. Both existing dialogs
-publish on their next explicitly requested check. Initial live read is unavailable;
-owner recording outcome remains unaccepted. Subsequent explicit Record metadata
-shows 16.48s PCM and a speech-energy trigger after 0.601s, then cancellation before
-the completed pause/STT; no private audio/text was read. This proves stream
-liveness, not recognized words or an audible relevant reply. Read safely with:
+publish on their next explicitly requested check. Initial live read was unavailable;
+one explicit Record attempt shows 16.48s PCM and a speech-energy trigger after
+0.601s, then cancellation before the completed pause/STT. A later attempt completed:
+quiet pause5.04s, STT4.626s, local model2.384s, synthesis1.313s, playback6.339s,
+total22.224s. The owner reports hearing a response but no visible transcript.
+This establishes limited real pipeline execution and owner-reported audibility;
+recognized words, reply relevance and language quality remain unaccepted. No
+private audio/text was read. All diagnostic windows/workers were subsequently
+closed. The diagnostic now shows the transcript immediately after STT and the
+reply before playback through separate private UI events. Reached text survives
+Cancel/playback failure and clears on the next check or close. The focused suite
+passes 286 cases, including 36 new private-text tests. A fresh dialog loads this
+repair without a service restart; owner-visible transcript acceptance is pending.
+Read only sanitized metadata with:
 
 ```bash
 ~/.ai_os/venv/bin/python -m ai_os.voice_check_status
@@ -73,8 +80,9 @@ sampled CUDA peak 961 MiB with Ollama unloaded. English exact; Hindi still inacc
 or rejected. No universal command, GPU support, sentience, training or finished-OS
 claim. Owner-approved restart of only `ai-os.service` passed active/running readback,
 with listening/wake/filter off and config unchanged. Owner-approved desktop/GDM artwork and defaults installed with private backups;
-source hashes, compiled databases and logo-key readback pass. Visual login is
-pending. No boot write, ISO build, VM test or publication.
+source hashes, compiled databases and logo-key readback pass. The owner accepted
+the compact login layout; other display/scaling cases remain untested. No boot
+write, ISO build, VM test or publication.
 
 Earlier runtime checkpoints follow; their counts and pending approvals are historical.
 

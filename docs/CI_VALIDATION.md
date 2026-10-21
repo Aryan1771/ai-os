@@ -147,6 +147,11 @@ The guided phase/early-reap revision `d7417c7` completes all required steps:
 Python, historical C++ and syntax checks pass with normal process completion.
 Personal microphone operation is still unaccepted; source CI is not its proof.
 
+Both disabled-primary styling `4191283` and private diagnostic status `818064b`
+complete successfully in required hosted CI:
+[39611842565](https://github.com/Aryan1771/ai-os/actions/runs/39611842565),
+[39613110856](https://github.com/Aryan1771/ai-os/actions/runs/39613110856).
+
 ## Reproduction and local evidence
 
 Read-only remote inspection used:

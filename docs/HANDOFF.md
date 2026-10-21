@@ -2,6 +2,30 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 latest checkpoint: early local transcript display
+
+After the owner heard a reply but saw no transcript, source review confirmed that
+the diagnostic waited for playback completion before displaying text. Recognized
+words now appear immediately after successful STT/language validation, with the
+reply shown before synthesis/playback. Separately validated private UI events
+never enter public progress/status/history. Legacy CLI output is preserved;
+GUI summaries omit duplicate text. Aggregate output remains capped at 64 KiB.
+
+Reached text survives playback failure or **Cancel check**, then clears on the
+next check or close. Worker-specific signal guards prevent cancelled/old workers
+from modifying a newer check. This does not add manual Finish recording, change
+the five-second pause, or enable continuous listening. A new dialog loads the
+repair without a service restart. See [VOICE_CHECK_PROGRESS](VOICE_CHECK_PROGRESS.md).
+
+Root's frozen suite: **1388 passed in 16.86s**, normal exit, including the six
+optional pinned Plymouth interpreter checks; correctness lint and whitespace pass.
+The focused ten-module suite has 286 cases, including 36 new private-text tests.
+Independent privacy/lifecycle review found no remaining blocker. No actual
+recording, model request or playback was started by these checks. Fresh owner
+transcript visibility, recognized words, relevance and language quality remain
+pending; the earlier 22.224s attempt supplies limited execution/audibility evidence.
+Hosted acceptance of this source revision remains pending.
+
 ## 2026-10-21 latest checkpoint: private diagnostic status
 
 The owner still reports no result and cannot identify a visible status message.
@@ -30,6 +54,17 @@ The required quiet pause was not reached before cancellation; the cancellation's
 initiator is not established. Owner was asked whether Stop was used to finish.
 Actual English/Hindi recognition/reply remains pending. No service, setting,
 model or boot change.
+
+The owner's later attempt **completed** and the owner reports hearing a response,
+with the transcript missing from view. Sanitized timings: detection wait 1.163s,
+capture 6.388s / PCM 6.72s, completed quiet pause 5.04s, Whisper 4.626s, local
+model 2.384s (load 1.906s), synthesis 1.313s, playback 6.339s, total 22.224s.
+That run verifies local capture → STT → model → playback execution and owner-
+reported audibility for one attempt; words, relevance and language accuracy were
+not inspected/accepted. All diagnostic windows/workers were closed by the next
+process inventory. Transcript-display timing is now the immediate source task:
+show reached text before playback in the local dialog, retaining no history.
+The earlier cancelled attempt is a separate result, not the current failure.
 
 A separate 35-second read-only sample observed 40 GPU samples, peak 13 MiB of
 8188 MiB; a diagnostic worker appeared in 22 samples, with no GPU-resident Ollama

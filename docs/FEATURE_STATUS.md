@@ -1,6 +1,6 @@
 # REgenOS Feature Checklist
 
-Latest frozen source suite (2026-10-21): **1352 passed in 16.66s**, normal exit,
+Latest frozen source suite (2026-10-21): **1388 passed in 16.86s**, normal exit,
 including six optional pinned Plymouth interpreter checks. New protected input
 routing, cancellable enrollment discovery, planner deadlines and isolated command
 bootstrap are source-tested and loaded by the separately approved core restart.
@@ -12,14 +12,19 @@ No physical voice accuracy or latency improvement is claimed. See
 
 The guided voice check now closes/reaps one-shot recording before processing,
 shows phase-only progress and the current quiet pause, and explains when results
-appear. Thirty-one new tests pass, including after the literal-ampersand caption
-fix. Owner controls are visible; correct transcript/reply/audibility are not yet
-confirmed. See [VOICE_CHECK_PROGRESS](VOICE_CHECK_PROGRESS.md).
+appear. A follow-up now shows recognized words after STT and the reply before
+playback through separate private UI events. Reached text survives Cancel/speech
+failure and clears on the next check or close. The ten-module suite passes 286
+cases, including 36 new text/lifecycle/privacy cases. A later real check completed
+in 22.224s and the owner heard a response, but saw no transcript. Fresh-window
+visibility, words/relevance/language remain pending. See
+[VOICE_CHECK_PROGRESS](VOICE_CHECK_PROGRESS.md).
 
 Latest-check diagnostic metadata is now private and bounded, containing only
 fixed stages/codes/numeric timings. It lets local diagnosis distinguish the next
 explicit Record/Play attempt without reading user speech. Thirty-one new cases
-pass; live operation still needs the owner's attempt. No capture is automatic.
+pass; the later completed owner attempt supplies limited execution/audibility
+evidence without exposing words. No capture is automatic.
 
 Static landscape UKI artwork and manifest generation pass 20 isolated-process
 tests and a decoded preview. The existing boot UKI is untouched; active route,

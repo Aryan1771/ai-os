@@ -18,6 +18,7 @@ import requests
 from ai_os.config import AI_OS_HOME, load_config, load_raw_config
 from ai_os.voice_timings import elapsed_timing, public_timings, record_timing
 from ai_os.voice_progress import ProgressReporter, progress_message, public_progress
+from ai_os.voice_ui_text import encoded_text_event, private_ui_text, text_event
 
 PHRASES = {
     "en": "Hello. Your REgenOS voice check is ready.",
@@ -127,7 +128,7 @@ def local_reply(text, language, home, *, metrics=None):
 
 
 def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, metrics=None,
-                on_progress=None):
+                on_progress=None, on_ui_text=None):
     """Trusted local UI only. A microphone click is not permission for any tool."""
     if human_confirmed is not True:
         raise PermissionError("Explicit local approval is required for each voice check.")
@@ -184,6 +185,8 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, met
                         "Could not identify English or Hindi clearly. No action was submitted.",
                     )
                 transcript = recognized.text
+                if on_ui_text is not None:
+                    on_ui_text(text_event("transcript", transcript))
                 publish_state("thinking", home=home)
                 progress.emit("thinking")
                 phase = "thinking"
@@ -197,6 +200,8 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, met
                         record_timing(timings, "model_" + key, model_metrics.get(key))
             else:
                 reply = PHRASES[actual_language]
+            if on_ui_text is not None:
+                on_ui_text(text_event("reply", reply))
             # Re-read revocation before output; explicit playback-only tests are
             # allowed while ordinary Speak replies is off, as in the existing test.
             if action == "record" and not load_raw_config(home)["speech_enabled"]:
@@ -258,6 +263,8 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             self.temporary = None
             self.output = bytearray()
             self.output_bytes = 0
+            self.reached_text = {}
+            self.reached_timings = {}
             layout = QVBoxLayout(self)
             notice = QLabel(
                 "Uses saved settings. Nothing records until you enable consent and click Record & reply. "
@@ -287,7 +294,7 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             self.record = QPushButton("Record && reply")
             self.record.setObjectName("primary")
             self.record.setEnabled(False)
-            self.stop = QPushButton("Stop")
+            self.stop = QPushButton("Cancel check")
             self.stop.setEnabled(False)
             for button in (self.play, self.record, self.stop):
                 controls.addWidget(button)
@@ -303,7 +310,8 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             self.details = QPlainTextEdit()
             self.details.setReadOnly(True)
             self.details.setPlaceholderText(
-                "The transcript, reply and timings appear here when the check finishes. "
+                "Recognized words appear here after transcription; the reply appears before playback. "
+                "Reached text stays until the next check or closing this window. "
                 "The status above shows recording and processing progress. "
                 "Nothing records until you allow it and click Record & reply."
             )
@@ -328,6 +336,8 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                 return
             self.output.clear()
             self.output_bytes = 0
+            self.reached_text.clear()
+            self.reached_timings.clear()
             self.details.clear()
             try:
                 self.temporary = tempfile.TemporaryDirectory(prefix="regenos-voice-check-")
@@ -341,7 +351,9 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             except (OSError, RuntimeError):
                 self.cancel("Voice check could not start. No microphone request was submitted.")
 
-        def remember_group(self):
+        def remember_group(self, expected=None):
+            if expected is not None and expected is not self.process:
+                return
             if self.process is not None and sys.platform == "linux":
                 pid = self.process.processId()
                 try:
@@ -370,14 +382,14 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             env.insert("AI_OS_HOME", str(home))
             env.insert("AI_OS_VOICE_TMP", self.temporary.name)
             process.setProcessEnvironment(env)
-            process.started.connect(self.remember_group)
-            process.readyReadStandardOutput.connect(self.read_output)
+            process.started.connect(lambda: self.remember_group(process))
+            process.readyReadStandardOutput.connect(lambda: self.read_output(process))
             process.readyReadStandardError.connect(lambda: process.readAllStandardError())
-            process.finished.connect(self.finished)
+            process.finished.connect(lambda code, status: self.finished(code, status, process))
             process.errorOccurred.connect(
                 lambda error: (
                     self.cancel("Voice check could not start.")
-                    if error == QProcess.ProcessError.FailedToStart
+                    if process is self.process and error == QProcess.ProcessError.FailedToStart
                     else None
                 )
             )
@@ -402,12 +414,13 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                     "--language",
                     self.language.currentData(),
                     "--progress",
+                    "--ui-text",
                     "--confirmed",
                 ],
             )
 
-        def read_output(self):
-            if self.process is None:
+        def read_output(self, expected=None):
+            if self.process is None or expected is not None and expected is not self.process:
                 return
             data = bytes(self.process.readAllStandardOutput())
             self.output_bytes += len(data)
@@ -420,7 +433,17 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                 try:
                     event = json.loads(line)
                 except (ValueError, UnicodeError):
-                    return  # Final-result parsing retains the existing failure path.
+                    self.cancel("Voice check returned invalid data; stopped.")
+                    return
+                if isinstance(event, dict) and event.get("event") == "voice_ui_text":
+                    event = private_ui_text(event)
+                    if event is None or event["kind"] in self.reached_text:
+                        self.cancel("Voice check returned invalid dialog text; stopped.")
+                        return
+                    self.reached_text[event["kind"]] = event["text"]
+                    self.output[:] = remainder
+                    self.render_details()
+                    continue
                 if not isinstance(event, dict) or event.get("event") != "voice_progress":
                     return  # Preserve the unchanged final JSON for finished().
                 event = public_progress(event)
@@ -430,8 +453,19 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                 self.output[:] = remainder
                 self.status.setText(progress_message(event))
 
-        def finished(self, code, _status):
-            if self.process is None:
+        def render_details(self):
+            parts = []
+            if "transcript" in self.reached_text:
+                parts.append("You: " + self.reached_text["transcript"])
+            if "reply" in self.reached_text:
+                parts.append("RE: " + self.reached_text["reply"])
+            if self.reached_timings:
+                parts.append("Timing in seconds. Audio durations overlap capture; do not add them to wall time.\n"
+                             + json.dumps(self.reached_timings, ensure_ascii=True))
+            self.details.setPlainText("\n\n".join(parts))
+
+        def finished(self, code, _status, expected=None):
+            if self.process is None or expected is not None and expected is not self.process:
                 return
             self.read_output()
             if self.process is None:
@@ -441,21 +475,14 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                 if not isinstance(result, dict):
                     raise ValueError()
                 if code == 0 and result.get("ok"):
-                    details = (
-                        "You: "
-                        + str(result.get("transcript", ""))[:8000]
-                        + "\n\nRE: "
-                        + str(result.get("reply", ""))[:2000]
-                    )
-                else:
-                    details = ""
-                timings = public_timings(result.get("timings"))
-                if timings:
-                    details += (
-                        "\n\nTiming in seconds. Audio durations overlap capture; do not add them to wall time.\n"
-                        + json.dumps(timings, ensure_ascii=True)
-                    )
-                self.details.setPlainText(details.strip())
+                    # Accept an older final-only worker as well as new early
+                    # UI events. Never erase validated text on output failure.
+                    for kind in ("transcript", "reply"):
+                        if result.get(kind):
+                            event = text_event(kind, result[kind])
+                            self.reached_text.setdefault(kind, event["text"])
+                self.reached_timings = public_timings(result.get("timings"))
+                self.render_details()
                 self.status.setText(
                     str(result.get("message", "Voice check did not complete."))[:400]
                 )
@@ -501,11 +528,15 @@ def create_dialog(home=AI_OS_HOME, parent=None):
         def done(self, result):
             self.cancel("Closed. Microphone off.")
             self.details.clear()
+            self.reached_text.clear()
+            self.reached_timings.clear()
             super().done(result)
 
         def closeEvent(self, event):
             self.cancel("Closed. Microphone off.")
             self.details.clear()
+            self.reached_text.clear()
+            self.reached_timings.clear()
             super().closeEvent(event)
 
     return VoiceCheckDialog()
@@ -517,6 +548,7 @@ def main():
     parser.add_argument("--language", choices=("auto", "en", "hi"), default="auto")
     parser.add_argument("--confirmed", action="store_true")
     parser.add_argument("--progress", action="store_true")
+    parser.add_argument("--ui-text", action="store_true")
     args = parser.parse_args()
     if args.worker:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
@@ -531,9 +563,17 @@ def main():
                     status.progress(event)
                 if args.progress:
                     print(json.dumps(event, ensure_ascii=True, allow_nan=False), flush=True)
+        emitted_text = set()
+        def emit_ui_text(event):
+            data = encoded_text_event(event)
+            if data is not None and event["kind"] not in emitted_text:
+                emitted_text.add(event["kind"])
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
         try:
             result = check_voice(args.worker, args.language, human_confirmed=args.confirmed, metrics=timings,
-                                 **({"on_progress": emit_progress} if args.progress or status is not None else {}))
+                                 **({"on_progress": emit_progress} if args.progress or status is not None else {}),
+                                 **({"on_ui_text": emit_ui_text} if args.ui_text and args.confirmed else {}))
         except SystemExit:
             if status is not None:
                 status.publish("cancelled", code="cancelled", timings=timings)
@@ -553,6 +593,8 @@ def main():
         if status is not None:
             status.publish("completed" if result["ok"] else "failed", code=result.get("code", ""),
                            timings=result.get("timings", timings))
+        if args.ui_text:
+            result = {key: value for key, value in result.items() if key not in {"transcript", "reply"}}
         print(json.dumps(result, ensure_ascii=True, allow_nan=False))
         return 0 if result["ok"] else 1
     from PySide6.QtWidgets import QApplication
