@@ -212,7 +212,11 @@ def run_command(
             # Do not let a user-writable PATH entry impersonate an approved diagnostic.
             argv[0] = "/usr/bin/" + Path(argv[0]).name
         if user_sandbox:
-            argv = [sys.executable, "-m", "ai_os.unprivileged_command", *argv]
+            # The requested cwd and inherited PYTHON* variables are untrusted.
+            # Resolve our wrapper through the installed venv, never a cwd/PATH
+            # package that could run before Bubblewrap starts. Missing installed
+            # metadata must fail instead of falling back to ordinary execution.
+            argv = [sys.executable, "-I", "-m", "ai_os.unprivileged_command", *argv]
         proc = run_bounded(argv, cwd=cwd, timeout=timeout_sec)
         return CommandResult(
             ok=proc.returncode == 0,

@@ -123,7 +123,7 @@ continuous recording require their own opt-in even when work is labeled Source.
 | A066, A067 | Hardening/AppArmor/firewall/scanner templates exist; reviewed installed enforcement, denied-write tests and rollback remain, not blanket script execution. | Source, Approval |
 | A068 | Bounded data-only avatar rendering/native UI exists; retain hostile-input/privacy review and ensure no future model code/URL renderer is introduced. | Source |
 | A069 | Independent daemon/settings/approval/user-data trust separation is absent; design authenticated IPC, identities and a threat model. | Source, Approval |
-| A070, A071 | Exact diagnostics and Bubblewrap-backed broad grants are implemented; independent argument-policy/confinement/adversarial audit remains. Same-user access is not isolation from private files. | Source, Owner |
+| A070, A071 | Exact diagnostics and Bubblewrap-backed broad grants are implemented. Cwd/interpreter-environment bootstrap shadowing is repaired and passes 79 focused regressions; resident reload is pending. Broader independent argument-policy/confinement/adversarial audit remains. Same-user access is not isolation from private files. | Source, Owner |
 | A072 | System-wide domain-only egress is absent. Choose and review a real enforcement design; UFW's generic HTTPS allowance is not it. Preserve the development connection/recovery. | Source, Approval |
 | A073 | Audited active AppArmor, seccomp, dedicated identity and secure secrets integration are incomplete; templates are not installed proof. | Source, Approval |
 | A074 | Verified noexec temporary/cache policy is absent; propose exact compatible changes and rollback before any mount policy change. | Approval, Owner |

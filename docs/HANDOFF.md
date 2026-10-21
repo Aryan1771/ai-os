@@ -2,6 +2,22 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: isolate the broad-command bootstrap
+
+Audit reproduced a pre-Bubblewrap module-shadowing defect using metadata and a
+fake runner: a selected cwd could provide an `ai_os` package before the trusted
+helper resolved. Broad grants now start the existing venv with `-I -m`, excluding
+cwd, interpreter environment and user-site lookup. Intended command/cwd/timeout
+are preserved; a missing installed helper fails without ordinary fallback.
+
+Root independently ran **79 command regressions in 0.90s**, including six new
+confinement cases and real read-only import-origin/flag checks. Correctness lint
+and whitespace checks pass. No payload, actual broad command/grant, Bubblewrap
+namespace or host security policy change was used. The resident core still needs
+a separately approved reload before relying on this repair there. Same-account
+editable-code trust and real revoke/confinement acceptance remain open.
+See [COMMAND_CONFINEMENT](COMMAND_CONFINEMENT.md).
+
 ## 2026-10-21 checkpoint: explicit microphone routing
 
 Native Voice settings now has a protected input selector and explicit asynchronous
