@@ -2,6 +2,17 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: disabled primary controls
+
+Synthetic rendering demonstrated that the primary-button ID selector overrode
+generic disabled styling in all five themes. Record could look active before
+consent even though the gate correctly blocked clicks. An explicit disabled
+primary selector now renders the surface/muted treatment; enabling consent
+restores the accent. Twelve native UI tests pass in 1.72s, all five palette
+transitions were checked without a worker, and correctness lint/whitespace pass.
+This is a visual repair, not proof of the owner's recording failure. Existing
+open windows retain their loaded stylesheet until reopened.
+
 ## 2026-10-21 latest checkpoint: truthful guided voice progress
 
 Owner acceptance exposed apparent Listening without a transcript. The standalone

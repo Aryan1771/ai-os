@@ -96,7 +96,7 @@ def theme_stylesheet(name: str) -> str:
     QPushButton:focus, QToolButton:focus {{ border-color: {accent}; }}
     QPushButton:pressed, QToolButton:pressed {{ background: {accent}; color: {bg}; }}
     QPushButton#primary {{ background: {accent}; color: {bg}; border-color: {accent}; font-weight: 600; }}
-    QPushButton:disabled, QToolButton:disabled {{ background: {surface}; color: {muted}; border-color: {border}; }}
+    QPushButton#primary:disabled, QPushButton:disabled, QToolButton:disabled {{ background: {surface}; color: {muted}; border-color: {border}; }}
     QCheckBox {{ spacing: 10px; padding: 5px 0; }}
     QCheckBox::indicator {{ width: 18px; height: 18px; }}
     QCheckBox:focus {{ color: {accent}; }}

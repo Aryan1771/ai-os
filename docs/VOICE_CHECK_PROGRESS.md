@@ -55,6 +55,14 @@ verify that initial status and the result area are visible below the buttons.
 These findings do not establish what was displayed in the owner's existing window.
 No owner window was closed or reset to test the change.
 
+A separate isolated rendering check demonstrated that the primary button ID
+selector kept disabled Record controls blue in all five themes. The disabled
+rule now explicitly includes `QPushButton#primary:disabled`; it shows the normal
+disabled surface until consent enables recording. Twelve native UI tests pass
+and all five enable/disable color transitions were checked without starting a
+worker. Existing windows need reopening to load that stylesheet; this does not
+establish the cause of the owner's missing result.
+
 Validation uses synthetic PCM, fake processes, fake models and isolated native
 windows only:
 

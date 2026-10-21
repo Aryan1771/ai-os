@@ -142,6 +142,11 @@ The subsequent source-artwork revision `7d5b138` also completes successfully:
 [run 39606763037](https://github.com/Aryan1771/ai-os/actions/runs/39606763037).
 This is required hosted source validation, not a host boot or VM test.
 
+The guided phase/early-reap revision `d7417c7` completes all required steps:
+[run 39610470745](https://github.com/Aryan1771/ai-os/actions/runs/39610470745).
+Python, historical C++ and syntax checks pass with normal process completion.
+Personal microphone operation is still unaccepted; source CI is not its proof.
+
 ## Reproduction and local evidence
 
 Read-only remote inspection used:
