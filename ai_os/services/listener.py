@@ -18,6 +18,7 @@ import numpy as np
 from ai_os.services.stt import WhisperCppTranscriber
 from ai_os.services.wakeword import WakeWordService, ReWhisperWakeWord
 from ai_os.voice_timings import elapsed_timing, record_timing
+from ai_os.voice_progress import ProgressReporter
 
 
 class AlwaysListeningService:
@@ -42,6 +43,8 @@ class AlwaysListeningService:
         speaker_filter: Callable[[Path], tuple[bool, str]] | None = None,
         on_error: Callable[[Exception], None] | None = None,
         input_target: str = "",
+        on_capture_complete: Callable[[], None] | None = None,
+        on_progress: Callable[[dict], None] | None = None,
     ) -> None:
         self.run_dir = run_dir
         self.require_wake_word = require_wake_word
@@ -61,6 +64,8 @@ class AlwaysListeningService:
         self.max_utterance_seconds = max(10, min(120, int(max_utterance_seconds)))
         self.sample_rate = sample_rate
         self.input_target = input_target
+        self.on_capture_complete = on_capture_complete
+        self.progress = ProgressReporter(on_progress)
         self.on_activity = on_activity or (lambda _phase: None)
         self.playback_active = playback_active or (lambda: False)
         self._stop = threading.Event()
@@ -113,13 +118,19 @@ class AlwaysListeningService:
 
     def stop(self) -> None:
         self._stop.set()
+        self.stop_recorder()
+
+    def stop_recorder(self):
+        """Reap owned capture without marking a completed utterance cancelled."""
         if self._process and self._process.poll() is None:
             self._process.terminate()
             try:
-                self._process.wait(timeout=2)
+                return self._process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 self._process.kill()
-                self._process.wait(timeout=2)
+                return self._process.wait(timeout=2)
+        if self._process is not None:
+            return self._process.poll()
 
     def run_forever(self) -> None:
         ready, reason = self.availability()
@@ -237,6 +248,9 @@ class AlwaysListeningService:
                 samples = len(audio) // 2
                 captured_samples += samples
                 silent_samples = 0 if self.has_speech(audio) else silent_samples + samples
+                self.progress.emit("capturing", captured_seconds=captured_samples / self.sample_rate,
+                                   silence_seconds=silent_samples / self.sample_rate,
+                                   required_silence_seconds=self.silence_seconds)
                 if silent_samples >= silence_samples:
                     endpoint_reached = True
                     break
@@ -256,6 +270,14 @@ class AlwaysListeningService:
                 "No request was submitted; please repeat in shorter parts.",
             )
 
+        if self.on_capture_complete is not None:
+            if not endpoint_reached:
+                from ai_os.services.voice_errors import VoicePipelineError
+                raise VoicePipelineError("capture_failed", "Recording did not reach the ending pause; no request was submitted.")
+            self.on_capture_complete()
+            if self._stop.is_set():
+                return ""
+
         with tempfile.NamedTemporaryFile(dir=self.run_dir, suffix=".wav", delete=False) as handle:
             audio_path = Path(handle.name)
         try:
@@ -270,6 +292,7 @@ class AlwaysListeningService:
                 trim_samples = max(0, silent_samples - self.sample_rate // 5) if endpoint_reached else 0
                 wav_file.writeframes(audio[:-trim_samples * 2] if trim_samples else audio)
             if self.speaker_filter is not None:
+                self.progress.emit("filtering")
                 from ai_os.services.voice_errors import VoicePipelineError, VOICE_MESSAGES
                 from ai_os.speaker_filter import MESSAGES
                 filter_started = time.monotonic() if metrics is not None else None
@@ -285,6 +308,7 @@ class AlwaysListeningService:
                     self.last_capture_error = VoicePipelineError(code, VOICE_MESSAGES[code])
                     return ""
             self.on_activity("transcribing")
+            self.progress.emit("transcribing")
             stt_started = time.monotonic() if metrics is not None else None
             try:
                 result = self.transcriber.transcribe_file(audio_path)

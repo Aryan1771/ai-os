@@ -2,7 +2,35 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
-## 2026-10-21 current runtime acceptance
+## 2026-10-21 latest checkpoint: truthful guided voice progress
+
+Owner acceptance exposed apparent Listening without a transcript. The standalone
+dialog is visible, but the owner explicitly confirmed only controls, not correct
+recognition or an audible relevant reply. No owner screen/audio/transcript was
+read. Source review found that the microphone-on label persisted through every
+stage and one-shot recording remained open through filtering/Whisper.
+
+One-shot capture now requires a completed pause and confirmed recorder reaping
+before processing; failed cleanup/cancellation submits nothing. The diagnostic
+shows bounded phase-only progress and quiet-pause counts, then confirmed mic-off
+stages. Final text still appears only after completion. Its empty-results text
+and status area explain this. Continuous recording lifecycle, five-second pause,
+language/model choice and gain are unchanged. See [VOICE_CHECK_PROGRESS](VOICE_CHECK_PROGRESS.md).
+
+Root frozen suite: **1321 passed in 16.57s**, normal exit; correctness lint and
+whitespace pass. Thirty-one new fake/geometry cases cover ordering, races,
+cleanup failures, privacy and split progress. After a literal-ampersand caption
+correction, all 31 pass again in 0.28s. A fresh native diagnostic was opened with
+recording off; owner must explicitly Record and report its stage/error. The
+earlier owner window/Settings were preserved. No further service restart is
+needed for the newly launched diagnostic worker; the earlier approved reload
+remains the loaded routing/deadline/bootstrap checkpoint.
+
+Personal voice acceptance remains **pending**, including the reported blank area
+not reproduced in isolated layouts. New hosted CI remains to be verified. No
+boot activation, ISO, VM, artifact signing or release publication occurred.
+
+## 2026-10-21 earlier runtime reload and native acceptance
 
 After final frozen automated checks (**1290 passed in 16.64s**, normal exit;
 correctness lint/whitespace clean), `scripts/verify_native_runtime.py` passed:

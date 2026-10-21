@@ -6,7 +6,7 @@
 below. An open acceptance item does not mean its implementation is missing.
 Historical C++ requirements are superseded by the supported Python/PySide6 apps.
 
-The latest frozen source checkpoint passed **1290 tests in 16.64s**, normal exit;
+The latest frozen source checkpoint passed **1321 tests in 16.57s**, normal exit;
 native Settings/temporary-companion/local-reply smoke and the approved core reload
 pass with unchanged config/listening off. The earlier 11/11 fixed local model
 probes executed no probe actions. This does not accept real microphone
@@ -24,6 +24,8 @@ quality, login appearance, recovery, an installer or a distribution. There is
    backup, but the saved base model rejects Hindi and small remains inaccurate
    on four synthetic Hindi sentences. Use explicit guided Record checks, measure
    each stage, and evaluate recognition/reply/audibility before enabling listening.
+   The new phase display/early recorder-close checkpoint passes 31 new tests;
+   owner-visible controls alone are not voice-loop acceptance.
 3. **Verify everyday interactions.** Check avatar unhide/monitor transfer, app-grid
    entries, three GNOME shortcuts, cursor, browser/tab launches, Stop/steering,
    memory controls and opted-in spoken device reactions with the owner.

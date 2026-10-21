@@ -1,6 +1,6 @@
 # REgenOS Feature Checklist
 
-Latest frozen source suite (2026-10-21): **1290 passed in 16.64s**, normal exit,
+Latest frozen source suite (2026-10-21): **1321 passed in 16.57s**, normal exit,
 including six optional pinned Plymouth interpreter checks. New protected input
 routing, cancellable enrollment discovery, planner deadlines and isolated command
 bootstrap are source-tested and loaded by the separately approved core restart.
@@ -9,6 +9,12 @@ Settings/temporary-companion/local-reply smoke passes. Supported hosted CI passe
 the Qt test-fixture repair `3132e4a` and artwork revision `7d5b138`.
 No physical voice accuracy or latency improvement is claimed. See
 [CHECKPOINT_PROGRESS](CHECKPOINT_PROGRESS.md) and [CI_VALIDATION](CI_VALIDATION.md).
+
+The guided voice check now closes/reaps one-shot recording before processing,
+shows phase-only progress and the current quiet pause, and explains when results
+appear. Thirty-one new tests pass, including after the literal-ampersand caption
+fix. Owner controls are visible; correct transcript/reply/audibility are not yet
+confirmed. See [VOICE_CHECK_PROGRESS](VOICE_CHECK_PROGRESS.md).
 
 Static landscape UKI artwork and manifest generation pass 20 isolated-process
 tests and a decoded preview. The existing boot UKI is untouched; active route,

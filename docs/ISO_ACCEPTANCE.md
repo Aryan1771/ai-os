@@ -6,7 +6,7 @@ are not installer or distribution acceptance.
 
 | Gate | Status |
 | --- | --- |
-| Runtime quality/security | 1290 automated regressions pass with normal exit (six use separately reviewed upstream Plymouth source); limited native reply and approved core restart pass. Hindi, personal voice, broader confinement/context and physical interaction acceptance remain open |
+| Runtime quality/security | 1321 automated regressions pass with normal exit (six use separately reviewed upstream Plymouth source); 31 progress tests pass again after caption correction. Limited native reply and approved core restart pass. Personal voice/Hindi, broader confinement/context and physical interaction acceptance remain open |
 | Release architecture (ARCH_HANDOFF Prompt F) | Awaiting concrete reviewed proposal and owner approval before impactful packaging |
 | Clean target root and pinned package source/signing | Not implemented/validated |
 | Calamares exact package/modules and rootfs image | Skeleton only; no install-rootfs.squashfs |

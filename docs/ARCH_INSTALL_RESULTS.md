@@ -1,12 +1,17 @@
 # Current runtime inspection — 2026-10-16
 
-2026-10-21 current checkpoint: **1290 frozen tests pass in 16.64s**, with normal
+2026-10-21 current checkpoint: **1321 frozen tests pass in 16.57s**, with normal
 exit; correctness lint/whitespace pass. Native xcb check passes nine Settings
 pages, visible temporary companion and a local Ollama greeting. Owner-approved
 restart of only `ai-os.service` loads the microphone-routing, planner-deadline and
 command-bootstrap fixes: active/running, exit0, NRestarts0, configuration bytes
-unchanged; listening/wake/filter off and voice readiness unblocked. No microphone
-or screen capture occurred. Supported hosted fixture-repair CI passes.
+unchanged; listening/wake/filter off and voice readiness unblocked. No agent-initiated
+microphone or screen capture occurred. Supported hosted fixture-repair CI passes.
+
+New guided phase-only progress and early one-shot recorder reaping pass 31 cases,
+including a focused rerun after caption correction. The fresh diagnostic starts
+with no recording; owner confirms visible controls only. Transcript accuracy,
+reply relevance/audibility and the reported blank area are not accepted.
 
 Landscape UKI artwork is generated/decoded only in temporary staging; no host
 boot image changed. Owner UKI metadata/preset evidence and the missing known

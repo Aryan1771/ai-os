@@ -1,6 +1,6 @@
 # REgenOS: installed runtime, latency and continuity
 
-2026-10-21 frozen combined source: **1290 passed in 16.64s**, normal exit,
+2026-10-21 frozen combined source: **1321 passed in 16.57s**, normal exit,
 including six explicitly supplied pinned Plymouth interpreter checks. Input
 selection/enrollment is asynchronous and no-fallback; planner dispatch respects
 its original deadline; the broad-command bootstrap excludes cwd/PYTHONPATH.
@@ -10,11 +10,17 @@ The excluded 6.12 teardown interaction remains unresolved. See
 [input routing](AUDIO_INPUT_SELECTION.md), [deadlines](PLANNER_DEADLINES.md),
 [command bootstrap](COMMAND_CONFINEMENT.md) and [CI evidence](CI_VALIDATION.md).
 
-After automated checks, the native xcb smoke passes nine Settings pages,
+The latest [guided progress/early recorder-close repair](VOICE_CHECK_PROGRESS.md)
+adds 31 cases. A literal-ampersand caption correction passes the 31-case suite
+again in 0.28s. A fresh diagnostic is open with no automatic recording; correct
+transcription, relevant audible reply and the reported blank area remain owner
+acceptance. Progress identifies recording versus processing without user text.
+
+After the earlier 1290-test run, the native xcb smoke passes nine Settings pages,
 visible temporary companion and a local Ollama reply. The owner-approved restart
 of only `ai-os.service` loads the new runtime: active/running, exit0, NRestarts0,
 config bytes unchanged; listening/wake/filter off and voice readiness unblocked.
-No microphone, screen capture or audible speech check was performed.
+No agent-initiated microphone, screen capture or audible speech check was performed.
 
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 REGENOS_PLYMOUTH_SOURCE_DIR="$HOME/.ai_os/build/plymouth-script-check-26.134.222" ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q --tb=short

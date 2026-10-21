@@ -16,6 +16,7 @@ import requests
 
 from ai_os.config import AI_OS_HOME, load_config, load_raw_config
 from ai_os.voice_timings import elapsed_timing, public_timings, record_timing
+from ai_os.voice_progress import ProgressReporter, progress_message, public_progress
 
 PHRASES = {
     "en": "Hello. Your REgenOS voice check is ready.",
@@ -124,12 +125,15 @@ def local_reply(text, language, home, *, metrics=None):
     return reply.strip()
 
 
-def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, metrics=None):
+def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, metrics=None,
+                on_progress=None):
     """Trusted local UI only. A microphone click is not permission for any tool."""
     if human_confirmed is not True:
         raise PermissionError("Explicit local approval is required for each voice check.")
     if action not in {"play", "record"} or language not in {"auto", "en", "hi"}:
         raise ValueError("Unsupported voice check.")
+    progress = ProgressReporter(on_progress)
+    progress.emit("preparing")
     from ai_os.companion_state import publish_state
     from ai_os.services.voice_input import capture_once
     from ai_os.services.voice_errors import VoicePipelineError
@@ -168,7 +172,8 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, met
                 )
                 capture_started = time.monotonic()
                 try:
-                    recognized = capture_once(config, return_result=True, metrics=timings)
+                    recognized = capture_once(config, return_result=True, metrics=timings,
+                                              **({"on_progress": on_progress} if on_progress is not None else {}))
                 finally:
                     elapsed_timing(timings, "capture_and_stt_seconds", capture_started)
                 actual_language = recognized.detected_language if language == "auto" else language
@@ -179,6 +184,7 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, met
                     )
                 transcript = recognized.text
                 publish_state("thinking", home=home)
+                progress.emit("thinking")
                 phase = "thinking"
                 model_started = time.monotonic()
                 model_metrics = {}
@@ -195,6 +201,7 @@ def check_voice(action, language, *, home=AI_OS_HOME, human_confirmed=False, met
             if action == "record" and not load_raw_config(home)["speech_enabled"]:
                 raise PermissionError("Spoken replies were disabled; playback was cancelled.")
             publish_state("speaking", home=home)
+            progress.emit("speaking")
             phase = "speaking"
             playback_started = time.monotonic()
             try:
@@ -249,6 +256,7 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             self.worker_group = None
             self.temporary = None
             self.output = bytearray()
+            self.output_bytes = 0
             layout = QVBoxLayout(self)
             notice = QLabel(
                 "Uses saved settings. Nothing records until you enable consent and click Record & reply. "
@@ -271,11 +279,11 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             )
             self.language.setCurrentIndex(max(0, self.language.findData(selected)))
             layout.addWidget(self.language)
-            self.consent = QCheckBox("Allow one microphone recording when I click Record & reply")
+            self.consent = QCheckBox("Allow one microphone recording when I click Record && reply")
             layout.addWidget(self.consent)
             controls = QHBoxLayout()
             self.play = QPushButton("Play test voice")
-            self.record = QPushButton("Record & reply")
+            self.record = QPushButton("Record && reply")
             self.record.setObjectName("primary")
             self.record.setEnabled(False)
             self.stop = QPushButton("Stop")
@@ -288,9 +296,16 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             )
             self.status.setTextFormat(Qt.TextFormat.PlainText)
             self.status.setWordWrap(True)
+            self.status.setAccessibleName("Voice check progress")
+            self.status.setMinimumHeight(40)
             layout.addWidget(self.status)
             self.details = QPlainTextEdit()
             self.details.setReadOnly(True)
+            self.details.setPlaceholderText(
+                "The transcript, reply and timings appear here when the check finishes. "
+                "The status above shows recording and processing progress. "
+                "Nothing records until you allow it and click Record & reply."
+            )
             layout.addWidget(self.details, 1)
             self.timer = QTimer(self)
             self.timer.setTimerType(Qt.TimerType.PreciseTimer)
@@ -311,6 +326,7 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             if self.process is not None or action == "record" and not self.consent.isChecked():
                 return
             self.output.clear()
+            self.output_bytes = 0
             self.details.clear()
             try:
                 self.temporary = tempfile.TemporaryDirectory(prefix="regenos-voice-check-")
@@ -370,7 +386,7 @@ def create_dialog(home=AI_OS_HOME, parent=None):
             self.consent.setEnabled(False)
             self.stop.setEnabled(True)
             self.status.setText(
-                "● Microphone on — speak now, then pause."
+                "Preparing the voice check. Microphone has not started yet."
                 if action == "record"
                 else "Playing the selected test voice. Microphone off."
             )
@@ -384,6 +400,7 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                     action,
                     "--language",
                     self.language.currentData(),
+                    "--progress",
                     "--confirmed",
                 ],
             )
@@ -391,14 +408,33 @@ def create_dialog(home=AI_OS_HOME, parent=None):
         def read_output(self):
             if self.process is None:
                 return
-            self.output.extend(bytes(self.process.readAllStandardOutput()))
-            if len(self.output) > 65536:
+            data = bytes(self.process.readAllStandardOutput())
+            self.output_bytes += len(data)
+            self.output.extend(data)
+            if self.output_bytes > 65536 or len(self.output) > 65536:
                 self.cancel("Voice check returned too much data; stopped.")
+                return
+            while b"\n" in self.output:
+                line, _separator, remainder = self.output.partition(b"\n")
+                try:
+                    event = json.loads(line)
+                except (ValueError, UnicodeError):
+                    return  # Final-result parsing retains the existing failure path.
+                if not isinstance(event, dict) or event.get("event") != "voice_progress":
+                    return  # Preserve the unchanged final JSON for finished().
+                event = public_progress(event)
+                if event is None:
+                    self.cancel("Voice check returned invalid progress; stopped.")
+                    return
+                self.output[:] = remainder
+                self.status.setText(progress_message(event))
 
         def finished(self, code, _status):
             if self.process is None:
                 return
             self.read_output()
+            if self.process is None:
+                return
             try:
                 result = json.loads(self.output)
                 if not isinstance(result, dict):
@@ -439,6 +475,7 @@ def create_dialog(home=AI_OS_HOME, parent=None):
                 self.temporary.cleanup()
                 self.temporary = None
             self.output.clear()
+            self.output_bytes = 0
             self.play.setEnabled(True)
             self.consent.setEnabled(True)
             self.language.setEnabled(True)
@@ -478,12 +515,18 @@ def main():
     parser.add_argument("--worker", choices=("play", "record"))
     parser.add_argument("--language", choices=("auto", "en", "hi"), default="auto")
     parser.add_argument("--confirmed", action="store_true")
+    parser.add_argument("--progress", action="store_true")
     args = parser.parse_args()
     if args.worker:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(130))
         timings = {}
+        def emit_progress(event):
+            event = public_progress(event)
+            if event is not None:
+                print(json.dumps(event, ensure_ascii=True, allow_nan=False), flush=True)
         try:
-            result = check_voice(args.worker, args.language, human_confirmed=args.confirmed, metrics=timings)
+            result = check_voice(args.worker, args.language, human_confirmed=args.confirmed, metrics=timings,
+                                 **({"on_progress": emit_progress} if args.progress else {}))
         except Exception as exc:
             from ai_os.services.voice_errors import diagnostic
 
