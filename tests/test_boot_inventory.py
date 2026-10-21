@@ -435,3 +435,185 @@ def test_deadline_while_waiting_is_reported_as_budget_limit(monkeypatch):
     monkeypatch.setattr(boot, "_kill", lambda child: killed.append(child))
     assert boot._read_command(["/usr/bin/stat"], boot.Budget(time.monotonic() + 1))[-1] == "limit"
     assert killed == [process]
+
+
+KERNEL_METADATA = """Kernel Type: uki
+    Cmdline: root=UUID=PRIVATE_UUID secret=PRIVATE_SECRET quiet splash disablehooks=plymouth
+    Version: 7.2.10-arch1-1
+         OS: Arch Linux
+"""
+SPLASH_HEADERS = """/boot/EFI/Linux/arch-linux.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  4 .splash       000abcde  0000000000037000  0000000000037000  00035200  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+"""
+ABSENT_SPLASH_HEADERS = """/boot/EFI/Linux/arch-linux.efi:     file format pei-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+"""
+
+
+def test_uki_kernel_metadata_discards_private_cmdline_and_reports_version_match():
+    parsed = boot._kernel_inspection(KERNEL_METADATA, "7.2.10-arch1-1")
+    assert parsed["parse_status"] == "recognized_metadata" and parsed["image_type"] == "uki"
+    assert parsed["kernel_version"] == "7.2.10-arch1-1" and parsed["running_version_matches"] is True
+    assert parsed["os_family"] == "arch"
+    assert parsed["embedded_flags"] == {"quiet": True, "splash": True, "plymouth_disabled": True}
+    assert parsed["booted_file_identity_verified"] is False
+    assert "PRIVATE" not in json.dumps(parsed) and "root=" not in json.dumps(parsed)
+    assert boot._kernel_inspection(KERNEL_METADATA, "7.2.11-arch1-1")["running_version_matches"] is False
+
+
+@pytest.mark.parametrize("text", [
+    "", "Kernel Type:", "Kernel Type: PRIVATE_UNKNOWN_TYPE", "Kernel Type: uki\nVersion:",
+    "Kernel Type: uki\nVersion: PRIVATE_KERNEL_VERSION", "Kernel Type: uki\nVersion: 7.2.10\nVersion: 7.2.11",
+    "Kernel Type: uki\nCmdline: root=UUID=PRIVATE_UUID\nPRIVATE_UNEXPECTED_LINE",
+    "Kernel Type: uki\nCmdline: 'PRIVATE_TRUNCATED", "Kernel Type: uki\nOS: PRIVATE\x00PRIVATE",
+])
+def test_unknown_or_truncated_kernel_metadata_fails_closed_without_raw_text(text):
+    parsed = boot._kernel_inspection(text, "7.2.10-arch1-1")
+    assert parsed["parse_status"] == "unrecognized" and parsed["image_type"] is None
+    assert parsed["kernel_version"] is None and parsed["embedded_flags"] is None
+    assert "PRIVATE" not in json.dumps(parsed)
+
+
+def test_uki_unknown_os_and_missing_optional_sections_do_not_invent_metadata():
+    parsed = boot._kernel_inspection("Kernel Type: uki\nOS: PRIVATE_CUSTOM_OS", "7.2.10")
+    assert parsed["os_family"] == "unknown" and parsed["kernel_version"] is None
+    assert parsed["running_version_matches"] is None and parsed["embedded_cmdline_present"] is False
+    assert parsed["embedded_flags"] is None and "PRIVATE" not in json.dumps(parsed)
+    assert boot._kernel_inspection("Kernel Type: uki\nOS: REgenOS Preview", None)["os_family"] == "regenos"
+
+
+def test_splash_section_headers_only_report_presence_and_size():
+    parsed = boot._splash_headers(SPLASH_HEADERS)
+    assert parsed == {"parse_status": "recognized_metadata", "present": True,
+                      "bytes": int("abcde", 16), "rendering_verified": False}
+    missing = boot._splash_headers(ABSENT_SPLASH_HEADERS)
+    assert missing["parse_status"] == "recognized_metadata" and missing["present"] is False
+    assert missing["bytes"] is None
+
+
+@pytest.mark.parametrize("text", [
+    "", "/boot/EFI/Linux/arch-linux.efi: file format pei-x86-64\nSections:",
+    SPLASH_HEADERS.replace("pei-x86-64", "PRIVATE_UNKNOWN_FORMAT"),
+    SPLASH_HEADERS.replace("000abcde", "PRIVATE_INVALID_SIZE"),
+    SPLASH_HEADERS.replace(".splash", ".PRIVATE"),
+    SPLASH_HEADERS + " 5 .splash 00000001 00000000 00000000 00000000 2**2\n",
+    ABSENT_SPLASH_HEADERS + " 4 .splash 000ab\n",
+    ABSENT_SPLASH_HEADERS + "PRIVATE_UNEXPECTED_TRAILER\n",
+    SPLASH_HEADERS + "PRIVATE_UNEXPECTED_TRAILER\n",
+    SPLASH_HEADERS.rsplit("                  CONTENTS", 1)[0],
+    SPLASH_HEADERS.replace("READONLY, DATA", "READONLY, PRIVATE_FLAG"),
+    SPLASH_HEADERS.replace("Sections:", "PRIVATE\x00Sections:"),
+    SPLASH_HEADERS.replace("Sections:", "PRIVATE_PREFIX\nSections:"),
+])
+def test_unknown_or_truncated_splash_headers_never_claim_absence(text):
+    parsed = boot._splash_headers(text)
+    assert parsed["parse_status"] == "unrecognized" and parsed["present"] is None
+    assert parsed["bytes"] is None and "PRIVATE" not in json.dumps(parsed)
+
+
+def test_focused_uki_uses_fixed_read_only_commands_and_one_budget(monkeypatch):
+    calls, budgets = [], []
+    def fake(argv, budget):
+        calls.append(argv)
+        budgets.append(budget)
+        command = argv[3:] if argv[0] == "/usr/bin/sudo" else argv
+        if command[0] == "/usr/bin/uname":
+            return 0, "7.2.10-arch1-1\n", "", ""
+        if command[0] == "/usr/bin/bootctl":
+            return 0, KERNEL_METADATA, "", ""
+        if command[0] == "/usr/bin/objdump":
+            return 0, SPLASH_HEADERS, "", ""
+        pytest.fail("Unexpected read-only command")
+    monkeypatch.setattr(boot, "_read_command", fake)
+    result = boot.inspect_uki(sudo=True)
+    assert calls == [
+        ["/usr/bin/uname", "-r"],
+        ["/usr/bin/sudo", "-n", "--", "/usr/bin/bootctl", "--no-pager", "kernel-inspect", boot.UKI_PATH],
+        ["/usr/bin/sudo", "-n", "--", "/usr/bin/objdump", "--section-headers", "--section=.splash", "--", boot.UKI_PATH],
+    ]
+    assert len({id(budget) for budget in budgets}) == 1
+    assert budgets[0].remaining == boot.MAX_BYTES and 0 < budgets[0].deadline - time.monotonic() <= boot.MAX_SECONDS
+    assert result["status"] == "metadata_inspected" and result["mode"] == "uki"
+    assert "PRIVATE" not in json.dumps(result) and "root=" not in json.dumps(result)
+    assert result["active_entry_verified"] is False and result["recovery_boot_verified"] is False
+
+
+def test_focused_uki_authentication_failure_stops_after_one_sudo_read(monkeypatch):
+    calls = []
+    def fake(argv, _budget):
+        calls.append(argv)
+        if argv[0] == "/usr/bin/uname":
+            return 0, "7.2.10-arch1-1\n", "", ""
+        return 1, "", "sudo: a password is required PRIVATE_ERROR", ""
+    monkeypatch.setattr(boot, "_read_command", fake)
+    result = boot.inspect_uki(sudo=True)
+    assert len(calls) == 2 and result["status"] == "sudo_unavailable"
+    assert result["sudo_reason"] == "authentication_required"
+    assert result["splash"]["present"] is None and "PRIVATE" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("issue", ["limit", "unavailable"])
+def test_focused_uki_budget_and_command_failures_withhold_partial_metadata(monkeypatch, issue):
+    calls = []
+    def fake(argv, _budget):
+        calls.append(argv)
+        if argv[0] == "/usr/bin/uname":
+            return 0, "7.2.10-arch1-1\n", "", ""
+        return None, KERNEL_METADATA, "PRIVATE_ERROR", issue
+    monkeypatch.setattr(boot, "_read_command", fake)
+    result = boot.inspect_uki()
+    assert result["status"] == ("budget_exhausted" if issue == "limit" else "partial_inventory")
+    assert result["kernel_inspection"]["image_type"] is None and result["splash"]["present"] is None
+    assert all(argv[0] != "/usr/bin/sudo" for argv in calls) and "PRIVATE" not in json.dumps(result)
+    assert len(calls) == (2 if issue == "limit" else 3)
+
+
+def test_focused_uki_read_denial_does_not_mean_no_splash(monkeypatch):
+    monkeypatch.setattr(boot, "_read_command", lambda *_: (1, "", "Permission denied", ""))
+    result = boot.inspect_uki()
+    assert result["kernel_inspection"]["image_type"] is None and result["splash"]["present"] is None
+    assert all(row["status"] == "permission_denied" for row in result["checks"])
+
+
+@pytest.mark.parametrize("code, issue", [(1, ""), (0, "unavailable")])
+def test_focused_uki_unsuccessful_reads_withhold_even_complete_output(monkeypatch, code, issue):
+    def fake(argv, _budget):
+        if argv[0] == "/usr/bin/uname":
+            return 0, "7.2.10-arch1-1\n", "", ""
+        return code, KERNEL_METADATA if argv[0] == "/usr/bin/bootctl" else SPLASH_HEADERS, "PRIVATE_ERROR", issue
+    monkeypatch.setattr(boot, "_read_command", fake)
+    result = boot.inspect_uki()
+    assert result["status"] == "partial_inventory"
+    assert result["kernel_inspection"]["image_type"] is None and result["splash"]["present"] is None
+    assert "PRIVATE" not in json.dumps(result)
+
+
+def test_focused_uki_does_not_export_unrecognized_running_release(monkeypatch):
+    monkeypatch.setattr(boot, "_read_command", lambda *_: (0, "PRIVATE_HOST\nPRIVATE_OUTPUT", "", ""))
+    result = boot.inspect_uki()
+    assert result["running_kernel_release"] is None and "PRIVATE" not in json.dumps(result)
+
+
+def test_focused_uki_limit_in_first_read_stops_without_any_image_command(monkeypatch):
+    calls = []
+    monkeypatch.setattr(boot, "_read_command", lambda argv, _: calls.append(argv) or (None, "", "", "limit"))
+    result = boot.inspect_uki()
+    assert result["status"] == "budget_exhausted" and calls == [["/usr/bin/uname", "-r"]]
+
+
+def test_uki_cli_is_opt_in_and_cannot_select_arbitrary_files(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["inspect_boot_branding.py", "--uki", "--sudo"])
+    monkeypatch.setattr(boot, "inspect", lambda **_: pytest.fail("Full inventory should not run"))
+    monkeypatch.setattr(boot, "inspect_uki", lambda **kw: {"mode": "uki", "sudo_requested": kw["sudo"]})
+    assert boot.main() == 0
+    assert json.loads(capsys.readouterr().out) == {"mode": "uki", "sudo_requested": True}
+    monkeypatch.setattr("sys.argv", ["inspect_boot_branding.py", "--uki", "/etc/shadow"])
+    with pytest.raises(SystemExit) as error:
+        boot.main()
+    assert error.value.code == 2

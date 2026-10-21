@@ -2,6 +2,21 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: opt-in UKI metadata inspection
+
+The bounded helper's new `--uki` mode reads only the fixed known Arch UKI via
+captured `bootctl kernel-inspect` and `.splash` section headers. It exports known
+OS family, bounded version/match and presentation flags, never embedded root
+arguments, IDs, raw command lines or image contents. Unknown/truncated formats
+stay unknown. Default inventory reads remain unchanged; no extraction, objcopy,
+rewrite or mount is used. Root independently verified **95 mocked tests in 0.06s**
+and correctness lint. No actual privileged image inspection has run for this mode.
+See [BOOT_RECOVERY_INVENTORY](BOOT_RECOVERY_INVENTORY.md) for the owner command.
+
+The owner's earlier full report remains useful current-stub evidence, not proof
+of exact booted on-disk contents or independent recovery. Inspection approval
+does not authorize rebuilding a UKI, installing Plymouth or writing boot settings.
+
 ## 2026-10-21 checkpoint: supported Qt dependency range
 
 Two controlled hosted comparisons isolate a version-specific project shutdown

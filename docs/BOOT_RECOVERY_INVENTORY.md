@@ -71,6 +71,53 @@ Unknown versions/formats/filenames remain unknown; private EFI IDs and URLs are
 dropped. No raw EFI-variable enumeration or write is performed.
 [upstream bootctl status implementation](https://github.com/systemd/systemd/blob/main/src/bootctl/bootctl-status.c).
 
+## Focused UKI metadata checkpoint
+
+The optional `--uki` mode reads exactly `/boot/EFI/Linux/arch-linux.efi` instead
+of repeating the full inventory. It cannot accept an arbitrary filename. Its
+three fixed commands are `uname -r`, `bootctl --no-pager kernel-inspect` for that
+path and `objdump --section-headers --section=.splash --` for that path. These
+share the existing 10-second/1-MiB budget, shell-free execution and owned-group
+cleanup. The default inventory's command scope is unchanged. No section is
+extracted, rendered, saved or modified; no EFI variable is read by this mode.
+
+After approval of any required elevation, the owner can run:
+
+```bash
+sudo -v && ~/.ai_os/venv/bin/python ~/src/ai-os/scripts/inspect_boot_branding.py --sudo --uki
+```
+
+Only the helper's sanitized JSON should be shared. Do not run `kernel-inspect`
+directly and paste its raw output: it can include embedded root UUIDs and other
+private kernel arguments. The report retains only a known image-type enum, a
+bounded kernel release, whether that release equals the running release, a known
+OS-family enum and quiet/splash/Plymouth-disable booleans. Unknown/custom text and
+all raw command lines are withheld. A release match is metadata evidence, never
+proof that this disk file is the image which booted.
+
+`splash` reports presence and section size only when the complete expected PE
+header format is recognized. Permission errors, unknown output, multiple rows,
+truncation and budget failures leave presence unknown, rather than reporting
+absence. Section addresses, raw flags and private stderr are discarded. A
+present section is not proof of its artwork, rendering or selected boot profile.
+The official systemd documentation describes `.splash` as an optional BMP shown
+before kernel invocation. Thus a startup logo may be independent of GDM and
+Plymouth; this inspection tests that possibility without changing the boot path.
+[systemd-stub sections](https://www.freedesktop.org/software/systemd/man/latest/systemd-stub.html),
+[bootctl inspection](https://www.freedesktop.org/software/systemd/man/latest/bootctl.html),
+[upstream output labels](https://github.com/systemd/systemd/blob/v260/src/bootctl/bootctl-uki.c),
+[GNU objdump section headers](https://sourceware.org/binutils/docs/binutils/objdump.html).
+
+On 2026-10-21, the focused source checkpoint passed **95 mocked tests in 0.13s**
+across `tests/test_boot_inventory.py`, plus correctness Ruff and whitespace
+checks. The suite includes 35 new cases for metadata privacy, complete/absent/
+unknown sections, authentication denial, failed reads with partial output,
+global-budget stops and fixed opt-in CLI dispatch. Exact verification commands
+are in the source checkpoint below. No actual privileged UKI inspection, host
+boot write, package/service change, download or disk operation was run for this
+source checkpoint. The host's embedded metadata and splash remain unverified
+until the separately reviewed read-only command returns an owner report.
+
 ## Source checkpoint and nonprivileged result
 
 On 2026-10-20:
@@ -112,12 +159,31 @@ No elevated retry, boot write, service action, rebuild or download was performed
 for this checkpoint. The public result must not replace an elevated owner report
 with guesses.
 
+## Owner's subsequent elevated report
+
+The owner subsequently supplied sanitized output from the full elevated helper:
+
+- Current-stub evidence reports `/EFI/Linux/arch-linux.efi`; the current-loader
+  field reports `/boot/EFI/Linux/arch-linux.efi`. These firmware-reported paths
+  do not establish the on-disk image's identity or a selected GRUB menu entry.
+- The known UKI is a readable regular file of 154,340,352 bytes. The known
+  fallback UKI and plain linux initramfs explicitly report **not found**.
+  Zen's initramfs and both kernel files are readable; none is recovery-tested.
+- GRUB is reported, but the parsed custom/unknown entry remains unresolved.
+  Only default presets are enabled; no Plymouth hook is present. Current flags
+  omit `BOOT_IMAGE`, `quiet` and `splash`.
+- `/boot` has 712,892,416 bytes available of 1,071,624,192 bytes at inspection.
+  It is an existing vfat mount; this is not a new mount or free-space guarantee.
+
+This supersedes the earlier permission-denied observations for those files; it
+does not establish an active entry, UKI contents or independently bootable
+recovery. No full boot configuration, device identifiers or raw logs are stored.
+
 ## Remaining gate before a boot-change proposal
 
-Obtain the new sanitized owner-run elevated report and review actual readable
-GRUB entry/chainloader paths, enabled preset outputs, image metadata and any
-current-stub evidence. Resolve custom/unknown entries through separately reviewed
-fixed reads; do not expose complete private boot configuration or identifiers.
+Review the focused UKI metadata report and resolve custom/unknown entries through
+separately reviewed fixed reads; do not expose complete private boot configuration
+or identifiers. Metadata alone must not be promoted to boot or recovery acceptance.
 Confirm which existing image/entry is the working boot path, and establish an
 independent usable recovery entry/image that the planned change will not rewrite.
 

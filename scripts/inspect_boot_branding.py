@@ -48,6 +48,7 @@ IMAGE_PATHS = frozenset(root + "/" + name for root in
                         (*ROOTS, *(root + "/EFI/Linux" for root in ROOTS)) for name in IMAGE_NAMES)
 PRESET_NAMES = frozenset({"default", "fallback", "recovery"})
 MAX_MENU_ENTRIES = 64
+UKI_PATH = "/boot/EFI/Linux/arch-linux.efi"
 
 
 @dataclass
@@ -522,6 +523,111 @@ def _image_metadata(path, text, status):
     return row
 
 
+def _kernel_inspection(text, running_release):
+    result = {"parse_status": "unrecognized", "image_type": None, "kernel_version": None,
+              "running_version_matches": None, "os_family": "unknown",
+              "embedded_cmdline_present": None, "embedded_flags": None,
+              "booted_file_identity_verified": False}
+    if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
+        return result
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines or len(lines) > 8:
+        return result
+    values = {}
+    for line in lines:
+        match = re.fullmatch(r"(Kernel Type|Cmdline|Version|OS):(?: (.*))?", line)
+        if not match or match[1] in values:
+            return result
+        values[match[1]] = match[2] or ""
+    kind = values.get("Kernel Type")
+    if kind not in {"uki", "addon", "pe", "unknown"}:
+        return result
+    version = values.get("Version")
+    if version is not None and not re.fullmatch(r"[0-9][0-9A-Za-z.+_-]{0,100}", version):
+        return result
+    flags = None
+    if "Cmdline" in values:
+        try:
+            flags = _flags(shlex.split(values["Cmdline"]))
+        except ValueError:
+            return result
+    family = {"Arch Linux": "arch", "REgenOS": "regenos", "REgenOS Preview": "regenos"}.get(values.get("OS"), "unknown")
+    result.update(parse_status="recognized_metadata", image_type=kind, kernel_version=version,
+                  running_version_matches=version == running_release if version and running_release else None,
+                  os_family=family, embedded_cmdline_present="Cmdline" in values,
+                  embedded_flags=flags)
+    return result
+
+
+def _splash_headers(text):
+    result = {"parse_status": "unrecognized", "present": None, "bytes": None,
+              "rendering_verified": False}
+    if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
+        return result
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    expected = re.escape(UKI_PATH) + r":\s+file format pei-x86-64"
+    if (len(lines) not in {3, 5} or not re.fullmatch(expected, lines[0])
+            or lines[1] != "Sections:"
+            or not re.fullmatch(r"Idx\s+Name\s+Size\s+VMA\s+LMA\s+File off\s+Algn", lines[2])):
+        return result
+    if len(lines) == 3:
+        result.update(parse_status="recognized_metadata", present=False)
+        return result
+    # A partial row or an unknown trailer is not evidence of absence. Accept only
+    # the complete selected-section format; never export addresses or raw flags.
+    flags = lines[4].split(", ")
+    known_flags = {"CONTENTS", "ALLOC", "LOAD", "RELOC", "READONLY", "CODE", "DATA",
+                   "ROM", "DEBUGGING", "NEVER_LOAD", "EXCLUDE", "SORT_ENTRIES", "LINK_ONCE_DISCARD"}
+    if not flags or len(flags) != len(set(flags)) or any(flag not in known_flags for flag in flags):
+        return result
+    match = re.fullmatch(r"\d{1,3}\s+\.splash\s+([0-9a-fA-F]{1,8})\s+[0-9a-fA-F]{1,16}\s+"
+                         r"[0-9a-fA-F]{1,16}\s+[0-9a-fA-F]{1,16}\s+2\*\*\d{1,2}", lines[3])
+    if match:
+        result.update(parse_status="recognized_metadata", present=True, bytes=int(match[1], 16))
+    return result
+
+
+def inspect_uki(*, sudo=False):
+    """Opt-in metadata reads of exactly one fixed UKI; no extraction or rewriting."""
+    budget = Budget(time.monotonic() + MAX_SECONDS)
+    result = {"read_only": True, "mode": "uki", "image_path": UKI_PATH,
+              "sudo_requested": sudo, "running_kernel_release": None, "checks": [],
+              "kernel_inspection": _kernel_inspection("", None), "splash": _splash_headers(""),
+              "active_entry_verified": False, "recovery_boot_verified": False}
+    stopped = False
+
+    def run(command, name, *, public=False):
+        nonlocal stopped
+        if stopped:
+            return None
+        elevated = sudo and not public
+        argv = (["/usr/bin/sudo", "-n", "--"] if elevated else []) + command
+        code, out, err, issue = _read_command(argv, budget)
+        result["checks"].append({"check": name, "status": _read_status(code, err, issue)})
+        failure = _sudo_failure(err) if elevated and code != 0 else None
+        if failure:
+            result.update(status="sudo_unavailable", sudo_reason=failure)
+            stopped = True
+        elif issue == "limit":
+            result["status"] = "budget_exhausted"
+            stopped = True
+        return out if code == 0 and not issue else None
+
+    release = run(["/usr/bin/uname", "-r"], "running_release", public=True)
+    if release is not None and re.fullmatch(r"[0-9][0-9A-Za-z.+_-]{0,100}\n?", release):
+        result["running_kernel_release"] = release.strip()
+    kernel = run(["/usr/bin/bootctl", "--no-pager", "kernel-inspect", UKI_PATH], "kernel_metadata")
+    if kernel is not None:
+        result["kernel_inspection"] = _kernel_inspection(kernel, result["running_kernel_release"])
+    headers = run(["/usr/bin/objdump", "--section-headers", "--section=.splash", "--", UKI_PATH], "splash_headers")
+    if headers is not None:
+        result["splash"] = _splash_headers(headers)
+    complete = (result["kernel_inspection"]["parse_status"] == "recognized_metadata"
+                and result["splash"]["parse_status"] == "recognized_metadata")
+    result.setdefault("status", "metadata_inspected" if complete else "partial_inventory")
+    return result
+
+
 def inspect(*, sudo=False):
     budget = Budget(time.monotonic() + MAX_SECONDS)
     result = {"read_only": True, "sudo_requested": sudo, "loader_product": "unknown",
@@ -645,9 +751,10 @@ def inspect(*, sudo=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sudo", action="store_true", help="Use only sudo -n; never request a password")
+    parser.add_argument("--uki", action="store_true", help="Only inspect the fixed Arch UKI's sanitized metadata")
     args = parser.parse_args()
     try:
-        result = inspect(sudo=args.sudo)
+        result = inspect_uki(sudo=args.sudo) if args.uki else inspect(sudo=args.sudo)
     except Exception:
         result = {"read_only": True, "status": "inspection_unavailable",
                   "message": "Boot inspection could not complete. No boot settings were changed."}
