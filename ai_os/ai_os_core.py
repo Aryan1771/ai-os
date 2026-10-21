@@ -42,6 +42,23 @@ READ_ONLY_ARGUMENT_REPAIR = frozenset({
 })
 
 
+def _model_request_timeout(deadline: float | None) -> float:
+    if deadline is None:
+        return 120
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise requests.Timeout("The task time limit expired before model inference.")
+    return min(120, remaining)
+
+
+def _expired_planning_response(previous: dict | None) -> dict:
+    if previous is not None:
+        return {**previous, "code": "task_deadline_exceeded",
+                "notice": "The task time limit expired. The previous tool result is preserved; no further action was started."}
+    return {"type": "text", "code": "task_deadline_exceeded",
+            "content": "The task time limit expired before the action could start. Please ask again; no action was run."}
+
+
 def _steering_reference(value: str | None, raw: dict) -> str:
     if value is None:
         return ""
@@ -237,6 +254,7 @@ def _ask_model(
     user_text: str, registered_tools: set[str] | None, home: Path, *, session="default", screen_observation=None,
     tool_trace=None, deadline=None, reply_language=None, interrupted_context=None
 ) -> str:
+    _model_request_timeout(deadline)
     if any(isinstance(step, dict) and isinstance(step.get("call"), dict)
            and step["call"].get("tool") == "github_read" for step in tool_trace or []):
         # Defense in depth for future callers: account text never enters inference,
@@ -367,7 +385,6 @@ def _ask_model(
     }
     if tools:
         payload["tools"] = tools
-    timeout = 120 if deadline is None else max(1, min(120, deadline - time.monotonic()))
     if policy:
         payload["keep_alive"] = policy["keep_alive"]
     headers: dict[str, str] = {}
@@ -391,6 +408,7 @@ def _ask_model(
             raise PermissionError("Screen or desktop-context consent was revoked; prepared observations cannot enter inference.")
     if steering:
         _steering_reference(interrupted_context, latest_raw)
+    timeout = _model_request_timeout(deadline)
     if config.ai_provider == "openai_compatible":
         api_key = os.environ.get(config.api_key_env)
         if api_key:
@@ -622,15 +640,19 @@ def handle_user_text(
         elif website and "open_website" in registry:
             model_text = json.dumps({"tool": "open_website", "arguments": website})
         else:
-            model_text = (ask_ollama(user_text, set(registry), home, **model_options)
+            model_text = (ask_ollama(user_text, set(registry), home, deadline=deadline, **model_options)
                           if session == "default"
-                          else ask_ollama(user_text, set(registry), home, session=session, **model_options))
+                          else ask_ollama(user_text, set(registry), home, session=session, deadline=deadline, **model_options))
         trace, seen = [], set()
         argument_repairs = 0
         response = None
         for step in range(3):
             tool_call = parse_tool_call(model_text)
             if not tool_call:
+                break
+            if time.monotonic() >= deadline:
+                response = _expired_planning_response(response)
+                publish_state("error", home=home)
                 break
             signature = json.dumps(tool_call, sort_keys=True)
             if signature in seen:
@@ -653,6 +675,10 @@ def handle_user_text(
                         from ai_os.research_reports import report_requested
                         if not report_requested(user_text):
                             tool_call["arguments"]["mode"] = "articles"
+                    if time.monotonic() >= deadline:
+                        response = _expired_planning_response(response)
+                        publish_state("error", home=home)
+                        break
                     result = execute_tool(tool_call["tool"], tool_call["arguments"], registry, home=home, session=session)
             except (ValueError, TypeError) as exc:
                 result = {"ok": False, "error": str(exc)[:500]}
@@ -675,14 +701,20 @@ def handle_user_text(
             response = {"type": "tool_result", "tool": tool_call["tool"], "result": result}
             trace.append({"call": tool_call, "result": result})
             needs_approval = isinstance(result, dict) and bool(result.get("approval_required"))
-            if (failed and not retry_arguments) or needs_approval or application or website or step == 2 or time.monotonic() >= deadline - 1:
+            if (failed and not retry_arguments) or needs_approval or application or website or step == 2:
+                break
+            if time.monotonic() >= deadline:
+                response = _expired_planning_response(response)
                 break
             try:
                 model_text = ask_ollama(user_text, set(registry), home, session=session,
                                         tool_trace=trace, deadline=deadline, **model_options)
             except (requests.RequestException, ValueError, RuntimeError):
                 # A successful action stays successful if follow-up inference fails.
-                response["notice"] = "The tool completed; a follow-up model reply was unavailable."
+                if time.monotonic() >= deadline:
+                    response = _expired_planning_response(response)
+                else:
+                    response["notice"] = "The tool completed; a follow-up model reply was unavailable."
                 break
         if response is not None and parse_tool_call(model_text):
             _remember_turn(home, user_text, spoken_response(response),
@@ -748,6 +780,10 @@ def spoken_response(response: dict, *, reply_language: str | None = None) -> str
                 if response.get("ok") else "GitHub reading was unavailable. Please check Permissions and local login.")
     if response["type"] == "text":
         return response["content"]
+    if response.get("code") == "task_deadline_exceeded":
+        return ("पिछले टूल का परिणाम तैयार है, लेकिन कार्य की समय सीमा समाप्त हो गई। आगे कोई कार्रवाई शुरू नहीं की गई।"
+                if reply_language == "hi" else
+                "The previous tool result is available, but the task time limit expired. No further action was started.")
     result = response["result"]
     if reply_language == "hi":
         if isinstance(result, dict) and result.get("approval_required"):

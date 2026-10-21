@@ -97,7 +97,7 @@ def test_model_reply_metadata_does_not_get_spoken():
 
 
 def test_tool_activity_and_failure_are_published(tmp_path, monkeypatch):
-    monkeypatch.setattr(core, "ask_ollama", lambda *_args: '{"tool":"job","arguments":{}}')
+    monkeypatch.setattr(core, "ask_ollama", lambda *_args, **_kwargs: '{"tool":"job","arguments":{}}')
     phases = []
     original = core.publish_state
 

@@ -2,6 +2,22 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: planner dispatch deadline
+
+The original 120-second planning deadline now reaches the initial model request
+and is rechecked before preparation/POST and each new tool dispatch. Previously a
+fake initial request taking 121 seconds could still start an action. Completed
+results survive expiry with an explicit notice; no action is retried to recover.
+Fractional remaining HTTP time is no longer extended to one second. Root's
+independent focused suite passed **55 tests in 0.29s**; source/new-test lint and
+whitespace checks pass. No command, inference, microphone or service operation
+was used. Resident core has not been reloaded for this new repair.
+See [PLANNER_DEADLINES](PLANNER_DEADLINES.md).
+
+This bounds new dispatch, not an already running executor or native confirmation;
+those keep their independent limits. It is not hard wall-clock cancellation,
+durable planning or GPU-memory reservation. Those acceptance items remain open.
+
 ## 2026-10-21 checkpoint: opt-in UKI metadata inspection
 
 The bounded helper's new `--uki` mode reads only the fixed known Arch UKI via
