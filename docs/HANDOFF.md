@@ -2,6 +2,23 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: staged UKI artwork
+
+The boot renderer now has an opt-in `--boot-splash` mode producing only a
+566×167, 24-bit uncompressed BMP and relative hash/version manifest from the
+tracked outlined wordmark. It preserves the stock splash footprint, refuses
+overwrite/symlink staging and excludes external references/fonts. The default
+four PNG outputs remain. Twenty isolated-process tests pass; root's frozen full
+suite is **1290 passed in 16.64s**, normal exit, with lint/whitespace clean.
+
+Root generated a separate temporary review artifact, decoded it with Qt and
+visually inspected a PNG preview. BMP bytes: 283954; SHA256
+`a2cf1dde1ee1625fe8a12fe3dfee3b99ab80432a23e8138f982bd3ed4473b772`
+under Qt/PySide6 6.11.2. This is an artwork hash, **not an ISO or UKI hash**.
+No raster output was added to Git. See [UKI_SPLASH_PROPOSAL](UKI_SPLASH_PROPOSAL.md)
+for the read-only preset/stock-BMP evidence and separately gated future recipe.
+No host UKI build, boot copy, activation, reboot or recovery acceptance occurred.
+
 ## 2026-10-21 checkpoint: Qt enrollment-test ownership
 
 The newly pushed audio tests exposed a native crash during later Settings event

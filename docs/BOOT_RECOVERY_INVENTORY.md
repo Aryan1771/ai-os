@@ -137,6 +137,12 @@ reboot. Embedded splash artwork is a supported candidate for the reported startu
 logo; changing GDM does not replace it. A concrete recovery and activation plan
 and separate boot approval are still required before any host image changes.
 
+The subsequent [source-only splash checkpoint](UKI_SPLASH_PROPOSAL.md) generates
+matching-footprint landscape REgenOS artwork with a public hash manifest. It
+records the literal preset's stock Arch BMP path and equal stock/embedded byte
+counts as supporting evidence, not an extracted-image comparison. The proposed
+candidate generation/copy/activation remains unapproved and has not run.
+
 ## Source checkpoint and nonprivileged result
 
 On 2026-10-20:

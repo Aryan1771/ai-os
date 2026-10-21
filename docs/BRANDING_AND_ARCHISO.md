@@ -27,6 +27,11 @@ The current GNOME desktop already selects the owner's original photograph.
 App source uses installed generic assets with a development-checkout fallback;
 no production path depends on a username.
 
+For a source-only static UKI splash, `render_branding.py --boot-splash --output`
+creates a matching-footprint landscape BMP and manifest in a fresh staging
+directory. See [UKI_SPLASH_PROPOSAL](UKI_SPLASH_PROPOSAL.md) for the complete
+command and limits. Generated artwork is not installed boot branding.
+
 ## Native graphical setup
 
 `python -m ai_os.first_run` opens the new Qt first-run app. It introduces the
@@ -43,8 +48,11 @@ A hash-bound [staged art/default/GDM installer](BRANDING_DEFAULTS_INSTALL.md)
 provides private backups and guarded rollback, with 24 disposable-root tests.
 The exact inventory and staged rollback proposal are in
 [REGENOS_BRANDING_PROPOSAL](REGENOS_BRANDING_PROPOSAL.md). GNOME/GDM is the active
-session. Plymouth is absent, and an owner-run sanitized helper identifies GRUB. The active entry and usable
-recovery remain unverified; a preset references an unlisted fallback image. No boot changes have been applied. The owner-approved desktop/default/GDM
+session. Plymouth is absent. Owner inspection reports GRUB/current-UKI evidence,
+matching running/embedded kernel versions and a 378,226-byte splash section; the
+literal preset selects Arch's stock BMP of the same size. The active entry and
+independently booted recovery remain unverified, and the known fallback UKI is
+not found. No boot changes have been applied. The owner-approved desktop/default/GDM
 stages are installed and their hashes/compiled logo key pass readback; actual
 login appearance remains pending. Installing
 art/defaults, configuring the supported GDM logo, adding Plymouth to initramfs and
