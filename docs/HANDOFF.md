@@ -2,6 +2,22 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: Qt enrollment-test ownership
+
+The newly pushed audio tests exposed a native crash during later Settings event
+processing, locally and in hosted CI. Two reduced two-test sequences reproduced
+exit 135. Independent probing identified deferred deletion of a fake enrollment
+metadata process after fixture teardown, with the same QApplication throughout.
+Test-only owner cleanup now checks stopped timers, destroys the exact dialog
+before its fake fixture ends, and verifies destruction of owner/child wrappers.
+No production cleanup, skipped rendering or crash suppression was introduced.
+
+Both reduced cases and 89 adjacent tests pass. Root's final frozen combined
+source suite passes **1290 tests in 16.64s**, normal exit, including six pinned
+Plymouth interpreter checks and the next boot-artwork checkpoint. Correctness
+lint/whitespace pass. Hosted acceptance of this repair remains pending.
+See [CI_VALIDATION](CI_VALIDATION.md) for failure and reproduction evidence.
+
 ## 2026-10-21 checkpoint: isolate the broad-command bootstrap
 
 Audit reproduced a pre-Bubblewrap module-shadowing defect using metadata and a

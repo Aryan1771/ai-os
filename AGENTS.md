@@ -45,7 +45,8 @@
 - App usage memory is a separate opt-in: app names/time estimates only, bounded
   retention and explicit inspect/clear controls. Never add keystroke/clipboard capture.
 - Broad command grants require the Bubblewrap boundary; never silently fall back
-  to ordinary execution. Tool discovery changes available schemas, never permissions.
+  to ordinary execution. Launch its installed Python helper with isolated mode
+  before entering an untrusted cwd. Tool discovery changes schemas, never permissions.
 
 - Reinforced memory stores only bounded, opt-in repeated user statements as untrusted
   reference data. Preserve session scope, decay, inspection, forget/clear revision guards
@@ -82,3 +83,5 @@
 - Keep desktop/screen PySide dependency bounds paired. The current supported
   range excludes 6.12 after controlled hosted teardown crashes; lifting the cap
   requires a full-process pass, not only a passing pytest summary. See CI_VALIDATION.
+- Qt tests must dispose of owned dialogs/timers and fake QObject children before
+  fake fixture teardown; defer no test process-double deletion into later tests.

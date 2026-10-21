@@ -107,6 +107,31 @@ The excluded 6.12 teardown interaction remains unresolved; this does not turn it
 earlier failures into passes. Later source changes require their own results.
 Hosted checks are not physical microphone, GPU, desktop, boot or ISO acceptance.
 
+### Enrollment test fixture regression — 2026-10-21
+
+[Run 39603184949](https://github.com/Aryan1771/ai-os/actions/runs/39603184949)
+for `90e41f0` crashed during native Settings rendering on the supported 6.11.2,
+before completing Python tests; C++ and syntax stages were skipped. This is
+distinct from the earlier excluded-6.12 post-summary crash. Root reproduced the
+same mid-suite failure locally under Python 3.14.8 / PySide6 6.11.2; faulthandler
+identified `tests/test_native_ui.py:58` during event processing.
+
+Two reduced sequences each run one fake-input enrollment test followed by native
+page rendering. Both reproduced a bus error (exit 135). An independent event
+probe identified deferred deletion of the completed metadata `FakeScan`; the
+QApplication instance was unchanged. Flushing that owner's deletion before its
+Python fake-process fixture teardown allowed normal exit.
+
+The targeted test cleanup now rejects the enrollment owner, asserts its timers
+are inactive, deletes that owner while its fake class/instances are still alive,
+and verifies the destroyed signal plus invalid owner/child wrappers. It does not
+drain unrelated events, add timing sleeps, skip rendering or alter production
+cleanup. Both reduced sequences pass after correction. A final frozen-source
+suite passes **1290 tests in 16.64s**, with normal exit, including six explicitly
+supplied pinned Plymouth interpreter tests and the following boot-artwork source
+checkpoint. Correctness lint and whitespace checks pass. A hosted rerun must
+still establish the repaired revision's remote acceptance.
+
 ## Reproduction and local evidence
 
 Read-only remote inspection used:

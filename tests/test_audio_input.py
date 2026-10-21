@@ -317,6 +317,21 @@ def app():
     return QApplication.instance() or QApplication(["regenos-input-selection-test"])
 
 
+def destroy_enrollment_owner(window, processes):
+    """Retire fake Qt children while their fixture and subclass are still alive."""
+    from PySide6.QtCore import QCoreApplication, QEvent, QTimer
+    from shiboken6 import isValid
+
+    assert not any(timer.isActive() for timer in window.findChildren(QTimer))
+    destroyed = []
+    window.destroyed.connect(lambda: destroyed.append(True))
+    window.deleteLater()
+    QCoreApplication.sendPostedEvents(window, QEvent.Type.DeferredDelete)
+    assert destroyed == [True]
+    assert not isValid(window)
+    assert all(not isValid(process) for process in processes)
+
+
 @pytest.fixture
 def settings_window(app, tmp_path):
     from ai_os.native_settings import SettingsWindow
@@ -517,6 +532,7 @@ def test_enrollment_missing_input_records_nothing_and_releases_shared_lease(
             assert acquired
     finally:
         window.reject()
+        destroy_enrollment_owner(window, fake_scan)
 
 
 @pytest.fixture
@@ -534,6 +550,7 @@ def selected_enrollment(app, tmp_path, monkeypatch, fake_scan):
     window = speaker_setup.SpeakerSetupDialog(tmp_path)
     yield window
     window.reject()
+    destroy_enrollment_owner(window, fake_scan)
 
 
 def test_enrollment_precheck_requires_record_click_and_keeps_cancel_responsive(

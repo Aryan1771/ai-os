@@ -80,6 +80,34 @@ in 1.35s**. Both lint checks and whitespace checks pass. Installed command help
 confirms support for `pw-record --target` and `pw-dump --no-colors`; no capture was
 started to validate those flags.
 
+### Deferred Qt test-object cleanup
+
+After the asynchronous enrollment addition, hosted tests failed and a local
+two-test sequence reproduced exit 135 during the following native-window test.
+The enrollment assertions alone had passed. The crash occurred when Qt delivered
+a deferred delete to its fake metadata `QProcess` after the enrollment fixture
+had ended. An independent observer confirmed the QApplication was unchanged;
+this is not evidence of a new application instance or a production capture fault.
+
+The test-only repair explicitly retires each enrollment dialog while its fake
+subclass/instances still exist. It asserts no owned timer remains active, drains
+only that owner's `DeferredDelete`, and asserts the destroyed signal plus invalid
+dialog/child wrappers. It adds no arbitrary wait, global event drain, skipped
+assertion, crash suppression or production workaround. The separate missing-input
+test needed the same cleanup: its reduced pair also exited 135 before repair.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q tests/test_audio_input.py::test_enrollment_success_uses_one_async_scan_and_exact_input_with_no_second_query tests/test_native_ui.py::test_native_pages_render_and_canvas_has_visible_pixels --tb=short
+env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q tests/test_audio_input.py::test_enrollment_missing_input_records_nothing_and_releases_shared_lease tests/test_native_ui.py::test_native_pages_render_and_canvas_has_visible_pixels --tb=short
+env -u DISPLAY -u WAYLAND_DISPLAY QT_QPA_PLATFORM=offscreen REGENOS_HUB_NO_COMPANION=1 ~/.ai_os/venv/bin/python -X faulthandler -m pytest -q tests/test_audio_input.py tests/test_speaker_setup.py tests/test_native_ui.py --tb=short
+```
+
+Repaired reduced pairs pass **2 tests in 0.96s** and **2 tests in 0.95s**;
+the broader adjacent modules pass **89 tests in 4.70s**, with normal exit.
+New-file Ruff and whitespace checks pass. These local results do not replace the
+full-suite/hosted acceptance recorded in the project checkpoint reports. No host
+audio, personal data, dependency, service or production source changed.
+
 A049 remains incomplete: gain/noise/clipping calibration, laptop-specific VAD,
 physical device removal/reconnect and actual selected/default microphone behavior
 remain pending. The fixed RMS speech threshold is unchanged; automatic mic
