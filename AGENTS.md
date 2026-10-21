@@ -79,3 +79,6 @@
   without publishing private embedded metadata or inventing redistribution licenses.
 - GNOME 51 loads greeter logos at natural size. Use the compact named landscape
   wordmark (144×48), never the 512px square app icon; preserve password-field space.
+- Keep desktop/screen PySide dependency bounds paired. The current supported
+  range excludes 6.12 after controlled hosted teardown crashes; lifting the cap
+  requires a full-process pass, not only a passing pytest summary. See CI_VALIDATION.

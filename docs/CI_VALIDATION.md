@@ -45,15 +45,51 @@ Both used Python 3.12.15. Installation logs show PySide6-Essentials and shiboken
 a lead, not proof of a Qt version regression. In both hosted runs the C++ and
 installer syntax stages were skipped because the Python process failed.
 
-The workflow now enables `PYTHONFAULTHANDLER=1` and runs independent Python 3.12
+The diagnostic workflow enabled `PYTHONFAULTHANDLER=1` and ran independent Python 3.12
 matrix jobs with PySide6-Essentials **6.11.2** and **6.12.0**, each installed in the
 same pip transaction as the editable desktop/dev requirements. Matrix fail-fast
-is disabled so a failure in one version cannot hide the other result. Both retain
-the existing C++ and installer syntax stages. The comparison changes only hosted
-CI dependencies; production dependency bounds and the developer venv are intact.
-It does not ignore crashes or force a successful result. There has been no host
-package, service or boot change. ISO release work remains blocked by this critical
-unresolved test-process crash until the comparison establishes a recovery path.
+was disabled so a failure in one version could not hide the other result. Both
+retained the existing C++ and installer syntax stages. The comparison changed only
+hosted CI dependencies and did not ignore crashes or force a successful result.
+
+### Controlled comparison results
+
+The same-source jobs differed only in their explicit PySide6 requirement; both
+used Ubuntu 24.04 and Python 3.12.15. Both comparisons reproduced the difference:
+
+| Revision / run | PySide6 6.11.2 | PySide6 6.12.0 |
+| --- | --- | --- |
+| `f2d9e25` / [39472270464](https://github.com/Aryan1771/ai-os/actions/runs/39472270464) | 1116 passed, 6 skipped in 20.67s; exit 0; C++ and shell checks passed | 1116 passed, 6 skipped in 20.01s; then exit 139 |
+| `28d9258` / [39472375770](https://github.com/Aryan1771/ai-os/actions/runs/39472375770) | 1144 passed, 6 skipped in 17.64s; exit 0; C++ and shell checks passed | 1144 passed, 6 skipped in 26.64s; then exit 139 |
+
+The passing [latest 6.11.2 job](https://github.com/Aryan1771/ai-os/actions/runs/39472375770/job/118799455246)
+also passed the historical C++ hub test (1/1) and all three retained installer
+shell syntax checks. The 6.12 jobs' faulthandler reports contain a main-thread
+native segmentation fault with **no Python frame**, after the pytest summary.
+They provide no specific Python callback or test-lifetime fix to apply.
+
+This establishes a reproducible version-specific project interaction, not a
+confirmed upstream Qt defect. Test QApplication ownership and native object
+destruction remain possible contributors. No speculative production or test
+lifetime workaround has been applied.
+
+### Supported dependency bounds
+
+The `desktop` Essentials and `screen` Addons requirements now both use
+`>=6.8,<6.12`; keeping these bounds paired avoids an optional screen dependency
+silently selecting the excluded release. The required Python 3.12 CI job selects
+the demonstrated working **6.11.2** explicitly and retains faulthandler, C++ tests
+and shell checks. The failing version was removed from the supported matrix;
+its failure was not converted to success or ignored with `continue-on-error`.
+This does not claim that every older allowed version was tested in this run.
+
+No developer-host pip, package, service or boot changes were made for this repair.
+A fresh install will resolve within the source bounds; an existing manually
+installed 6.12 environment needs its own reviewed downgrade before support can
+be claimed. Further 6.12 lifetime isolation is deferred. Revisit the cap only
+after a controlled full suite, native UI smoke and interpreter teardown succeed;
+matching test assertions alone are insufficient. A fresh required hosted run
+must verify the final bounded revision before the CI checkpoint is closed.
 
 ## Reproduction and local evidence
 

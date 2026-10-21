@@ -15,8 +15,10 @@ dependencies = [
 
 [project.optional-dependencies]
 browser = ["playwright>=1.50,<2"]
-desktop = ["PySide6-Essentials>=6.8,<7"]
-screen = ["PySide6-Addons>=6.8,<7"]
+# 6.12.0 crashes at native teardown in controlled CI; revisit with full-process evidence.
+# Keep Essentials/Addons bounds paired. See docs/CI_VALIDATION.md.
+desktop = ["PySide6-Essentials>=6.8,<6.12"]
+screen = ["PySide6-Addons>=6.8,<6.12"]
 memory = ["chromadb>=0.5.0"]
 voice = ["openwakeword>=0.6.0", "piper-tts>=1.2.0"]
 speaker = ["sherpa-onnx>=1.12,<2"]

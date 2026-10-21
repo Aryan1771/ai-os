@@ -23,8 +23,9 @@ The complete scope, including every A001–A100 item and later requests, remains
 those requirements. No physical-disk operation, signing or release publication is
 authorized by checkpoint progression.
 
-CI checkpoint: headless browser/dependency isolation fixes pass locally and all
-hosted Python assertions now pass. Hosted teardown still exits 139; a strict
-PySide 6.11.2/6.12.0 comparison with faulthandler is underway. See
-[CI_VALIDATION](CI_VALIDATION.md); do not call remote CI passed until its exit and
-remaining workflow steps pass.
+CI checkpoint: headless browser/dependency isolation fixes pass locally. Two
+controlled comparisons show 6.11.2 completes Python/build/syntax checks, while
+6.12.0 exits 139 after its assertions. Paired desktop/screen bounds now exclude
+6.12; supported-only CI retains faulthandler. See [CI_VALIDATION](CI_VALIDATION.md).
+The supported-only rerun still needs verification before claiming the final
+remote checkpoint passed; no host dependency was changed.

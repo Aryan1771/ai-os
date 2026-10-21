@@ -2,6 +2,21 @@
 
 Baseline `fd0f67f` on `main`; intentional runtime/source work follows.
 
+## 2026-10-21 checkpoint: supported Qt dependency range
+
+Two controlled hosted comparisons isolate a version-specific project shutdown
+failure: Python 3.12 / PySide 6.11.2 completes all Python, historical C++ and shell
+checks; 6.12.0 passes assertions then exits 139. No upstream defect or Python
+lifetime cause is claimed. Both Essentials/Addons extras now use `>=6.8,<6.12`;
+required CI selects 6.11.2 and retains faulthandler and real failure exits.
+See [CI_VALIDATION](CI_VALIDATION.md) for run/job links and counts.
+
+On resumption, the existing venv independently passed the 89 focused command/
+research regressions in 1.02s. TOML/YAML and paired-bound checks pass. No package
+or dependency changed on this host. The supported-only hosted rerun remains to
+be verified after this checkpoint is pushed; the earlier 1150-test local source
+run remains the full-suite evidence until new code is accepted.
+
 ## 2026-10-20 checkpoint: owner boot evidence and approved core reload
 
 The owner ran the improved elevated read-only helper. It reports a current stub
